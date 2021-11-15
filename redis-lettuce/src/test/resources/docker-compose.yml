@@ -1,0 +1,57 @@
+version: '3'
+
+networks:
+  app-tier:
+    driver: bridge
+
+services:
+  redis:
+    image: redis:6.0.10
+    networks:
+      - app-tier
+    ports:
+      - '6379:6379'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.01'
+          memory: 50M
+        reservations:
+          cpus: '0.01'
+          memory: 20M
+
+  redis-slave:
+    image: redis:6.0.10
+    command: redis-server --slaveof redis-master 6379
+    links:
+      - redis:redis-master
+    networks:
+      - app-tier
+    ports:
+      - '6379'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.01'
+          memory: 50M
+        reservations:
+          cpus: '0.01'
+          memory: 20M
+
+  sentinel:
+    image: 'bitnami/redis-sentinel:6.0.10'
+    ports:
+      - '26379:26379'
+    networks:
+      - app-tier
+    depends_on:
+      - redis
+      - redis-slave
+    deploy:
+      resources:
+        limits:
+          cpus: '0.01'
+          memory: 50M
+        reservations:
+          cpus: '0.01'
+          memory: 20M

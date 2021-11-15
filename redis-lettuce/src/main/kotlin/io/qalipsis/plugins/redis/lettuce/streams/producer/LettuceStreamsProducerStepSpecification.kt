@@ -1,0 +1,96 @@
+package io.qalipsis.plugins.redis.lettuce.streams.producer
+
+import io.qalipsis.api.annotations.Spec
+import io.qalipsis.api.context.StepContext
+import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.StepSpecification
+import io.qalipsis.plugins.redis.lettuce.Monitoring
+import io.qalipsis.plugins.redis.lettuce.RedisLettuceStepSpecification
+import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfiguration
+import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.CLUSTER
+import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.SENTINEL
+import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.SINGLE
+
+/**
+ * Specification for a [LettuceStreamsProducerStep] to produce data onto a Redis stream.
+ *
+ * The output is a [LettuceStreamsProducerResult] that contains the output from previous step and metrics regarding this step.
+ *
+ * @author Gabriel Moraes
+ */
+@Spec
+interface LettuceStreamsProducerStepSpecification<I> :
+    StepSpecification<I, LettuceStreamsProducerResult<I>, LettuceStreamsProducerStepSpecification<I>>{
+
+    /**
+     * Configures the connection to the database.
+     *
+     * The connection type is specified in the [configBlock] by using either [SINGLE], [CLUSTER] or [SENTINEL].
+     * It is also possible to connect to more than one node, this can be achieved by passing a more than one
+     * parameter in the [List] of nodes for the [configBlock].
+     *
+     * For the [SENTINEL] connection type is required to pass a value for the masterId parameter.
+     */
+    fun connection(configBlock: RedisConnectionConfiguration.() -> Unit)
+
+    /**
+     * Defines the records to be published, it receives the context and the output from previous step that can be used
+     * when defining the records.
+     */
+    fun records(recordsConfiguration: suspend (stepContext: StepContext<*, *>, input: I) -> List<LettuceStreamsProduceRecord>)
+
+    /**
+     * Configures the monitoring of the streams producer step.
+     */
+    fun monitoring(configurationBlock: Monitoring.() -> Unit)
+}
+
+/**
+ * Specification to a Redis streams publisher, implementation of [LettuceStreamsProducerStepSpecification].
+ *
+ * @author Gabriel Moraes
+ */
+@Spec
+internal class LettuceStreamsProducerStepSpecificationImpl<I>:
+    AbstractStepSpecification<I, LettuceStreamsProducerResult<I>, LettuceStreamsProducerStepSpecification<I>>(),
+    LettuceStreamsProducerStepSpecification<I> {
+
+
+    internal var connection = RedisConnectionConfiguration()
+
+    override fun connection(configBlock: RedisConnectionConfiguration.() -> Unit) {
+        connection.configBlock()
+    }
+
+    internal var monitoringConfiguration = Monitoring()
+
+    override fun monitoring(configurationBlock: Monitoring.() -> Unit) {
+        this.monitoringConfiguration.configurationBlock()
+    }
+
+    internal var recordsFactory: (suspend (stepContext: StepContext<*, *>, input: I) ->
+    List<LettuceStreamsProduceRecord>) = { _, _ -> emptyList() }
+
+    override fun records(recordsConfiguration: suspend (stepContext: StepContext<*, *>, input: I) -> List<LettuceStreamsProduceRecord>) {
+        this.recordsFactory = recordsConfiguration
+    }
+
+}
+
+
+/**
+ * Creates a step to push data onto streams of a Redis broker and forwards the input to the next step.
+ *
+ * You can learn more on [lettuce website](https://lettuce.io/docs/getting-started.html).
+ *
+ * @author Gabriel Moraes
+ */
+fun <I> RedisLettuceStepSpecification<*, I, *>.streamsProduce(
+configurationBlock: LettuceStreamsProducerStepSpecification<I>.() -> Unit
+): LettuceStreamsProducerStepSpecification<I> {
+    val step = LettuceStreamsProducerStepSpecificationImpl<I>()
+    step.configurationBlock()
+
+    this.add(step)
+    return step
+}
