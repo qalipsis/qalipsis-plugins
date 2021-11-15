@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<root>
+  <PojoForTest>
+    <name>test-1</name>
+    <age>33</age>
+    <position>Founder</position>
+    <position>CEO</position>
+    <position>Writer</position>
+  </PojoForTest>
+  <PojoForTest name="test-2" age="35">
+    <position>Founder</position>
+    <position>CTO</position>
+  </PojoForTest>
+</root>

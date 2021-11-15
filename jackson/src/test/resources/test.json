@@ -1,0 +1,19 @@
+[
+  {
+    "name": "test-1",
+    "age": 33,
+    "position": [
+      "Founder",
+      "CEO",
+      "Writer"
+    ]
+  },
+  {
+    "name": "test-2",
+    "age": 35,
+    "position": [
+      "Founder",
+      "CTO"
+    ]
+  }
+]

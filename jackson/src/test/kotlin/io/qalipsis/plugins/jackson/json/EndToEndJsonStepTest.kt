@@ -1,0 +1,150 @@
+package io.qalipsis.plugins.jackson.json
+
+import assertk.all
+import assertk.assertThat
+import assertk.assertions.*
+import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.scenario
+import io.qalipsis.api.steps.Step
+import io.qalipsis.api.steps.StepCreationContext
+import io.qalipsis.api.steps.StepCreationContextImpl
+import io.qalipsis.api.steps.StepSpecification
+import io.qalipsis.api.steps.datasource.DatasourceRecord
+import io.qalipsis.api.sync.Latch
+import io.qalipsis.plugins.jackson.jackson
+import io.qalipsis.test.coroutines.TestDispatcherProvider
+import io.qalipsis.test.mockk.relaxedMockk
+import io.qalipsis.test.steps.TestStepContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.extension.RegisterExtension
+
+
+/**
+ *
+ * While tests in [JsonReaderStepSpecificationConverterTest] verify that the generated Jackson configuration is as
+ * expected until the finest detail, [EndToEndJsonStepTest] aims at verifying that the mentioned configuration
+ * actually does what we expect from it.
+ *
+ * @author Maxim Golokhov
+ */
+@Suppress("UNCHECKED_CAST")
+internal class EndToEndJsonStepTest {
+
+    val file = "test.json"
+
+    val converter = JsonReaderStepSpecificationConverter()
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
+
+    @Test
+    @Timeout(10)
+    internal fun `should convert JSON to POJO`() = testDispatcherProvider.runTest {
+        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        scenario.jackson().jsonToObject(PojoForTest::class) {
+            classpath(file)
+        }
+        val result = executeStep<PojoForTest>(this, scenario.rootSteps.first())
+
+        // then
+        assertThat(result).all {
+            hasSize(2)
+            index(0).all {
+                prop(DatasourceRecord<PojoForTest?>::ordinal).isEqualTo(0L)
+                prop(DatasourceRecord<PojoForTest?>::value).isNotNull().all {
+                    prop(PojoForTest::name).isEqualTo("test-1")
+                    prop(PojoForTest::position).isEqualTo(listOf("Founder", "CEO", "Writer"))
+                    prop(PojoForTest::age).isEqualTo(33)
+                }
+            }
+            index(1).all {
+                prop(DatasourceRecord<PojoForTest?>::ordinal).isEqualTo(1L)
+                prop(DatasourceRecord<PojoForTest?>::value).isNotNull().all {
+                    prop(PojoForTest::name).isEqualTo("test-2")
+                    prop(PojoForTest::position).isEqualTo(listOf("Founder", "CTO"))
+                    prop(PojoForTest::age).isEqualTo(35)
+                }
+            }
+        }
+    }
+
+    @Test
+    @Timeout(10)
+    internal fun `should convert JSON to Map`() = testDispatcherProvider.runTest {
+        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        scenario.jackson().jsonToMap {
+            classpath(file)
+        }
+        val result = executeStep<Map<String, Any>>(this, scenario.rootSteps.first())
+
+        // then
+        assertThat(result).all {
+            hasSize(2)
+            index(0).all {
+                prop(DatasourceRecord<Map<String, Any>?>::ordinal).isEqualTo(0L)
+                prop(DatasourceRecord<Map<String, Any>?>::value).isNotNull().all {
+                    key("name").isEqualTo("test-1")
+                    key("position").isEqualTo(listOf("Founder", "CEO", "Writer"))
+                    key("age").isEqualTo(33)
+                }
+            }
+            index(1).all {
+                prop(DatasourceRecord<Map<String, Any>?>::ordinal).isEqualTo(1L)
+                prop(DatasourceRecord<Map<String, Any>?>::value).isNotNull().all {
+                    key("name").isEqualTo("test-2")
+                    key("position").isEqualTo(listOf("Founder", "CTO"))
+                    key("age").isEqualTo(35)
+                }
+            }
+        }
+    }
+
+    private suspend fun <T : Any> executeStep(
+        coroutineScope: CoroutineScope,
+        specification: StepSpecification<*, *, *>
+    ): List<DatasourceRecord<T?>> {
+        val spec = specification as JsonReaderStepSpecification<T>
+        val result = mutableListOf<DatasourceRecord<T?>>()
+        val creationContext = StepCreationContextImpl(relaxedMockk(), relaxedMockk(), spec)
+        val stepContext = TestStepContext<Unit, DatasourceRecord<T?>>(
+            minionId = "",
+            scenarioId = "",
+            directedAcyclicGraphId = "",
+            stepId = ""
+        )
+
+        val latch = Latch(true)
+        coroutineScope.launch {
+            for (outputRecord in stepContext.output as Channel) {
+                result.add(outputRecord)
+            }
+            latch.release()
+        }
+
+        converter.convert<Unit, DatasourceRecord<T?>>(
+            creationContext as StepCreationContext<JsonReaderStepSpecification<*>>
+        )
+        (creationContext.createdStep!! as Step<Unit, DatasourceRecord<T?>>).apply {
+            start(relaxedMockk())
+            execute(stepContext)
+            stop(relaxedMockk())
+            stepContext.output.close()
+        }
+
+        latch.await()
+
+        assertThat(stepContext.errors).isEqualTo(emptyList())
+        return result
+    }
+
+    data class PojoForTest(
+        val name: String,
+        val age: Int,
+        val position: List<String>
+    )
+}
