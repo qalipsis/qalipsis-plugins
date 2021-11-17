@@ -16,8 +16,17 @@ import com.rabbitmq.client.Delivery
 import com.rabbitmq.client.Envelope
 import com.rabbitmq.client.MessageProperties
 import io.aerisconsulting.catadioptre.getProperty
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Tag
+import io.mockk.impl.annotations.RelaxedMockK
+import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.plugins.rabbitmq.Constants.DOCKER_IMAGE
+import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
+import io.qalipsis.test.mockk.verifyExactly
+import io.qalipsis.test.mockk.verifyNever
+import io.qalipsis.test.mockk.verifyOnce
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -38,6 +47,7 @@ import kotlin.math.pow
  * @author Gabriel Moraes
  */
 @Testcontainers
+@WithMockk
 internal class RabbitMqConsumerIterativeReaderIntegrationTest {
 
     private lateinit var connection: Connection
@@ -47,6 +57,12 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     private lateinit var reader: RabbitMqConsumerIterativeReader
 
     private val factory = ConnectionFactory()
+
+    @RelaxedMockK
+    private lateinit var meterRegistry: MeterRegistry
+
+    @RelaxedMockK
+    private lateinit var eventsLogger: EventsLogger
 
     @BeforeEach
     internal fun setUp() {
@@ -60,6 +76,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
 
             initialized = true
         }
+
     }
 
     @AfterAll
@@ -97,7 +114,14 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     @Test
     @Timeout(10)
     internal fun `should always have next at start but not at stop`() = runBlocking {
-        reader = RabbitMqConsumerIterativeReader(2, 20, "test", factory)
+        reader = RabbitMqConsumerIterativeReader(
+            2,
+            20,
+            "test",
+            factory,
+            meterRegistry,
+            eventsLogger
+        )
 
         reader.start(relaxedMockk())
         Assertions.assertTrue(reader.hasNext())
@@ -114,7 +138,14 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
         val channel = connection.createChannel()
         createExchangeAndQueue(channel, queueName)
 
-        reader = RabbitMqConsumerIterativeReader(2, 20, queueName, factory)
+        reader = RabbitMqConsumerIterativeReader(
+            2,
+            20,
+            queueName,
+            factory,
+            meterRegistry,
+            eventsLogger
+        )
         reader.start(relaxedMockk())
         val initialChannel = reader.getProperty<kotlinx.coroutines.channels.Channel<*>>("resultChannel")
 
@@ -133,7 +164,8 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
 
         reader.stop(relaxedMockk())
 
-        assertThat(afterStopStartChannel).isInstanceOf(kotlinx.coroutines.channels.Channel::class).isNotEqualTo(initialChannel)
+        assertThat(afterStopStartChannel).isInstanceOf(kotlinx.coroutines.channels.Channel::class)
+            .isNotEqualTo(initialChannel)
         assertThat(received).all {
             hasSize(10)
             index(0).all {
@@ -149,9 +181,17 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
 
     @Test
     @Timeout(10)
-    internal fun `should consume all the data from queue in a direct exchange type`() = runBlocking {
+    internal fun `should work without monitoring`() = runBlocking {
         val queueName = "test"
-        reader = RabbitMqConsumerIterativeReader(2, 20, queueName, factory)
+
+        reader = RabbitMqConsumerIterativeReader(
+            2,
+            20,
+            queueName,
+            factory,
+            null,
+            null
+        )
 
         val channel = connection.createChannel()
 
@@ -159,6 +199,16 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
         val recordsPublished = publishRecords(channel, queueName)
 
         reader.start(relaxedMockk())
+
+        verifyNever {
+            meterRegistry.counter("rabbitmq-consume-bytes", any<Iterable<Tag>>())
+            meterRegistry.counter("rabbitmq-consume-records", any<Iterable<Tag>>())
+        }
+
+        verifyNever {
+            eventsLogger.info("rabbitmq.consume.records", any<Int>(), any(), tags = any<Map<String, String>>())
+            eventsLogger.info("rabbitmq.consume.bytes", any<Int>(), any(), tags = any<Map<String, String>>())
+        }
 
         // when
         val received = mutableListOf<Delivery>()
@@ -187,6 +237,68 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
         }
 
         reader.stop(relaxedMockk())
+
+        verifyNever {
+            meterRegistry.remove(any<Counter>())
+        }
+    }
+
+    @Test
+    @Timeout(10)
+    internal fun `should consume all the data from queue in a direct exchange type`() = runBlocking {
+        val queueName = "test"
+
+        reader = RabbitMqConsumerIterativeReader(
+            2,
+            20,
+            queueName,
+            factory,
+            meterRegistry,
+            eventsLogger
+        )
+
+        val channel = connection.createChannel()
+
+        createExchangeAndQueue(channel, queueName)
+        val recordsPublished = publishRecords(channel, queueName)
+
+        reader.start(relaxedMockk())
+
+        verifyOnce {
+            meterRegistry.counter("rabbitmq-consume-bytes", any<Iterable<Tag>>())
+            meterRegistry.counter("rabbitmq-consume-records", any<Iterable<Tag>>())
+        }
+        // when
+        val received = mutableListOf<Delivery>()
+        while (received.size < 100) {
+            val records = reader.next()
+            received.add(records)
+        }
+
+        assertThat(received).all {
+            hasSize(100)
+            index(0).all {
+                prop("envelope") { Delivery::getEnvelope.call(it) }.all {
+                    prop("exchange") { Envelope::getExchange.call(it) }.isEqualTo("test")
+                }
+            }
+            transform { delivery -> delivery.map { it.body.decodeToString() } }.all {
+                containsAll(*recordsPublished.toTypedArray())
+            }
+        }
+
+        // No other message will be read.
+        assertThrows<TimeoutCancellationException> {
+            withTimeout(1000) {
+                reader.next()
+            }
+        }
+
+        reader.stop(relaxedMockk())
+
+        verifyExactly(2) {
+            meterRegistry.remove(any<Counter>())
+        }
     }
 
     @Test
@@ -194,7 +306,14 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     internal fun `should consume all the data from queue in a fanout exchange type`() = runBlocking {
         val exchangeName = "test-fanout"
         val queueName = "test-fanout-queue"
-        reader = RabbitMqConsumerIterativeReader(2, 20, queueName, factory)
+        reader = RabbitMqConsumerIterativeReader(
+            2,
+            20,
+            queueName,
+            factory,
+            meterRegistry,
+            eventsLogger
+        )
 
         val channel = connection.createChannel()
 
@@ -242,7 +361,14 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     internal fun `should consume all the data from queue in a topic exchange type`() = runBlocking {
         val exchangeName = "test-topic"
         val queueName = "test-topic-queue"
-        reader = RabbitMqConsumerIterativeReader(2, 20, queueName, factory)
+        reader = RabbitMqConsumerIterativeReader(
+            2,
+            20,
+            queueName,
+            factory,
+            meterRegistry,
+            eventsLogger
+        )
 
         val channel = connection.createChannel()
 

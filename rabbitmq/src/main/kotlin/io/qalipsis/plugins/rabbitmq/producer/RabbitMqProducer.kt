@@ -21,14 +21,13 @@ import javax.validation.constraints.Positive
  *
  * @property concurrency quantity of concurrent producers.
  * @property connectionFactory supplier to create the connection with the RabbitMQ broker.
- * @property metrics the metrics for the produce operation
+ * @property monitoring the metrics for the produce operation
  *
  * @author Alexander Sosnovsky
  */
 internal class RabbitMqProducer(
     @Positive private val concurrency: Int,
-    private val connectionFactory: ConnectionFactory,
-    private val metrics: RabbitMqProducerMetrics,
+    private val connectionFactory: ConnectionFactory
 ) {
 
     private lateinit var executorService: ExecutorService
@@ -62,8 +61,6 @@ internal class RabbitMqProducer(
                         connection.createChannel()
                     }.run {
                         basicPublish(message.exchange, message.routingKey, message.props, message.value)
-                        metrics.countRecord()
-                        metrics.countBytes(message.value.size.toDouble())
                     }
                 } catch (e: InterruptedException) {
                     // Nothing to do here.

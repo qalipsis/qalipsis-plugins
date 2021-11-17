@@ -6,7 +6,7 @@ import io.aerisconsulting.catadioptre.KTestable
 import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.context.StepId
-import io.qalipsis.api.lang.supplyIf
+import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.messaging.deserializer.MessageDeserializer
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
@@ -26,6 +26,7 @@ import java.time.Duration
  */
 @StepConverter
 internal class RabbitMqConsumerStepSpecificationConverter(
+    private val eventsLogger: EventsLogger,
     private val meterRegistry: MeterRegistry
 ) : StepSpecificationConverter<RabbitMqConsumerStepSpecificationImpl<*>> {
 
@@ -41,20 +42,22 @@ internal class RabbitMqConsumerStepSpecificationConverter(
             spec.concurrency,
             spec.prefetchCount,
             spec.queueName,
-            buildConnectionFactory(spec.connectionConfiguration)
+            buildConnectionFactory(spec.connectionConfiguration),
+            meterRegistry.takeIf { spec.monitoringConfig.meters },
+            eventsLogger.takeIf { spec.monitoringConfig.events }
         )
 
         val step = IterativeDatasourceStep(
             stepId,
             reader,
             NoopDatasourceObjectProcessor(),
-            buildConverter(stepId, spec.valueDeserializer, spec.metrics)
+            buildConverter(stepId, spec.valueDeserializer)
         )
         creationContext.createdStep(step)
     }
 
     @KTestable
-    private fun buildConnectionFactory(connectionConfiguration: RabbitMqConnectionConfiguration): ConnectionFactory {
+    fun buildConnectionFactory(connectionConfiguration: RabbitMqConnectionConfiguration): ConnectionFactory {
         val connectionFactory = ConnectionFactory()
 
         connectionFactory.host = connectionConfiguration.host
@@ -70,24 +73,14 @@ internal class RabbitMqConsumerStepSpecificationConverter(
         return connectionFactory
     }
 
-    private fun buildConverter(
+    @KTestable
+    fun buildConverter(
         stepId: StepId,
-        valueDeserializer: MessageDeserializer<*>,
-        metricsConfiguration: RabbitMqConsumerMetricsConfiguration
+        valueDeserializer: MessageDeserializer<*>
     ): DatasourceObjectConverter<Delivery, out Any?> {
 
-        val consumedValueBytesCounter = supplyIf(metricsConfiguration.valuesBytesCount) {
-            meterRegistry.counter("rabbitmq-consumer-value-bytes", "step", stepId)
-        }
-
-        val consumedRecordsCounter = supplyIf (metricsConfiguration.recordsCount) {
-            meterRegistry.counter("rabbitmq-consumer-records", "step", stepId)
-        }
-
         return RabbitMqConsumerConverter(
-            valueDeserializer,
-            consumedValueBytesCounter,
-            consumedRecordsCounter
+            valueDeserializer as MessageDeserializer<Any>
         )
     }
 

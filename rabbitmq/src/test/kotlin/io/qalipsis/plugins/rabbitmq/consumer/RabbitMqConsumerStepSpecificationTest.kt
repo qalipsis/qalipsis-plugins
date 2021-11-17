@@ -41,10 +41,6 @@ internal class rabbitmqConsumerStepSpecificationTest {
             }
 
             prop(RabbitMqConsumerStepSpecificationImpl<*>::concurrency).isEqualTo(1)
-            prop(RabbitMqConsumerStepSpecificationImpl<*>::metrics).all {
-                prop(RabbitMqConsumerMetricsConfiguration::recordsCount).isFalse()
-                prop(RabbitMqConsumerMetricsConfiguration::valuesBytesCount).isFalse()
-            }
             prop(RabbitMqConsumerStepSpecificationImpl<*>::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.UNICAST)
                 prop(SingletonConfiguration::bufferSize).isEqualTo(-1)
@@ -63,10 +59,6 @@ internal class rabbitmqConsumerStepSpecificationTest {
             queue("complete-test")
             concurrency(10)
             prefetchCount(20)
-            metrics {
-                recordsCount = true
-                valuesBytesCount = true
-            }
             connection {
                 host = "anotherhost"
                 port = 5673
@@ -91,10 +83,6 @@ internal class rabbitmqConsumerStepSpecificationTest {
             }
 
             prop(RabbitMqConsumerStepSpecificationImpl<*>::concurrency).isEqualTo(10)
-            prop(RabbitMqConsumerStepSpecificationImpl<*>::metrics).all {
-                prop(RabbitMqConsumerMetricsConfiguration::recordsCount).isTrue()
-                prop(RabbitMqConsumerMetricsConfiguration::valuesBytesCount).isTrue()
-            }
             prop(RabbitMqConsumerStepSpecificationImpl<*>::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.UNICAST)
                 prop(SingletonConfiguration::bufferSize).isEqualTo(6)

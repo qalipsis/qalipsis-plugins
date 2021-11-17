@@ -20,7 +20,6 @@ import io.qalipsis.plugins.rabbitmq.consumer.RabbitMqConsumerRecord
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.mockk.CleanMockkRecordedCalls
 import io.qalipsis.test.mockk.relaxedMockk
-import io.qalipsis.test.mockk.verifyExactly
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Test
@@ -37,43 +36,19 @@ internal class RabbitMqConsumerConverterTest {
         every { deserialize(any()) } answers { firstArg<ByteArray>().decodeToString() }
     }
 
-    private val counter: Counter = relaxedMockk {}
+    private val counterBytes: Counter = relaxedMockk {}
 
     @Test
     @Timeout(2)
     fun `should deserialize without monitoring`() = runBlockingTest {
-        executeConversion()
+        executeConversion(valueSerializer = valueSerializer)
 
-        confirmVerified(counter, valueSerializer)
+        confirmVerified(counterBytes, valueSerializer)
     }
 
-    @Test
-    @Timeout(2)
-    fun `should deserialize and count the values bytes`() = runBlockingTest {
-        executeConversion(consumedValueBytesCounter = counter)
-
-        verify {
-            counter.increment(7.0)
-            counter.increment(8.0)
-            counter.increment(8.0)
-        }
-
-        confirmVerified(counter, valueSerializer)
-    }
-
-    @Test
-    @Timeout(2)
-    fun `should deserialize and count the records`() = runBlockingTest {
-        executeConversion(consumedRecordsCounter = counter)
-
-        verifyExactly(3) {
-            counter.increment()
-        }
-
-        confirmVerified(counter, valueSerializer)
-    }
 
     private suspend fun executeConversion(
+        valueSerializer: MessageDeserializer<String>,
         consumedValueBytesCounter: Counter? = null,
         consumedRecordsCounter: Counter? = null
     ) {
@@ -92,9 +67,7 @@ internal class RabbitMqConsumerConverterTest {
         )
 
         val converter = RabbitMqConsumerConverter(
-            valueSerializer,
-            consumedValueBytesCounter,
-            consumedRecordsCounter
+            valueSerializer
         )
         val channel = Channel<RabbitMqConsumerRecord<String>>(3)
         val output = relaxedMockk<StepOutput<RabbitMqConsumerRecord<String>>> {
@@ -107,6 +80,7 @@ internal class RabbitMqConsumerConverterTest {
         converter.supply(AtomicLong(120), deliveryMessage1, output)
         converter.supply(AtomicLong(121), deliveryMessage2, output)
         converter.supply(AtomicLong(122), deliveryMessage3, output)
+
 
         // receives messages converted sent in the output channel.
         val results = listOf(channel.receive(), channel.receive(), channel.receive())

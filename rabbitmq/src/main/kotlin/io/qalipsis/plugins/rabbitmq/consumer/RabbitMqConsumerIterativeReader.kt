@@ -5,7 +5,11 @@ import com.rabbitmq.client.Connection
 import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.DeliverCallback
 import com.rabbitmq.client.Delivery
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Tags
 import io.qalipsis.api.context.StepStartStopContext
+import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLog
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.steps.datasource.DatasourceIterativeReader
@@ -32,7 +36,9 @@ internal class RabbitMqConsumerIterativeReader(
     @Positive private val concurrency: Int,
     private val prefetchCount: Int,
     private val queue: String,
-    private val connectionFactory: ConnectionFactory
+    private val connectionFactory: ConnectionFactory,
+    private val meterRegistry: MeterRegistry?,
+    private val eventsLogger: EventsLogger?
 ) : DatasourceIterativeReader<Delivery> {
 
     private lateinit var executorService: ExecutorService
@@ -45,7 +51,25 @@ internal class RabbitMqConsumerIterativeReader(
 
     private lateinit var connection: Connection
 
+    private val eventPrefix = "rabbitmq.consume"
+
+    private val meterPrefix: String = "rabbitmq-consume"
+
+    private var meterBytesCounter: Counter? = null
+
+    private var meterRecordsCounter: Counter? = null
+
+    private var meterTags: Tags? = null
+
+    private var eventTags: Map<String, String>? = null
+
     override fun start(context: StepStartStopContext) {
+
+        meterTags = context.toMetersTags()
+        eventTags = context.toEventTags()
+
+        initMonitoringMetrics()
+
         running = true
 
         resultChannel = Channel(Channel.UNLIMITED)
@@ -62,6 +86,13 @@ internal class RabbitMqConsumerIterativeReader(
         }
     }
 
+    private fun initMonitoringMetrics() {
+        meterRegistry?.apply {
+            meterBytesCounter = meterRegistry.counter("${meterPrefix}-bytes", meterTags)
+            meterRecordsCounter = meterRegistry.counter("${meterPrefix}-records", meterTags)
+        }
+    }
+
     private fun startConsumer(connection: Connection) {
         val channel = connection.createChannel()
         channels.add(channel)
@@ -71,13 +102,23 @@ internal class RabbitMqConsumerIterativeReader(
             channel.basicConsume(queue, false,
                 DeliverCallback { consumerTag, message ->
                     log.trace { "Message received for consumer tag: $consumerTag" }
-                    resultChannel?.trySend(message)?.getOrThrow()
+                    updateMonitoringStats(message.body)
+                    resultChannel?.trySend(message)
                     channel.basicAck(message.envelope.deliveryTag, false)
                 },
                 CancelCallback { }
             )
         } catch (e: Exception) {
             log.error(e) { "An error occurred in the rabbitMQ consumer: ${e.message}" }
+        }
+    }
+
+    private fun updateMonitoringStats(message: ByteArray) {
+        meterBytesCounter?.increment(message.size.toDouble())
+        meterRecordsCounter?.increment()
+        eventsLogger?.apply {
+            info("${eventPrefix}.bytes", message.size, tags = eventTags!!)
+            info("${eventPrefix}.records", 1, tags = eventTags!!)
         }
     }
 
@@ -94,7 +135,19 @@ internal class RabbitMqConsumerIterativeReader(
         executorService.awaitTermination(2 * CLOSE_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
 
         resultChannel = null
+
+        stopMonitoringMetrics()
+
         log.debug { "RabbitMQ consumer was stopped" }
+    }
+
+    private fun stopMonitoringMetrics() {
+        meterRegistry?.apply {
+            remove(meterBytesCounter)
+            remove(meterRecordsCounter)
+            meterBytesCounter = null
+            meterRecordsCounter = null
+        }
     }
 
     override suspend fun hasNext(): Boolean {

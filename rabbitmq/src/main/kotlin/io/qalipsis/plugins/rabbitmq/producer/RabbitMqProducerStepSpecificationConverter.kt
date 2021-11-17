@@ -4,8 +4,7 @@ import com.rabbitmq.client.ConnectionFactory
 import io.aerisconsulting.catadioptre.KTestable
 import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.annotations.StepConverter
-import io.qalipsis.api.context.StepName
-import io.qalipsis.api.lang.supplyIf
+import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
@@ -22,7 +21,8 @@ import java.time.Duration
 @ExperimentalCoroutinesApi
 @StepConverter
 internal class RabbitMqProducerStepSpecificationConverter(
-    private val meterRegistry: MeterRegistry
+    private val meterRegistry: MeterRegistry,
+    private val eventsLogger: EventsLogger
 ) : StepSpecificationConverter<RabbitMqProducerStepSpecificationImpl<*>> {
 
     override fun support(stepSpecification: StepSpecification<*, *, *>): Boolean {
@@ -32,15 +32,18 @@ internal class RabbitMqProducerStepSpecificationConverter(
     override suspend fun <I, O> convert(creationContext: StepCreationContext<RabbitMqProducerStepSpecificationImpl<*>>) {
         val spec = creationContext.stepSpecification
         val stepId = spec.name
-        val metrics = buildMetrics(spec.metrics, stepId)
-        val producer = RabbitMqProducer(4, buildConnectionFactory(spec.connectionConfiguration), metrics)
+        val producer = RabbitMqProducer(4, buildConnectionFactory(spec.connectionConfiguration))
+        val rabbitMqProducerResult = RabbitMqProducerResult()
 
         @Suppress("UNCHECKED_CAST")
-        val step = RabbitMqProducerStep<String>(
+        val step = RabbitMqProducerStep(
             stepId = stepId,
             retryPolicy = spec.retryPolicy,
             recordFactory = spec.recordsFactory,
-            rabbitMqProducer = producer
+            rabbitMqProducer = producer,
+            rabbitMqProducerResult = rabbitMqProducerResult,
+            eventsLogger = eventsLogger.takeIf { spec.monitoring.events },
+            meterRegistry = meterRegistry.takeIf { spec.monitoring.meters }
         )
         creationContext.createdStep(step)
     }
@@ -60,21 +63,6 @@ internal class RabbitMqProducerStepSpecificationConverter(
         connectionFactory.useNio()
 
         return connectionFactory
-    }
-
-    @KTestable
-    private fun buildMetrics(metrics: RabbitMqProducerMetricsConfiguration, stepId: StepName): RabbitMqProducerMetrics {
-        val producedBytesCounter = supplyIf(metrics.bytesCount) {
-            meterRegistry.counter("rabbitmq-producer-sent-bytes", "step", stepId)
-        }
-        val producedRecordsCounter = supplyIf(metrics.recordsCount) {
-            meterRegistry.counter("rabbitmq-producer-records", "step", stepId)
-        }
-
-        return RabbitMqProducerMetrics(
-            producedBytesCounter = producedBytesCounter,
-            producedRecordsCounter = producedRecordsCounter
-        )
     }
 
     companion object {

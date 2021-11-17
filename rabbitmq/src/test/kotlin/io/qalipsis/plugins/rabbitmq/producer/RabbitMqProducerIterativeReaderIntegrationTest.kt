@@ -14,7 +14,6 @@ import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.slot
 import io.qalipsis.plugins.rabbitmq.Constants.DOCKER_IMAGE
 import io.qalipsis.test.mockk.WithMockk
-import io.qalipsis.test.mockk.verifyOnce
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -66,11 +65,7 @@ internal class RabbitMqProducerIterativeReaderIntegrationTest {
 
         val producerClient = RabbitMqProducer(
             concurrency = 1,
-            connectionFactory = factory,
-            metrics = RabbitMqProducerMetrics(
-                producedBytesCounter = byteCounter,
-                producedRecordsCounter = recordCounter
-            )
+            connectionFactory = factory
         )
 
         val countDownLatch = CountDownLatch(1)
@@ -110,8 +105,6 @@ internal class RabbitMqProducerIterativeReaderIntegrationTest {
         assertThat(receivedMessage.captured).all {
             prop(Delivery::getBody).isEqualTo("text-2".toByteArray())
         }
-        verifyOnce { byteCounter.increment("text-2".toByteArray().size.toDouble()) }
-        verifyOnce { recordCounter.increment() }
     }
 
     companion object {

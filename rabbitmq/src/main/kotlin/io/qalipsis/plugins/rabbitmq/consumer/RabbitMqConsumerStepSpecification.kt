@@ -9,6 +9,7 @@ import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonStepSpecification
 import io.qalipsis.api.steps.SingletonType
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.UnicastSpecification
 import io.qalipsis.plugins.rabbitmq.RabbitMqScenarioSpecification
@@ -45,9 +46,9 @@ interface RabbitMqConsumerStepSpecification<V : Any> : UnicastSpecification,
     fun concurrency(concurrency: Int)
 
     /**
-     * Configures the metrics to apply, default to none.
+     * Configures the monitoring to apply, default to none.
      */
-    fun metrics(metricsConfiguration: RabbitMqConsumerMetricsConfiguration.() -> Unit)
+    fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit)
 }
 
 interface RabbitMqDeserializerSpecification<V : Any> :
@@ -91,11 +92,11 @@ internal class RabbitMqConsumerStepSpecificationImpl<V : Any> internal construct
 
     internal var valueDeserializer = deserializer
 
-    internal val metrics = RabbitMqConsumerMetricsConfiguration()
-
     override val singletonConfiguration: SingletonConfiguration = SingletonConfiguration(SingletonType.UNICAST)
 
     internal var connectionConfiguration = RabbitMqConnectionConfiguration()
+
+    internal var monitoringConfig = StepMonitoringConfiguration()
 
     @field:NotBlank
     internal var queueName = ""
@@ -105,6 +106,10 @@ internal class RabbitMqConsumerStepSpecificationImpl<V : Any> internal construct
 
     @field:Min(1)
     internal var concurrency: Int = 1
+
+    override fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit) {
+        this.monitoringConfig.monitoringConfig()
+    }
 
     override fun connection(configurationBlock: RabbitMqConnectionConfiguration.() -> Unit) {
         connectionConfiguration.configurationBlock()
@@ -120,10 +125,6 @@ internal class RabbitMqConsumerStepSpecificationImpl<V : Any> internal construct
 
     override fun concurrency(concurrency: Int) {
         this.concurrency = concurrency
-    }
-
-    override fun metrics(metricsConfiguration: RabbitMqConsumerMetricsConfiguration.() -> Unit) {
-        metrics.metricsConfiguration()
     }
 
     override fun forwardOnce(bufferSize: Int, idleTimeout: Duration) {
@@ -166,20 +167,6 @@ internal class RabbitMqConsumerStepSpecificationImpl<V : Any> internal construct
     }
 
 }
-
-/**
- * Configuration of the metrics to record for the RabbitMQ consumer.
- *
- * @property valuesBytesCount when true, records the number of bytes consumed for the serialized values.
- * @property recordsCount when true, records the number of consumed messages.
- *
- * @author Gabriel Moraes
- */
-@Spec
-data class RabbitMqConsumerMetricsConfiguration(
-    var valuesBytesCount: Boolean = false,
-    var recordsCount: Boolean = false,
-)
 
 /**
  * Creates a RabbitMQ consumers to received pushed data from queues of a RabbitMQ broker and forward each message

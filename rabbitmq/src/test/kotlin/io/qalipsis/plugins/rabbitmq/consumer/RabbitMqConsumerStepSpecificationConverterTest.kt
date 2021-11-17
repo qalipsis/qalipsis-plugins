@@ -9,25 +9,19 @@ import assertk.assertions.isNull
 import assertk.assertions.isSameAs
 import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.Delivery
-import io.aerisconsulting.catadioptre.invokeInvisible
-import io.micrometer.core.instrument.Counter
-import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.slot
 import io.mockk.spyk
-import io.qalipsis.api.messaging.deserializer.MessageJsonDeserializer
 import io.qalipsis.api.messaging.deserializer.MessageStringDeserializer
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepCreationContextImpl
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
-import io.qalipsis.plugins.rabbitmq.consumer.converter.RabbitMqConsumerConverter
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
-import io.qalipsis.test.mockk.verifyOnce
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Assertions
@@ -70,18 +64,17 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
 
-        val spiedConverter = spyk(converter, recordPrivateCalls = true)
+        val spiedConverter = spyk(converter)
         val recordsConverter: DatasourceObjectConverter<Delivery, out Any?> = relaxedMockk()
 
         every {
-            spiedConverter["buildConverter"](
+            spiedConverter.buildConverter(
                 eq("my-step"),
-                refEq(spec.valueDeserializer),
-                refEq(spec.metrics)
+                refEq(spec.valueDeserializer)
             )
         } returns recordsConverter
 
-        every { spiedConverter["buildConnectionFactory"](refEq(spec.connectionConfiguration)) } returns mockkedConnectionFactory
+        every { spiedConverter.buildConnectionFactory(refEq(spec.connectionConfiguration)) } returns mockkedConnectionFactory
 
         // when
         spiedConverter.convert<Unit, Map<String, *>>(
@@ -118,19 +111,18 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
 
-        val spiedConverter = spyk(converter, recordPrivateCalls = true)
+        val spiedConverter = spyk(converter)
         val recordsConverter: DatasourceObjectConverter<Delivery, out Any?> = relaxedMockk()
         val stepIdSlot = slot<String>()
 
         every {
-            spiedConverter["buildConverter"](
+            spiedConverter.buildConverter(
                 capture(stepIdSlot),
-                refEq(spec.valueDeserializer),
-                refEq(spec.metrics)
+                refEq(spec.valueDeserializer)
             )
         } returns recordsConverter
 
-        every { spiedConverter["buildConnectionFactory"](refEq(spec.connectionConfiguration)) } returns mockkedConnectionFactory
+        every { spiedConverter.buildConnectionFactory(refEq(spec.connectionConfiguration)) } returns mockkedConnectionFactory
 
         // when
         spiedConverter.convert<Unit, Map<String, *>>(
@@ -154,75 +146,104 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should build single converter`() {
+    internal fun `should log meters`() = runBlockingTest {
+        // given
+        val deserializer = MessageStringDeserializer()
+        val spec = RabbitMqConsumerStepSpecificationImpl(deserializer)
+        spec.monitoringConfig.meters = true
+        spec.apply {
+            connection {
+                host = "localhost"
+            }
+            concurrency(2)
+            queue("name2")
+        }
+        val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
 
-        val monitoringConfiguration = RabbitMqConsumerMetricsConfiguration()
-        val valueDeserializer = MessageStringDeserializer()
+        val spiedConverter = spyk(converter)
+        val recordsConverter: DatasourceObjectConverter<Delivery, out Any?> = relaxedMockk()
+        val stepIdSlot = slot<String>()
+
+        every {
+            spiedConverter.buildConverter(
+                capture(stepIdSlot),
+                refEq(spec.valueDeserializer)
+            )
+        } returns recordsConverter
+
+        every { spiedConverter.buildConnectionFactory(refEq(spec.connectionConfiguration)) } returns mockkedConnectionFactory
 
         // when
-        val recordsConverter = converter.invokeInvisible<DatasourceObjectConverter<Delivery, out Any?>>("buildConverter","my-step", valueDeserializer, monitoringConfiguration)
+        spiedConverter.convert<Unit, Map<String, *>>(
+            creationContext as StepCreationContext<RabbitMqConsumerStepSpecificationImpl<*>>
+        )
 
         // then
-        assertThat(recordsConverter).isNotNull().isInstanceOf(RabbitMqConsumerConverter::class).all {
-            prop("valueDeserializer").isSameAs(valueDeserializer)
-            prop("consumedValueBytesCounter").isNull()
-            prop("consumedRecordsCounter").isNull()
+        creationContext.createdStep!!.let {
+            assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
+                prop("id").isNotNull().isEqualTo(stepIdSlot.captured)
+                prop("reader").isNotNull().isInstanceOf(RabbitMqConsumerIterativeReader::class).all {
+                    prop("meterRegistry").isSameAs(meterRegistry)
+                    prop("eventsLogger").isNull()
+                    prop("prefetchCount").isEqualTo(10)
+                    prop("concurrency").isEqualTo(2)
+                    prop("queue").isEqualTo("name2")
+                    prop("connectionFactory").isEqualTo(mockkedConnectionFactory)
+                }
+                prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
+                prop("converter").isNotNull().isSameAs(recordsConverter)
+            }
         }
     }
 
     @Test
-    internal fun `should build single converter with json deserializer`() {
+    internal fun `should log events`() = runBlockingTest {
+        // given
+        val deserializer = MessageStringDeserializer()
+        val spec = RabbitMqConsumerStepSpecificationImpl(deserializer)
+        spec.monitoringConfig.events = true
+        spec.apply {
+            connection {
+                host = "localhost"
+            }
+            concurrency(2)
+            queue("name2")
+        }
+        val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
 
-        val monitoringConfiguration = RabbitMqConsumerMetricsConfiguration()
-        val jsonValueDeserializer = MessageJsonDeserializer(String::class)
+        val spiedConverter = spyk(converter)
+        val recordsConverter: DatasourceObjectConverter<Delivery, out Any?> = relaxedMockk()
+        val stepIdSlot = slot<String>()
+
+        every {
+            spiedConverter.buildConverter(
+                capture(stepIdSlot),
+                refEq(spec.valueDeserializer)
+            )
+        } returns recordsConverter
+
+        every { spiedConverter.buildConnectionFactory(refEq(spec.connectionConfiguration)) } returns mockkedConnectionFactory
 
         // when
-        val recordsConverter = converter.invokeInvisible<DatasourceObjectConverter<Delivery, out Any?>>("buildConverter","my-step", jsonValueDeserializer, monitoringConfiguration)
+        spiedConverter.convert<Unit, Map<String, *>>(
+            creationContext as StepCreationContext<RabbitMqConsumerStepSpecificationImpl<*>>
+        )
 
         // then
-        assertThat(recordsConverter).isNotNull().isInstanceOf(RabbitMqConsumerConverter::class).all {
-            prop("valueDeserializer").isSameAs(jsonValueDeserializer)
-            prop("consumedValueBytesCounter").isNull()
-            prop("consumedRecordsCounter").isNull()
+        creationContext.createdStep!!.let {
+            assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
+                prop("id").isNotNull().isEqualTo(stepIdSlot.captured)
+                prop("reader").isNotNull().isInstanceOf(RabbitMqConsumerIterativeReader::class).all {
+                    prop("meterRegistry").isNull()
+                    prop("eventsLogger").isSameAs(eventsLogger)
+                    prop("prefetchCount").isEqualTo(10)
+                    prop("concurrency").isEqualTo(2)
+                    prop("queue").isEqualTo("name2")
+                    prop("connectionFactory").isEqualTo(mockkedConnectionFactory)
+                }
+                prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
+                prop("converter").isNotNull().isSameAs(recordsConverter)
+            }
         }
     }
-
-    @Test
-    internal fun `should build converter with value bytes counter`() {
-        val monitoringConfiguration = RabbitMqConsumerMetricsConfiguration(valuesBytesCount = true)
-        val valueDeserializer = MessageStringDeserializer()
-        // when
-        val recordsConverter = converter.invokeInvisible<DatasourceObjectConverter<Delivery, out Any?>>("buildConverter","my-step", valueDeserializer, monitoringConfiguration)
-
-        // then
-        assertThat(recordsConverter).isNotNull().isInstanceOf(RabbitMqConsumerConverter::class).all {
-            prop("valueDeserializer").isSameAs(valueDeserializer)
-            prop("consumedValueBytesCounter").isNotNull().isInstanceOf(Counter::class)
-            prop("consumedRecordsCounter").isNull()
-        }
-        verifyOnce {
-            meterRegistry.counter("rabbitmq-consumer-value-bytes", "step", "my-step")
-        }
-        confirmVerified(meterRegistry)
-    }
-
-    @Test
-    internal fun `should build converter with records counter`() {
-        val monitoringConfiguration = RabbitMqConsumerMetricsConfiguration(recordsCount = true)
-        val valueDeserializer = MessageStringDeserializer()
-        // when
-        val recordsConverter = converter.invokeInvisible<DatasourceObjectConverter<Delivery, out Any?>>("buildConverter","my-step", valueDeserializer, monitoringConfiguration)
-
-        // then
-        assertThat(recordsConverter).isNotNull().isInstanceOf(RabbitMqConsumerConverter::class).all {
-            prop("valueDeserializer").isSameAs(valueDeserializer)
-            prop("consumedValueBytesCounter").isNull()
-            prop("consumedRecordsCounter").isNotNull().isInstanceOf(Counter::class)
-        }
-        verifyOnce {
-            meterRegistry.counter("rabbitmq-consumer-records", "step", "my-step")
-        }
-        confirmVerified(meterRegistry)
-    }
-
 }

@@ -4,6 +4,7 @@ import com.rabbitmq.client.ConnectionFactory
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.rabbitmq.RabbitMqStepSpecification
 import io.qalipsis.plugins.rabbitmq.configuration.RabbitMqConnectionConfiguration
@@ -31,9 +32,9 @@ interface RabbitMqProducerStepSpecification<I> :
     fun records(recordsFactory: suspend (ctx: StepContext<*, *>, input: Any) -> List<RabbitMqProducerRecord>)
 
     /**
-     * Configures the metrics of the step.
+     * Configures the monitoring of the step.
      */
-    fun metrics(metricsConfiguration: RabbitMqProducerMetricsConfiguration.() -> Unit)
+    fun monitoring(monitoringConfiguration: StepMonitoringConfiguration.() -> Unit)
 
     /**
      * Defines the number of concurrent channels producing messages to RabbitMQ, defaults to 1.
@@ -54,11 +55,12 @@ internal class RabbitMqProducerStepSpecificationImpl<I> :
 
     internal lateinit var connectionFactory: ConnectionFactory
 
-    internal var recordsFactory: suspend (ctx: StepContext<*, *>, input: Any) -> List<RabbitMqProducerRecord> = { _, _ -> listOf() }
+    internal var recordsFactory: suspend (ctx: StepContext<*, *>, input: Any) -> List<RabbitMqProducerRecord> =
+        { _, _ -> listOf() }
 
     internal var connectionConfiguration = RabbitMqConnectionConfiguration()
 
-    internal val metrics = RabbitMqProducerMetricsConfiguration()
+    internal var monitoring = StepMonitoringConfiguration()
 
     @field:Min(1)
     internal var concurrency: Int = 1
@@ -71,28 +73,14 @@ internal class RabbitMqProducerStepSpecificationImpl<I> :
         this.recordsFactory = recordsFactory
     }
 
-    override fun metrics(metricsConfiguration: RabbitMqProducerMetricsConfiguration.() -> Unit) {
-        metrics.metricsConfiguration()
+    override fun monitoring(monitoringConfiguration: StepMonitoringConfiguration.() -> Unit) {
+        monitoringConfiguration.apply { monitoring }
     }
 
     override fun concurrency(concurrency: Int) {
         this.concurrency = concurrency
     }
 }
-
-/**
- * Configuration of the metrics to record for the RabbitMQ producer.
- *
- * @property bytesCount when true, records the number of bytes produced messages.
- * @property recordsCount when true, records the number of produced messages.
- *
- * @author Alexander Sosnovsky
- */
-@Spec
-data class RabbitMqProducerMetricsConfiguration(
-    var bytesCount: Boolean = false,
-    var recordsCount: Boolean = false,
-)
 
 /**
  * Provides messages to RabbitMQ broker using a io.qalipsis.plugins.rabbitmq.producer query.

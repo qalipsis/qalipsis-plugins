@@ -37,10 +37,6 @@ internal class RabbitMqProducerStepSpecificationTest {
 
             prop(RabbitMqProducerStepSpecificationImpl<*>::concurrency).isEqualTo(1)
 
-            prop(RabbitMqProducerStepSpecificationImpl<*>::metrics).isNotNull().all {
-                prop(RabbitMqProducerMetricsConfiguration::bytesCount).isFalse()
-                prop(RabbitMqProducerMetricsConfiguration::recordsCount).isFalse()
-            }
         }
     }
 
@@ -59,7 +55,8 @@ internal class RabbitMqProducerStepSpecificationTest {
             value = "text-2".toByteArray()
         )
 
-        val recordSupplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<RabbitMqProducerRecord>) = { _, _ -> listOf(rec1, rec2) }
+        val recordSupplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<RabbitMqProducerRecord>) =
+            { _, _ -> listOf(rec1, rec2) }
 
         val previousStep = DummyStepSpecification()
         previousStep.rabbitmq().produce {
@@ -92,47 +89,6 @@ internal class RabbitMqProducerStepSpecificationTest {
 
             prop(RabbitMqProducerStepSpecificationImpl<*>::recordsFactory).isEqualTo(recordSupplier)
 
-            prop(RabbitMqProducerStepSpecificationImpl<*>::metrics).isNotNull().all {
-                prop(RabbitMqProducerMetricsConfiguration::bytesCount).isFalse()
-                prop(RabbitMqProducerMetricsConfiguration::recordsCount).isFalse()
-            }
-        }
-    }
-
-
-    @Test
-    internal fun `should apply bytes count`() {
-        val scenario = DummyStepSpecification()
-        
-        scenario.rabbitmq().produce {
-            metrics {
-                bytesCount = true
-            }
-        }
-
-        assertThat(scenario.nextSteps[0]).isInstanceOf(RabbitMqProducerStepSpecificationImpl::class).all {
-            prop(RabbitMqProducerStepSpecificationImpl<*>::metrics).isNotNull().all {
-                prop(RabbitMqProducerMetricsConfiguration::bytesCount).isTrue()
-                prop(RabbitMqProducerMetricsConfiguration::recordsCount).isFalse()
-            }
-        }
-    }
-
-    @Test
-    internal fun `should apply records count`() {
-        val scenario = DummyStepSpecification()
-        
-        scenario.rabbitmq().produce {
-            metrics {
-                recordsCount = true
-            }
-        }
-
-        assertThat(scenario.nextSteps[0]).isInstanceOf(RabbitMqProducerStepSpecificationImpl::class).all {
-            prop(RabbitMqProducerStepSpecificationImpl<*>::metrics).isNotNull().all {
-                prop(RabbitMqProducerMetricsConfiguration::bytesCount).isFalse()
-                prop(RabbitMqProducerMetricsConfiguration::recordsCount).isTrue()
-            }
         }
     }
 
