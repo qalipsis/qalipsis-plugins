@@ -11,7 +11,7 @@ import io.qalipsis.api.scenario.StepSpecificationRegistry
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
-import io.qalipsis.plugins.redis.lettuce.Monitoring
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType
 import io.qalipsis.plugins.redis.lettuce.redisLettuce
@@ -53,9 +53,9 @@ internal class LettuceStreamsConsumerStepSpecificationImplTest {
                 prop(LettuceStreamsConsumerStepSpecificationImpl::offset).isEqualTo(LettuceStreamsConsumerOffset.FROM_BEGINNING)
                 prop(LettuceStreamsConsumerStepSpecificationImpl::streamKey).isEqualTo("test")
 
-                prop(LettuceStreamsConsumerStepSpecificationImpl::monitoringConfiguration).all {
-                    prop(Monitoring::events).isFalse()
-                    prop(Monitoring::meters).isFalse()
+                prop(LettuceStreamsConsumerStepSpecificationImpl::monitoringConfig).all {
+                    prop(StepMonitoringConfiguration::events).isFalse()
+                    prop(StepMonitoringConfiguration::meters).isFalse()
                 }
             }
     }
@@ -109,9 +109,9 @@ internal class LettuceStreamsConsumerStepSpecificationImplTest {
                 prop(LettuceStreamsConsumerStepSpecificationImpl::groupName).isEqualTo("group")
                 prop(LettuceStreamsConsumerStepSpecificationImpl::streamKey).isEqualTo("test")
 
-                prop(LettuceStreamsConsumerStepSpecificationImpl::monitoringConfiguration).all {
-                    prop(Monitoring::events).isTrue()
-                    prop(Monitoring::meters).isTrue()
+                prop(LettuceStreamsConsumerStepSpecificationImpl::monitoringConfig).all {
+                    prop(StepMonitoringConfiguration::events).isTrue()
+                    prop(StepMonitoringConfiguration::meters).isTrue()
                 }
             }
 

@@ -95,7 +95,6 @@ internal class LettuceStreamsProducerStepTest {
         assertThat(monitoringCollector.captured).all {
             prop("stepContext").isSameAs(context)
             prop("eventsLogger").isNull()
-            prop("meterRegistry").isNull()
         }
 
         confirmVerified(lettuceStreamsProducerStep)
@@ -118,6 +117,7 @@ internal class LettuceStreamsProducerStepTest {
                 recordsFactory, meterRegistry, eventsLogger
             ), recordPrivateCalls = true
         )
+
         lettuceStreamsProducerStep.setProperty(
             "connection",
             relaxedMockk<StatefulRedisConnection<ByteArray, ByteArray>> { })
@@ -153,7 +153,6 @@ internal class LettuceStreamsProducerStepTest {
         assertThat(monitoringCollector.captured).all {
             prop("stepContext").isSameAs(context)
             prop("eventsLogger").isSameAs(eventsLogger)
-            prop("meterRegistry").isSameAs(meterRegistry)
         }
 
         confirmVerified(lettuceStreamsProducerStep)

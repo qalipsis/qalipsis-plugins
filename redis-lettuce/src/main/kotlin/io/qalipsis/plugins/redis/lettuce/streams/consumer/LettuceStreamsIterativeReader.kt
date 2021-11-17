@@ -80,6 +80,7 @@ internal class LettuceStreamsIterativeReader(
         resultChannel = Channel(Channel.UNLIMITED)
     }
 
+    @Suppress("UNCHECKED_CAST")
     private suspend fun createConsumerGroup() {
         val groupExists = kotlin.runCatching {
             redisAsyncCommand.xinfoGroups(streamKey.toByteArray())

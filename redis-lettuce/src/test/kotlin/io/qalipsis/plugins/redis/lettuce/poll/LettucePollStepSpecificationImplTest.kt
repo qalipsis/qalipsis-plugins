@@ -11,7 +11,7 @@ import io.qalipsis.api.scenario.StepSpecificationRegistry
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
-import io.qalipsis.plugins.redis.lettuce.Monitoring
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType
 import io.qalipsis.plugins.redis.lettuce.redisLettuce
@@ -45,10 +45,11 @@ internal class LettucePollStepSpecificationImplTest {
             }
 
             prop(LettucePollStepSpecificationImpl<*>::pollDelay).isEqualTo(
-                Duration.ofSeconds(10))
-            prop(LettucePollStepSpecificationImpl<*>::monitoringConfiguration).all {
-                prop(Monitoring::events).isFalse()
-                prop(Monitoring::meters).isFalse()
+                Duration.ofSeconds(10)
+            )
+            prop(LettucePollStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isFalse()
             }
             prop(LettucePollStepSpecificationImpl<*>::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.UNICAST)
@@ -95,10 +96,11 @@ internal class LettucePollStepSpecificationImplTest {
             }
 
             prop(LettucePollStepSpecificationImpl<*>::pollDelay).isEqualTo(
-                Duration.ofSeconds(2))
-            prop(LettucePollStepSpecificationImpl<*>::monitoringConfiguration).all {
-                prop(Monitoring::events).isTrue()
-                prop(Monitoring::meters).isTrue()
+                Duration.ofSeconds(2)
+            )
+            prop(LettucePollStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
             prop(LettucePollStepSpecificationImpl<*>::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.BROADCAST)

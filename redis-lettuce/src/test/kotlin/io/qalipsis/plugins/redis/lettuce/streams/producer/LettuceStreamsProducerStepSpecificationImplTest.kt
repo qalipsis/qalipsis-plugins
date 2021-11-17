@@ -6,7 +6,7 @@ import assertk.assertions.*
 import io.aerisconsulting.catadioptre.getProperty
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.DummyStepSpecification
-import io.qalipsis.plugins.redis.lettuce.Monitoring
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType
 import io.qalipsis.plugins.redis.lettuce.redisLettuce
@@ -37,9 +37,9 @@ internal class LettuceStreamsProducerStepSpecificationImplTest {
                     prop(RedisConnectionConfiguration::masterId).isEqualTo("")
                 }
 
-                prop(LettuceStreamsProducerStepSpecificationImpl<*>::monitoringConfiguration).all {
-                    prop(Monitoring::events).isFalse()
-                    prop(Monitoring::meters).isFalse()
+                prop(LettuceStreamsProducerStepSpecificationImpl<*>::monitoringConfig).all {
+                    prop(StepMonitoringConfiguration::events).isFalse()
+                    prop(StepMonitoringConfiguration::meters).isFalse()
                 }
             }
 
@@ -93,9 +93,9 @@ internal class LettuceStreamsProducerStepSpecificationImplTest {
                     prop(RedisConnectionConfiguration::masterId).isEqualTo("mymaster")
                 }
 
-                prop(LettuceStreamsProducerStepSpecificationImpl<*>::monitoringConfiguration).all {
-                    prop(Monitoring::events).isTrue()
-                    prop(Monitoring::meters).isTrue()
+                prop(LettuceStreamsProducerStepSpecificationImpl<*>::monitoringConfig).all {
+                    prop(StepMonitoringConfiguration::events).isTrue()
+                    prop(StepMonitoringConfiguration::meters).isTrue()
                 }
             }
 

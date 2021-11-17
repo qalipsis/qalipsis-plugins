@@ -4,16 +4,14 @@ import io.lettuce.core.StreamMessage
 import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.Executors
 import io.qalipsis.api.annotations.StepConverter
-import io.qalipsis.api.context.StepId
 import io.qalipsis.api.events.EventsLogger
-import io.qalipsis.api.lang.supplyIf
 import io.qalipsis.api.steps.StepCreationContext
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
-import io.qalipsis.plugins.redis.lettuce.Monitoring
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisStatefulConnectionFactory
 import jakarta.inject.Named
 import kotlinx.coroutines.CoroutineDispatcher
@@ -58,40 +56,23 @@ internal class LettuceStreamsConsumerStepSpecificationConverter(
             spec.name,
             reader,
             NoopDatasourceObjectProcessor(),
-            buildConverter(spec.name, spec.monitoringConfiguration, spec.flattenOutput)
+            buildConverter(spec.monitoringConfig, spec.flattenOutput)
         )
         creationContext.createdStep(step)
     }
 
     private fun buildConverter(
-        stepId: StepId,
-        monitoringConfiguration: Monitoring,
+        monitoringConfig: StepMonitoringConfiguration,
         flattenOutput: Boolean
     ): DatasourceObjectConverter<List<StreamMessage<ByteArray, ByteArray>>, out Any?> {
 
-        val recordsCounter = supplyIf(monitoringConfiguration.meters) {
-            meterRegistry.counter(
-                "redis-lettuce-streams-consumer-records-counter", "step",
-                stepId
-            )
-        }
-
-        val consumedBytes = supplyIf(monitoringConfiguration.meters) {
-            meterRegistry.counter(
-                "redis-lettuce-streams-consumer-records-bytes-counter", "step",
-                stepId
-            )
-        }
-
-        val metrics = LettuceStreamsConsumerMetrics(
-            recordsCounter,
-            consumedBytes
-        )
-
         return if (flattenOutput) {
-            LettuceStreamsConsumerSingleConverter(metrics)
+            LettuceStreamsConsumerSingleConverter(
+                meterRegistry = meterRegistry.takeIf { monitoringConfig.meters })
         } else {
-            LettuceStreamsConsumerBatchConverter(metrics)
+            LettuceStreamsConsumerBatchConverter(
+                meterRegistry = meterRegistry.takeIf { monitoringConfig.meters }
+            )
         }
     }
 }

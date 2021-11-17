@@ -9,10 +9,10 @@ import io.qalipsis.api.steps.LoopableSpecification
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonStepSpecification
 import io.qalipsis.api.steps.SingletonType
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.UnicastSpecification
 import io.qalipsis.plugins.redis.lettuce.Flattenable
-import io.qalipsis.plugins.redis.lettuce.Monitoring
 import io.qalipsis.plugins.redis.lettuce.RedisLettuceScenarioSpecification
 import io.qalipsis.plugins.redis.lettuce.RedisRecord
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfiguration
@@ -71,7 +71,7 @@ interface LettucePollStepSpecification<V : Any> :
     /**
      * Configures the monitoring of the poll step.
      */
-    fun monitoring(configurationBlock: Monitoring.() -> Unit)
+    fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit)
 }
 
 /**
@@ -97,7 +97,7 @@ internal class LettucePollStepSpecificationImpl<V : Any> internal constructor(
     @field:PositiveOrZeroDuration
     internal var pollDelay: Duration? = Duration.ofSeconds(10)
 
-    internal var monitoringConfiguration = Monitoring()
+    internal var monitoringConfig = StepMonitoringConfiguration()
 
     internal var flattenOutput = false
 
@@ -117,8 +117,8 @@ internal class LettucePollStepSpecificationImpl<V : Any> internal constructor(
         this.pollDelay = Duration.of(delay, ChronoUnit.MILLIS)
     }
 
-    override fun monitoring(configurationBlock: Monitoring.() -> Unit) {
-        monitoringConfiguration.configurationBlock()
+    override fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit) {
+        this.monitoringConfig.monitoringConfig()
     }
 
     override fun forwardOnce(bufferSize: Int, idleTimeout: Duration) {

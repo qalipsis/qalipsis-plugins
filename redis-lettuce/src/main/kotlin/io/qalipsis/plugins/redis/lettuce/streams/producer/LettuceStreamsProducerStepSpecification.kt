@@ -3,8 +3,8 @@ package io.qalipsis.plugins.redis.lettuce.streams.producer
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
-import io.qalipsis.plugins.redis.lettuce.Monitoring
 import io.qalipsis.plugins.redis.lettuce.RedisLettuceStepSpecification
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.CLUSTER
@@ -40,9 +40,9 @@ interface LettuceStreamsProducerStepSpecification<I> :
     fun records(recordsConfiguration: suspend (stepContext: StepContext<*, *>, input: I) -> List<LettuceStreamsProduceRecord>)
 
     /**
-     * Configures the monitoring of the streams producer step.
+     * Configures the monitoring of the poll step.
      */
-    fun monitoring(configurationBlock: Monitoring.() -> Unit)
+    fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit)
 }
 
 /**
@@ -55,6 +55,7 @@ internal class LettuceStreamsProducerStepSpecificationImpl<I>:
     AbstractStepSpecification<I, LettuceStreamsProducerResult<I>, LettuceStreamsProducerStepSpecification<I>>(),
     LettuceStreamsProducerStepSpecification<I> {
 
+    internal var monitoringConfig = StepMonitoringConfiguration()
 
     internal var connection = RedisConnectionConfiguration()
 
@@ -62,10 +63,8 @@ internal class LettuceStreamsProducerStepSpecificationImpl<I>:
         connection.configBlock()
     }
 
-    internal var monitoringConfiguration = Monitoring()
-
-    override fun monitoring(configurationBlock: Monitoring.() -> Unit) {
-        this.monitoringConfiguration.configurationBlock()
+    override fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit) {
+        this.monitoringConfig.monitoringConfig()
     }
 
     internal var recordsFactory: (suspend (stepContext: StepContext<*, *>, input: I) ->

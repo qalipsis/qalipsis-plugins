@@ -9,18 +9,19 @@ import assertk.assertions.isNull
 import assertk.assertions.isSameAs
 import io.aerisconsulting.catadioptre.invokeInvisible
 import io.lettuce.core.StreamMessage
+import io.micrometer.core.instrument.Tags
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
-import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
+import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepCreationContextImpl
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
-import io.qalipsis.plugins.redis.lettuce.Monitoring
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.mockk.WithMockk
@@ -77,8 +78,7 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
 
         every {
             spiedConverter["buildConverter"](
-                eq("my-step"),
-                refEq(spec.monitoringConfiguration),
+                refEq(spec.monitoringConfig),
                 refEq(spec.flattenOutput)
             )
         } returns recordsConverter
@@ -127,12 +127,10 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
         val spiedConverter = spyk(converter, recordPrivateCalls = true)
         val recordsConverter: DatasourceObjectConverter<List<StreamMessage<ByteArray, ByteArray>>, out Any?> =
             relaxedMockk()
-        val stepIdSlot = slot<String>()
 
         every {
             spiedConverter["buildConverter"](
-                capture(stepIdSlot),
-                refEq(spec.monitoringConfiguration),
+                refEq(spec.monitoringConfig),
                 refEq(spec.flattenOutput)
             )
         } returns recordsConverter
@@ -145,7 +143,7 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
-                prop("id").isNotNull().isEqualTo(stepIdSlot.captured)
+                prop("id").isEqualTo("")
                 prop("reader").isNotNull().isInstanceOf(LettuceStreamsIterativeReader::class).all {
                     prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
                     prop("ioCoroutineDispatcher").isSameAs(ioCoroutineDispatcher)
@@ -164,56 +162,71 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
     @Test
     internal fun `should build single converter`() {
 
-        val monitoringConfiguration = Monitoring()
+        val monitoringConfiguration = StepMonitoringConfiguration(false, true)
 
         // when
-        val recordsConverter = converter.invokeInvisible<DatasourceObjectConverter<List<StreamMessage<ByteArray, ByteArray>>, out Any?>>("buildConverter", "my-step", monitoringConfiguration, true)
+        val recordsConverter =
+            converter.invokeInvisible<DatasourceObjectConverter<List<StreamMessage<ByteArray, ByteArray>>, out Any?>>(
+                "buildConverter",
+                monitoringConfiguration,
+                true
+            )
 
         // then
         assertThat(recordsConverter).isNotNull().isInstanceOf(LettuceStreamsConsumerSingleConverter::class).all {
-            prop("metrics").isNotNull().isInstanceOf(LettuceStreamsConsumerMetrics::class).all {
-                prop("recordsCount").isNull()
-                prop("valuesBytesReceived").isNull()
-            }
+            prop("recordsCounter").isNull()
+            prop("valuesBytesReceived").isNull()
+            prop("meterRegistry").isSameAs(meterRegistry)
         }
     }
 
     @Test
     internal fun `should build batch converter`() {
 
-        val monitoringConfiguration = Monitoring()
+        val monitoringConfiguration = StepMonitoringConfiguration(false, true)
 
         // when
-        val recordsConverter = converter.invokeInvisible<DatasourceObjectConverter<List<StreamMessage<ByteArray, ByteArray>>, out Any?>>("buildConverter", "my-step", monitoringConfiguration, false)
+        val recordsConverter =
+            converter.invokeInvisible<DatasourceObjectConverter<List<StreamMessage<ByteArray, ByteArray>>, out Any?>>(
+                "buildConverter",
+                monitoringConfiguration,
+                false
+            )
 
         // then
         assertThat(recordsConverter).isNotNull().isInstanceOf(LettuceStreamsConsumerBatchConverter::class).all {
-            prop("metrics").isNotNull().isInstanceOf(LettuceStreamsConsumerMetrics::class).all {
-                prop("recordsCount").isNull()
-                prop("valuesBytesReceived").isNull()
-            }
+            prop("meterRegistry").isSameAs(meterRegistry)
+            prop("recordsCounter").isNull()
+            prop("valuesBytesReceived").isNull()
         }
     }
 
     @Test
     internal fun `should build converter with records counter and bytes counter`() {
-        val monitoringConfiguration = Monitoring(true, true)
+        val monitoringConfiguration = StepMonitoringConfiguration(true, true)
+        val metersTags = relaxedMockk<Tags>()
 
+        val startStopContext = relaxedMockk<StepStartStopContext> {
+            every { toMetersTags() } returns metersTags
+        }
         // when
-        val recordsConverter = converter.invokeInvisible<DatasourceObjectConverter<List<StreamMessage<ByteArray, ByteArray>>, out Any?>>("buildConverter", "my-step", monitoringConfiguration, false)
-
+        val recordsConverter =
+            converter.invokeInvisible<DatasourceObjectConverter<List<StreamMessage<ByteArray, ByteArray>>, out Any?>>(
+                "buildConverter",
+                monitoringConfiguration,
+                false
+            )
+        recordsConverter.start(startStopContext)
         // then
         assertThat(recordsConverter).isNotNull().isInstanceOf(LettuceStreamsConsumerBatchConverter::class).all {
-            prop("metrics").isNotNull().isInstanceOf(LettuceStreamsConsumerMetrics::class).all {
-                prop("recordsCount").isNotNull()
-                prop("valuesBytesReceived").isNotNull()
-            }
+            prop("meterRegistry").isSameAs(meterRegistry)
+            prop("recordsCounter").isNotNull()
+            prop("valuesBytesReceived").isNotNull()
         }
         verify {
-            meterRegistry.counter("redis-lettuce-streams-consumer-records-counter", "step", "my-step")
-            meterRegistry.counter("redis-lettuce-streams-consumer-records-bytes-counter", "step", "my-step")
+            meterRegistry.counter("redis-lettuce-streams-consumer-records", metersTags)
+            meterRegistry.counter("redis-lettuce-streams-consumer-records-bytes", metersTags)
         }
         confirmVerified(meterRegistry)
     }
-
 }

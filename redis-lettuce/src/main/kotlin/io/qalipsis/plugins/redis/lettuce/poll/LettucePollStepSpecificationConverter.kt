@@ -4,7 +4,6 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.Executors
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.events.EventsLogger
-import io.qalipsis.api.lang.supplyIf
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
@@ -48,7 +47,7 @@ internal class LettucePollStepSpecificationConverter(
 
         val redisScanExecutor = LettuceScanExecutorFactory.newInstance(
             spec.redisMethod,
-            eventsLogger.takeIf { spec.monitoringConfiguration.events }
+            eventsLogger.takeIf { spec.monitoringConfig.events }
         )
 
         val reader = LettuceIterativeReader(
@@ -59,7 +58,7 @@ internal class LettucePollStepSpecificationConverter(
             redisScanExecutor,
         ) { Channel(Channel.UNLIMITED) }
 
-        val converter = buildConverter(stepId, spec)
+        val converter = buildConverter(spec)
 
         val step = IterativeDatasourceStep(
             stepId,
@@ -70,25 +69,21 @@ internal class LettucePollStepSpecificationConverter(
         creationContext.createdStep(step)
     }
 
-    private fun buildConverter(
-        stepId: String,
-        spec: LettucePollStepSpecificationImpl<*>,
-    ): DatasourceObjectConverter<PollRawResult<*>, out Any> {
-        val recordsCounter = supplyIf(spec.monitoringConfiguration.meters) {
-            meterRegistry.counter("redis-lettuce-${spec.redisMethod.name.lowercase()}-poll-records", "step", stepId)
-        }
-
-        val recordsBytes = supplyIf(spec.monitoringConfiguration.meters) {
-            meterRegistry.counter(
-                "redis-lettuce-${spec.redisMethod.name.lowercase()}-poll-records-bytes", "step",
-                stepId
-            )
-        }
-
+    private fun buildConverter(spec: LettucePollStepSpecificationImpl<*>): DatasourceObjectConverter<PollRawResult<*>, out Any> {
         return if (spec.flattenOutput) {
-            PollResultSetSingleConverter(redisToJavaConverter, recordsCounter, recordsBytes)
+            PollResultSetSingleConverter(
+                redisToJavaConverter,
+                eventsLogger = eventsLogger.takeIf { spec.monitoringConfig.events },
+                meterRegistry = meterRegistry.takeIf { spec.monitoringConfig.meters },
+                spec.redisMethod.name.lowercase()
+            )
         } else {
-            PollResultSetBatchConverter(redisToJavaConverter, recordsCounter, recordsBytes)
+            PollResultSetBatchConverter(
+                redisToJavaConverter,
+                eventsLogger = eventsLogger.takeIf { spec.monitoringConfig.events },
+                meterRegistry = meterRegistry.takeIf { spec.monitoringConfig.meters },
+                spec.redisMethod.name.lowercase()
+            )
         }
     }
 

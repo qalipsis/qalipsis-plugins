@@ -57,6 +57,7 @@ internal class LettuceSaveStepTest {
                 recordsFactory, null, null
             ), recordPrivateCalls = true
         )
+
         lettuceSaveStep.setProperty("connection", relaxedMockk<StatefulRedisConnection<ByteArray, ByteArray>> { })
 
         val context = StepTestHelper.createStepContext<String, LettuceSaveResult<String>>(input = "Any")
@@ -86,7 +87,6 @@ internal class LettuceSaveStepTest {
         assertThat(monitoringCollector.captured).all {
             prop("stepContext").isSameAs(context)
             prop("eventsLogger").isNull()
-            prop("meterRegistry").isNull()
         }
 
         confirmVerified(lettuceSaveStep)
@@ -109,6 +109,7 @@ internal class LettuceSaveStepTest {
                 recordsFactory, meterRegistry, eventsLogger
             ), recordPrivateCalls = true
         )
+
         lettuceSaveStep.setProperty(
             "connection",
             relaxedMockk<StatefulRedisConnection<ByteArray, ByteArray>> { })
@@ -144,7 +145,6 @@ internal class LettuceSaveStepTest {
         assertThat(monitoringCollector.captured).all {
             prop("stepContext").isSameAs(context)
             prop("eventsLogger").isSameAs(eventsLogger)
-            prop("meterRegistry").isSameAs(meterRegistry)
         }
 
         confirmVerified(lettuceSaveStep)

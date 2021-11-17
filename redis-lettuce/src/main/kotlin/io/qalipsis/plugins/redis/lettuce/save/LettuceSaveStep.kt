@@ -3,6 +3,7 @@ package io.qalipsis.plugins.redis.lettuce.save
 import io.lettuce.core.RedisFuture
 import io.lettuce.core.api.StatefulConnection
 import io.lettuce.core.cluster.api.async.RedisClusterAsyncCommands
+import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepId
@@ -49,7 +50,23 @@ internal class LettuceSaveStep<I>(
 
     private lateinit var redisAsyncCommands: RedisClusterAsyncCommands<ByteArray, ByteArray>
 
+    private lateinit var monitoringCollector: LettuceMonitoringCollector
+
+    private var sendingBytes: Counter? = null
+
+    private var sentBytesMeter: Counter? = null
+
+    private var sendingFailure: Counter? = null
+
+    private val metersPrefix = "lettuce-save"
+
     override suspend fun start(context: StepStartStopContext) {
+        meterRegistry?.apply {
+            val tags = context.toMetersTags()
+            sendingBytes = counter("$metersPrefix-sending-bytes", tags)
+            sentBytesMeter = counter("$metersPrefix-sent-bytes", tags)
+            sendingFailure = counter("$metersPrefix-sending-failure", tags)
+        }
         connection = connectionFactory()
         redisAsyncCommands = RedisCommandsFactory.getAsyncCommand(connection)
     }
@@ -59,7 +76,9 @@ internal class LettuceSaveStep<I>(
 
         val records = recordsFactory(context, input)
 
-        val monitoringCollector = LettuceMonitoringCollector(context, eventsLogger, meterRegistry, "save")
+        monitoringCollector =
+            LettuceMonitoringCollector(context, eventsLogger, sendingBytes, sentBytesMeter, sendingFailure, "save")
+
         context.send(execute(monitoringCollector, input, records))
     }
 
@@ -121,6 +140,14 @@ internal class LettuceSaveStep<I>(
     }
 
     override suspend fun stop(context: StepStartStopContext) {
+        meterRegistry?.apply {
+            remove(sendingBytes!!)
+            remove(sentBytesMeter!!)
+            remove(sendingFailure!!)
+            sendingBytes = null
+            sentBytesMeter = null
+            sendingFailure = null
+        }
         tryAndLog(log) { connection.closeAsync()?.asSuspended() }
         tryAndLog(log) { connection.resources.shutdown() }
     }
@@ -132,5 +159,4 @@ internal class LettuceSaveStep<I>(
         @JvmStatic
         private val log = logger()
     }
-
 }

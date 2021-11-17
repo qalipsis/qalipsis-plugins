@@ -6,10 +6,10 @@ import io.qalipsis.api.steps.AbstractStepSpecification
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonStepSpecification
 import io.qalipsis.api.steps.SingletonType
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.UnicastSpecification
 import io.qalipsis.plugins.redis.lettuce.Flattenable
-import io.qalipsis.plugins.redis.lettuce.Monitoring
 import io.qalipsis.plugins.redis.lettuce.RedisLettuceScenarioSpecification
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.CLUSTER
@@ -65,9 +65,9 @@ interface LettuceStreamsConsumerStepSpecification : UnicastSpecification,
     fun concurrency(concurrency: Int)
 
     /**
-     * Configures the monitoring of the streams consumer step.
+     * Configures the monitoring of the poll step.
      */
-    fun monitoring(configurationBlock: Monitoring.() -> Unit)
+    fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit)
 }
 
 /**
@@ -85,15 +85,18 @@ internal class LettuceStreamsConsumerStepSpecificationImpl:
 
     internal var connection = RedisConnectionConfiguration()
 
-    internal var monitoringConfiguration = Monitoring()
+    internal var monitoringConfig = StepMonitoringConfiguration()
 
-    @field:NotBlank internal var streamKey = ""
+    @field:NotBlank
+    internal var streamKey = ""
 
-    @field:NotBlank internal var groupName: String = ""
+    @field:NotBlank
+    internal var groupName: String = ""
 
-    internal var offset: LettuceStreamsConsumerOffset =  LettuceStreamsConsumerOffset.FROM_BEGINNING
+    internal var offset: LettuceStreamsConsumerOffset = LettuceStreamsConsumerOffset.FROM_BEGINNING
 
-    @field:Positive internal var concurrency: Int = 1
+    @field:Positive
+    internal var concurrency: Int = 1
 
     internal var flattenOutput = false
 
@@ -101,9 +104,10 @@ internal class LettuceStreamsConsumerStepSpecificationImpl:
         connection.configBlock()
     }
 
-    override fun monitoring(configurationBlock: Monitoring.() -> Unit) {
-        monitoringConfiguration.configurationBlock()
+    override fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit) {
+        this.monitoringConfig.monitoringConfig()
     }
+
     override fun streamKey(key: String) {
         streamKey = key
     }
@@ -111,6 +115,7 @@ internal class LettuceStreamsConsumerStepSpecificationImpl:
     override fun group(name: String) {
         groupName = name
     }
+
     override fun offset(offsetConsumer: LettuceStreamsConsumerOffset) {
         this.offset = offsetConsumer
     }

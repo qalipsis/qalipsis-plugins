@@ -3,8 +3,8 @@ package io.qalipsis.plugins.redis.lettuce.save
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
-import io.qalipsis.plugins.redis.lettuce.Monitoring
 import io.qalipsis.plugins.redis.lettuce.RedisLettuceStepSpecification
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.CLUSTER
@@ -39,9 +39,9 @@ interface LettuceSaveStepSpecification<I> : StepSpecification<I, LettuceSaveResu
     fun records(recordsConfiguration: suspend (stepContext: StepContext<*, *>, input: I) -> List<LettuceSaveRecord<*>>)
 
     /**
-     * Configures the metrics of the save step.
+     * Configures the monitoring of the poll step.
      */
-    fun monitoring(configurationBlock: Monitoring.() -> Unit)
+    fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit)
 }
 
 /**
@@ -54,9 +54,10 @@ internal class LettuceSaveStepSpecificationImpl<I> : AbstractStepSpecification<I
 
     internal var connectionConfiguration = RedisConnectionConfiguration()
 
-    internal var monitoringConfiguration = Monitoring()
+    internal var monitoringConfig = StepMonitoringConfiguration()
 
-    internal var recordsFactory: (suspend (stepContext: StepContext<*, *>, input: I) -> List<LettuceSaveRecord<*>>) = { _, _ -> emptyList() }
+    internal var recordsFactory: (suspend (stepContext: StepContext<*, *>, input: I) -> List<LettuceSaveRecord<*>>) =
+        { _, _ -> emptyList() }
 
     override fun connection(configurationBlock: RedisConnectionConfiguration.() -> Unit) {
         connectionConfiguration.configurationBlock()
@@ -66,8 +67,8 @@ internal class LettuceSaveStepSpecificationImpl<I> : AbstractStepSpecification<I
         recordsFactory = recordsConfiguration
     }
 
-    override fun monitoring(configurationBlock: Monitoring.() -> Unit) {
-        monitoringConfiguration.configurationBlock()
+    override fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit) {
+        this.monitoringConfig.monitoringConfig()
     }
 
 }

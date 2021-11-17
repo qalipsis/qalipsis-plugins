@@ -1,7 +1,10 @@
 package io.qalipsis.plugins.redis.lettuce.poll.converters
 
 import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.context.StepOutput
+import io.qalipsis.api.context.StepStartStopContext
+import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLogOrNull
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
@@ -19,9 +22,41 @@ import java.util.concurrent.atomic.AtomicLong
  */
 internal class PollResultSetBatchConverter(
     private val redisToJavaConverter: RedisToJavaConverter,
-    private val recordsCounter: Counter?,
-    private val recordsBytes: Counter?
+    private val eventsLogger: EventsLogger?,
+    private val meterRegistry: MeterRegistry?,
+    redisMethod: String
 ) : DatasourceObjectConverter<PollRawResult<*>, LettucePollResult<Any?>> {
+
+    private lateinit var context: StepStartStopContext
+
+    private val eventPrefix = "redis.lettuce.poll.$redisMethod"
+
+    private val meterPrefix = "redis-lettuce-poll-$redisMethod"
+
+    private var recordsCounter: Counter? = null
+
+    private var recordsBytes: Counter? = null
+
+    private lateinit var eventTags: Map<String, String>
+
+    override fun start(context: StepStartStopContext) {
+        meterRegistry?.apply {
+            val tags = context.toMetersTags()
+            recordsCounter = counter("$meterPrefix-records", tags)
+            recordsBytes = counter("$meterPrefix-records-bytes", tags)
+        }
+        this.context = context
+        eventTags = context.toEventTags();
+    }
+
+    override fun stop(context: StepStartStopContext) {
+        meterRegistry?.apply {
+            remove(recordsCounter!!)
+            remove(recordsBytes!!)
+            recordsCounter = null
+            recordsBytes = null
+        }
+    }
 
     /**
      * Converts the provided [value] from redis commands to a [RedisRecord] and send it in a [LettucePollResult] to the
@@ -42,6 +77,7 @@ internal class PollResultSetBatchConverter(
         value: PollRawResult<*>,
         output: StepOutput<LettucePollResult<Any?>>
     ) {
+        eventsLogger?.info("$eventPrefix.records-count", value.recordsCount, tags = eventTags)
         recordsCounter?.increment(value.recordsCount.toDouble())
         val records = when (value.records) {
             is List<*> -> {
@@ -76,6 +112,7 @@ internal class PollResultSetBatchConverter(
                     )
                 )
             )
+            eventsLogger?.info("$eventPrefix.records-bytes", bytes.toInt(), tags = eventTags)
             recordsBytes?.increment(bytes.toDouble())
         }
     }
@@ -85,5 +122,4 @@ internal class PollResultSetBatchConverter(
         @JvmStatic
         private val log = logger()
     }
-
 }

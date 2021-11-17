@@ -41,8 +41,8 @@ internal class LettuceSaveStepSpecificationConverter(
             ioCoroutineContext = ioCoroutineContext,
             connectionFactory = connectionFactory,
             recordsFactory = spec.recordsFactory,
-            eventsLogger = eventsLogger.takeIf { spec.monitoringConfiguration.events },
-            meterRegistry = meterRegistry.takeIf { spec.monitoringConfiguration.meters }
+            eventsLogger = eventsLogger.takeIf { spec.monitoringConfig.events },
+            meterRegistry = meterRegistry.takeIf { spec.monitoringConfig.meters }
         )
 
         creationContext.createdStep(step)
