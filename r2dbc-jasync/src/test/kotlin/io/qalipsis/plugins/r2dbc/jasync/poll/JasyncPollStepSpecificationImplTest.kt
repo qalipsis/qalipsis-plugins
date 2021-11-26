@@ -16,6 +16,7 @@ import io.qalipsis.api.scenario.StepSpecificationRegistry
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.r2dbc.jasync.JasyncConnection
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Protocol
 import io.qalipsis.plugins.r2dbc.jasync.r2dbcJasync
@@ -73,8 +74,9 @@ internal class JasyncPollStepSpecificationImplTest {
             prop(JasyncPollStepSpecificationImpl::tieBreaker).isEqualTo("my-tie-breaker")
             prop(JasyncPollStepSpecificationImpl::strictTieBreaker).isFalse()
             prop(JasyncPollStepSpecificationImpl::pollDelay).isEqualTo(Duration.ofSeconds(12))
-            prop(JasyncPollStepSpecificationImpl::metrics).all {
-                prop(JasyncPollMetricsConfiguration::recordsCount).isFalse()
+            prop(JasyncPollStepSpecificationImpl::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isFalse()
             }
             prop(JasyncPollStepSpecificationImpl::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.UNICAST)
@@ -107,8 +109,9 @@ internal class JasyncPollStepSpecificationImplTest {
             parameters()
             tieBreaker("my-other-tie-breaker", true)
             pollDelay(Duration.ofSeconds(23))
-            metrics {
-                recordsCount = true
+            monitoring {
+                meters = true
+                events = false
             }
             broadcast(123, Duration.ofSeconds(20))
         }
@@ -135,8 +138,9 @@ internal class JasyncPollStepSpecificationImplTest {
             prop(JasyncPollStepSpecificationImpl::tieBreaker).isEqualTo("my-other-tie-breaker")
             prop(JasyncPollStepSpecificationImpl::strictTieBreaker).isTrue()
             prop(JasyncPollStepSpecificationImpl::pollDelay).isEqualTo(Duration.ofSeconds(23))
-            prop(JasyncPollStepSpecificationImpl::metrics).all {
-                prop(JasyncPollMetricsConfiguration::recordsCount).isTrue()
+            prop(JasyncPollStepSpecificationImpl::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::meters).isTrue()
+                prop(StepMonitoringConfiguration::events).isFalse()
             }
             prop(JasyncPollStepSpecificationImpl::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.BROADCAST)

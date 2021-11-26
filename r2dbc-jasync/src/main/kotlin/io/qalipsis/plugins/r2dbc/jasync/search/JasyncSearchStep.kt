@@ -1,6 +1,5 @@
 package io.qalipsis.plugins.r2dbc.jasync.search
 
-import com.github.jasync.sql.db.ResultSet
 import com.github.jasync.sql.db.SuspendingConnection
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepError
@@ -10,8 +9,8 @@ import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
 import io.qalipsis.api.steps.datasource.DatasourceException
-import io.qalipsis.api.steps.datasource.DatasourceRecord
 import io.qalipsis.plugins.r2dbc.jasync.converters.JasyncResultSetConverter
+import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -30,8 +29,8 @@ internal class JasyncSearchStep<I>(
     private val connectionsPoolFactory: () -> SuspendingConnection,
     private val queryFactory: (suspend (ctx: StepContext<*, *>, input: I) -> String),
     private val parametersFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<*>),
-    private val converter: JasyncResultSetConverter<ResultSet, Any?, I>
-) : AbstractStep<I, Pair<I, List<DatasourceRecord<Map<String, Any?>>>>>(id, retryPolicy) {
+    private val converter: JasyncResultSetConverter<ResultSetWrapper, Any?, I>
+) : AbstractStep<I, JasyncSearchBatchResults<I, Map<String, Any?>>>(id, retryPolicy) {
 
     private lateinit var connection: SuspendingConnection
 
@@ -44,13 +43,19 @@ internal class JasyncSearchStep<I>(
         connection.disconnect()
     }
 
-    override suspend fun execute(context: StepContext<I, Pair<I, List<DatasourceRecord<Map<String, Any?>>>>>) {
+    override suspend fun execute(context: StepContext<I, JasyncSearchBatchResults<I, Map<String, Any?>>>) {
+
         val input = context.receive()
 
         val query = queryFactory(context, input)
         val parameters = parametersFactory(context, input)
-
-        val result = connection.sendPreparedStatement(query, parameters, true).rows
+        val requestStart = System.nanoTime()
+        val resultSet = connection.sendPreparedStatement(query, parameters, true).rows
+        val timeToResponse = Duration.ofMillis(System.nanoTime() - requestStart)
+        val result = ResultSetWrapper(
+            resultSet = resultSet,
+            timeToResponse = timeToResponse
+        )
         val rowIndex = AtomicLong()
 
         try {

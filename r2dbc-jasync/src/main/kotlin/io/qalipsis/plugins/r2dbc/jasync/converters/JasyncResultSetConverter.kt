@@ -1,6 +1,7 @@
 package io.qalipsis.plugins.r2dbc.jasync.converters;
 
 import io.qalipsis.api.context.StepOutput
+import io.qalipsis.api.context.StepStartStopContext
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -23,5 +24,9 @@ interface JasyncResultSetConverter<R, O, I> {
      * @param output channel to received the data after conversion
      */
     suspend fun supply(offset: AtomicLong, value: R, input: I, output: StepOutput<O>)
+
+    fun start(context: StepStartStopContext) = Unit
+
+    fun stop(context: StepStartStopContext) = Unit
 
 }

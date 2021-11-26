@@ -1,19 +1,17 @@
 package io.qalipsis.plugins.r2dbc.jasync.search
 
 import com.github.jasync.sql.db.ConnectionPoolConfiguration
-import com.github.jasync.sql.db.ResultSet
 import com.github.jasync.sql.db.SuspendingConnection
 import com.github.jasync.sql.db.asSuspending
 import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.Executors
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.context.StepContext
+import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
-import io.qalipsis.plugins.r2dbc.jasync.converters.JasyncResultSetBatchConverter
 import io.qalipsis.plugins.r2dbc.jasync.converters.JasyncResultSetConverter
-import io.qalipsis.plugins.r2dbc.jasync.converters.JasyncResultSetSingleConverter
 import io.qalipsis.plugins.r2dbc.jasync.converters.ParametersConverter
 import io.qalipsis.plugins.r2dbc.jasync.converters.ResultValuesConverter
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Dialect
@@ -26,6 +24,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 @StepConverter
 internal class JasyncSearchStepSpecificationConverter(
     private val meterRegistry: MeterRegistry,
+    private val eventsLogger: EventsLogger,
     private val parametersConverter: ParametersConverter,
     private val resultValuesConverter: ResultValuesConverter,
     @Named(Executors.IO_EXECUTOR_NAME) private val ioCoroutineDispatcher: CoroutineDispatcher
@@ -50,7 +49,7 @@ internal class JasyncSearchStepSpecificationConverter(
             parametersFactory = buildParameterFactory(
                 spec.parametersFactory as (suspend (ctx: StepContext<*, *>, input: I) -> List<*>)
             ),
-            converter = buildConverter<I>(stepId, spec) as JasyncResultSetConverter<ResultSet, Any?, I>
+            converter = buildConverter<I>(stepId, spec) as JasyncResultSetConverter<ResultSetWrapper, Any?, I>
         )
 
         creationContext.createdStep(step)
@@ -65,17 +64,15 @@ internal class JasyncSearchStepSpecificationConverter(
     private fun <I> buildConverter(
         stepId: String,
         spec: JasyncSearchStepSpecificationImpl<*>,
-    ): JasyncResultSetConverter<ResultSet, *, I> {
-        val recordsCounter = if (spec.metrics.recordsCount) {
-            meterRegistry.counter("r2dbc-jasync-search-records", "step", stepId)
-        } else {
-            null
-        }
-
+    ): JasyncResultSetConverter<ResultSetWrapper, *, I> {
         return if (spec.flattenOutput) {
-            JasyncResultSetSingleConverter(resultValuesConverter, recordsCounter)
+            JasyncResultSetSingleConverter(resultValuesConverter,
+                eventsLogger = eventsLogger.takeIf { spec.monitoringConfig.events },
+                meterRegistry = meterRegistry.takeIf { spec.monitoringConfig.meters })
         } else {
-            JasyncResultSetBatchConverter(resultValuesConverter, recordsCounter)
+            JasyncResultSetBatchConverter(resultValuesConverter,
+                eventsLogger = eventsLogger.takeIf { spec.monitoringConfig.events },
+                meterRegistry = meterRegistry.takeIf { spec.monitoringConfig.meters })
         }
     }
 

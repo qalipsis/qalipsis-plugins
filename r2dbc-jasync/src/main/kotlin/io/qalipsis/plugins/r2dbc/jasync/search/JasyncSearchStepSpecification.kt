@@ -3,6 +3,7 @@ package io.qalipsis.plugins.r2dbc.jasync.search
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.datasource.DatasourceRecord
 import io.qalipsis.plugins.r2dbc.jasync.JasyncConnection
@@ -21,8 +22,8 @@ import org.jetbrains.annotations.NotNull
  */
 @Spec
 interface JasyncSearchStepSpecification<I> :
-    StepSpecification<I, Pair<I, List<DatasourceRecord<Map<String, Any?>>>>, JasyncSearchStepSpecification<I>>,
-    R2dbcJasyncStepSpecification<I, Pair<I, List<DatasourceRecord<Map<String, Any?>>>>, JasyncSearchStepSpecification<I>> {
+    StepSpecification<I,  JasyncSearchBatchResults<I, Map<String, Any?>>, JasyncSearchStepSpecification<I>>,
+    R2dbcJasyncStepSpecification<I, JasyncSearchBatchResults<I, Map<String, Any?>>, JasyncSearchStepSpecification<I>> {
 
     /**
      * Configures the pool of connections to the database.
@@ -45,14 +46,14 @@ interface JasyncSearchStepSpecification<I> :
     fun parameters(parametersBuilder: suspend (ctx: StepContext<*, *>, input: I) -> List<*>)
 
     /**
-     * Configures the metrics of the poll step.
+     * Configures the monitoring of the search step.
      */
-    fun metrics(metricsConfiguration: JasyncSearchMetricsConfiguration.() -> Unit)
+    fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit)
 
     /**
      * Returns each record of a batch individually to the next steps.
      */
-    fun flatten(): StepSpecification<I, DatasourceRecord<Map<String, Any?>>, *>
+    fun flatten(): StepSpecification<I, JasyncSearchSingleResult<I,Map<String, Any?>>, *>
 }
 
 /**
@@ -63,7 +64,7 @@ interface JasyncSearchStepSpecification<I> :
 @Spec
 internal class JasyncSearchStepSpecificationImpl<I> :
     JasyncSearchStepSpecification<I>,
-    AbstractStepSpecification<I, Pair<I, List<DatasourceRecord<Map<String, Any?>>>>, JasyncSearchStepSpecification<I>>() {
+    AbstractStepSpecification<I,JasyncSearchBatchResults<I, Map<String, Any?>>, JasyncSearchStepSpecification<I>>() {
 
     internal var connection = JasyncConnection()
 
@@ -76,7 +77,7 @@ internal class JasyncSearchStepSpecificationImpl<I> :
     @field:NotNull
     internal var parametersFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<*>)? = null
 
-    internal val metrics = JasyncSearchMetricsConfiguration()
+    internal val monitoringConfig = StepMonitoringConfiguration()
 
     internal var flattenOutput = false
 
@@ -96,31 +97,19 @@ internal class JasyncSearchStepSpecificationImpl<I> :
         this.parametersFactory = parametersBuilder
     }
 
-    override fun metrics(metricsConfiguration: JasyncSearchMetricsConfiguration.() -> Unit) {
-        this.metrics.metricsConfiguration()
+    override fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit) {
+        this.monitoringConfig.monitoringConfig()
     }
 
-    override fun flatten(): StepSpecification<I, DatasourceRecord<Map<String, Any?>>, *> {
+    override fun flatten(): StepSpecification<I, JasyncSearchSingleResult<I,Map<String, Any?>>, *> {
         flattenOutput = true
 
         @Suppress("UNCHECKED_CAST")
-        return this as StepSpecification<I, DatasourceRecord<Map<String, Any?>>, *>
+        return this as StepSpecification<I, JasyncSearchSingleResult<I,Map<String, Any?>>, *>
     }
 
 }
 
-
-/**
- * Configuration of the metrics to record for the Jasync search step.
- *
- * @property recordsCount when true, records the number of received records.
- *
- * @author Fiodar Hmyza
- */
-@Spec
-data class JasyncSearchMetricsConfiguration(
-    var recordsCount: Boolean = false
-)
 
 /**
  * Searches data in a SQL database.

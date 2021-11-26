@@ -6,11 +6,16 @@ import assertk.assertions.*
 import com.github.jasync.sql.db.general.ArrayRowData
 import com.github.jasync.sql.db.general.MutableResultSet
 import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Tags
 import io.mockk.coEvery
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
+import io.qalipsis.api.context.StepStartStopContext
+import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.steps.datasource.DatasourceRecord
+import io.qalipsis.plugins.r2dbc.jasync.poll.ResultSetSingleConverter
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
@@ -27,8 +32,9 @@ internal class ResultSetSingleConverterTest {
     @RelaxedMockK
     lateinit var resultValuesConverter: ResultValuesConverter
 
-    @RelaxedMockK
-    lateinit var counter: Counter
+    private val counter = relaxedMockk<Counter>()
+
+    private val eventsLogger = relaxedMockk<EventsLogger>()
 
     @Test
     @Timeout(2)
@@ -52,12 +58,17 @@ internal class ResultSetSingleConverterTest {
             )
         )
         val channel = Channel<DatasourceRecord<Map<String, Any?>>>(2)
+        val metersTags = relaxedMockk<Tags>()
+        val startStopContext = relaxedMockk<StepStartStopContext> {
+            every { toMetersTags() } returns metersTags
+        }
         val converter = ResultSetSingleConverter(
-            resultValuesConverter, null
+            resultValuesConverter, null, null
         )
 
         // when
         val converted = mutableListOf<DatasourceRecord<Map<String, Any?>>>()
+        converter.start(startStopContext)
         converter.supply(
             AtomicLong(123),
             resultSet,
@@ -85,7 +96,7 @@ internal class ResultSetSingleConverterTest {
                 }
             }
         }
-        confirmVerified(counter)
+        confirmVerified(counter, eventsLogger)
     }
 
     @ExperimentalCoroutinesApi
@@ -111,12 +122,23 @@ internal class ResultSetSingleConverterTest {
             )
         )
         val channel = Channel<DatasourceRecord<Map<String, Any?>>>(2)
+        val tags: Map<String, String> = emptyMap()
+
+        val metersTags = relaxedMockk<Tags>()
+        val meterRegistry = relaxedMockk<MeterRegistry> {
+            every { counter("r2dbc-jasync-poll-records", refEq(metersTags)) } returns counter
+        }
+
+        val startStopContext = relaxedMockk<StepStartStopContext> {
+            every { toMetersTags() } returns metersTags
+        }
         val converter = ResultSetSingleConverter(
-            resultValuesConverter, counter
+            resultValuesConverter, meterRegistry, eventsLogger
         )
 
         // when
         val converted = mutableListOf<DatasourceRecord<Map<String, Any?>>>()
+        converter.start(startStopContext)
         converter.supply(
             AtomicLong(123),
             resultSet,
@@ -146,8 +168,9 @@ internal class ResultSetSingleConverterTest {
         }
         verifyOnce {
             counter.increment(2.0)
+            eventsLogger.info("r2dbc.jasync.poll.records", 2, any(), tags = tags)
         }
-        confirmVerified(counter)
+        confirmVerified(counter, eventsLogger)
     }
 
 }

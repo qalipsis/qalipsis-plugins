@@ -9,6 +9,7 @@ import io.qalipsis.api.Executors
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepName
+import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.supplyIf
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
@@ -26,6 +27,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 internal class JasyncSaveStepSpecificationConverter(
     @Named(Executors.IO_EXECUTOR_NAME) private val ioCoroutineDispatcher: CoroutineDispatcher,
     private val meterRegistry: MeterRegistry,
+    private val eventsLogger: EventsLogger,
 ) : StepSpecificationConverter<JasyncSaveStepSpecificationImpl<*>> {
 
     override fun support(stepSpecification: StepSpecification<*, *, *>): Boolean {
@@ -48,7 +50,8 @@ internal class JasyncSaveStepSpecificationConverter(
             tableNameFactory = spec.tableNameFactory,
             columnsFactory = spec.columnsFactory,
             recordsFactory = spec.rowsFactory as suspend (StepContext<*, *>, I) -> List<JasyncSaverRecord>,
-            metrics = jasyncMetrics
+            eventsLogger = eventsLogger.takeIf { spec.monitoringConfig.events },
+            meterRegistry = meterRegistry.takeIf { spec.monitoringConfig.meters }
         )
         creationContext.createdStep(step)
     }

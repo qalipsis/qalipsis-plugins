@@ -2,8 +2,15 @@ package io.qalipsis.plugins.r2dbc.jasync.save
 
 import assertk.assertThat
 import com.github.jasync.sql.db.SuspendingConnection
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Tags
+import io.micrometer.core.instrument.Timer
 import io.mockk.confirmVerified
+import io.mockk.every
 import io.mockk.verify
+import io.qalipsis.api.context.StepStartStopContext
+import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Dialect
 import io.qalipsis.plugins.r2dbc.jasync.poll.AbstractJasyncIntegrationTest
 import io.qalipsis.test.io.readResource
@@ -18,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.testcontainers.junit.jupiter.Testcontainers
+import java.util.concurrent.TimeUnit
 
 /**
  * Integration test for the usage of the save step
@@ -32,7 +40,15 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
     connectionPoolFactory: () -> SuspendingConnection
 ) : AbstractJasyncIntegrationTest(connectionPoolFactory) {
 
-    private val jasyncQueryMetrics = relaxedMockk<JasyncQueryMetrics>()
+    private val eventsLogger = relaxedMockk<EventsLogger>()
+
+    private val recordsCounter = relaxedMockk<Counter>()
+
+    private val failureCounter = relaxedMockk<Counter>()
+
+    private val successCounter = relaxedMockk<Counter>()
+
+    private val timeToResponse = relaxedMockk<Timer>()
 
     private val creationScript = readResource("schemas/$scriptFolderBaseName/create-table-buildingentries.sql").trim()
     private val dropScript = readResource("schemas/$scriptFolderBaseName/drop-table-buildingentries.sql").trim()
@@ -56,6 +72,15 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         val recordsList = listOf(JasyncSaverRecord(listOf("2020-10-20T12:34:21", "IN", "alice", true)))
         val columns = listOf("timestamp", "action", "username", "enabled")
         val tableName = "buildingentries"
+        val metersTags = relaxedMockk<Tags>()
+        val meterRegistry = relaxedMockk<MeterRegistry> {
+            every { counter("jasync-save-records", refEq(metersTags)) } returns recordsCounter
+            every { counter("jasync-save-records-success", refEq(metersTags)) } returns successCounter
+            every { timer("jasync-save-records-time-to-response", refEq(metersTags)) } returns timeToResponse
+        }
+        val startStopContext = relaxedMockk<StepStartStopContext> {
+            every { toMetersTags() } returns metersTags
+        }
 
         val step = JasyncSaveStep<String>(
             id = id,
@@ -64,30 +89,31 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
             recordsFactory = { _, _ -> recordsList },
             columnsFactory = { _, _ -> columns },
             tableNameFactory = { _, _ -> tableName },
-            metrics = jasyncQueryMetrics,
             dialect = dialect,
+            meterRegistry = meterRegistry,
+            eventsLogger = eventsLogger
         )
 
         val input = "input data"
         val context =
-            StepTestHelper.createStepContext<String, R2DBCSaveResult<String>>(input)
+            StepTestHelper.createStepContext<String, JasyncSaveResult<String>>(input)
 
-        step.start(relaxedMockk())
+        step.start(startStopContext)
         step.execute(context)
 
         verify {
-            jasyncQueryMetrics.recordTimeToSuccess(more(0L))
-            jasyncQueryMetrics.countRecords(eq(1))
-            jasyncQueryMetrics.countSuccess()
+            timeToResponse.record(more(0L), TimeUnit.NANOSECONDS)
+            successCounter.increment(1.0)
+            recordsCounter.increment()
         }
-        confirmVerified(jasyncQueryMetrics)
+        confirmVerified(timeToResponse, successCounter, recordsCounter)
 
         val result = connection.sendQuery("SELECT * FROM $tableName")
         assertTrue(result.rows[0].contains("IN"))
         assertTrue(result.rows[0].contains("alice"))
 
         val output = (context.output as Channel).receive()
-        assertThat(output.successSavedDocuments == 1)
+        assertThat(output.jasyncSaveStepMeters.successSavedDocuments == 1)
         assertThat(output.input == "input data")
 
     }
@@ -103,6 +129,17 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         )
         val columns = listOf("timestamp", "action", "username", "enabled")
         val tableName = "buildingentries"
+
+        val metersTags = relaxedMockk<Tags>()
+        val meterRegistry = relaxedMockk<MeterRegistry> {
+            every { counter("jasync-save-records", refEq(metersTags)) } returns recordsCounter
+            every { counter("jasync-save-records-success", refEq(metersTags)) } returns successCounter
+            every { timer("jasync-save-records-time-to-response", refEq(metersTags)) } returns timeToResponse
+        }
+        val startStopContext = relaxedMockk<StepStartStopContext> {
+            every { toMetersTags() } returns metersTags
+        }
+
         val step = JasyncSaveStep<String>(
             id = id,
             retryPolicy = retryPolicyNull,
@@ -111,21 +148,22 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
             columnsFactory = { _, _ -> columns },
             tableNameFactory = { _, _ -> tableName },
             dialect = dialect,
-            metrics = jasyncQueryMetrics,
+            meterRegistry = meterRegistry,
+            eventsLogger = eventsLogger
         )
         val input = "input data"
         val context =
-            StepTestHelper.createStepContext<String, R2DBCSaveResult<String>>(input)
+            StepTestHelper.createStepContext<String, JasyncSaveResult<String>>(input)
 
-        step.start(relaxedMockk())
+        step.start(startStopContext)
         step.execute(context)
 
         verify {
-            jasyncQueryMetrics.recordTimeToSuccess(more(0L))
-            jasyncQueryMetrics.countRecords(eq(2))
-            jasyncQueryMetrics.countSuccess()
+            timeToResponse.record(more(0L), TimeUnit.NANOSECONDS)
+            successCounter.increment(2.0)
+            recordsCounter.increment()
         }
-        confirmVerified(jasyncQueryMetrics)
+        confirmVerified(timeToResponse, successCounter, recordsCounter)
 
         val result = connection.sendQuery("SELECT * FROM $tableName")
         val toCollection = result.rows.flatten()
@@ -135,7 +173,7 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         assertTrue(toCollection.contains("john"))
 
         val output = (context.output as Channel).receive()
-        assertThat(output.successSavedDocuments == 2)
+        assertThat(output.jasyncSaveStepMeters.successSavedDocuments == 2)
         assertThat(output.input == "input data")
     }
 
@@ -148,6 +186,17 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         val columns = listOf("timestamp", "action", "username", "enabled")
         val tableName = "buildingentries"
 
+        val metersTags = relaxedMockk<Tags>()
+        val meterRegistry = relaxedMockk<MeterRegistry> {
+            every { counter("jasync-save-records", refEq(metersTags)) } returns recordsCounter
+            every { counter("jasync-save-records-success", refEq(metersTags)) } returns successCounter
+            every { counter("jasync-save-records-failure", refEq(metersTags)) } returns failureCounter
+        }
+
+        val startStopContext = relaxedMockk<StepStartStopContext> {
+            every { toMetersTags() } returns metersTags
+        }
+
         val step = JasyncSaveStep<String>(
             id = id,
             retryPolicy = retryPolicyNull,
@@ -156,23 +205,22 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
             columnsFactory = { _, _ -> columns },
             tableNameFactory = { _, _ -> tableName },
             dialect = dialect,
-            metrics = jasyncQueryMetrics,
+            meterRegistry = meterRegistry,
+            eventsLogger = eventsLogger
         )
         val input = "input data"
         val context =
-            StepTestHelper.createStepContext<String, R2DBCSaveResult<String>>(input)
-        step.start(relaxedMockk())
+            StepTestHelper.createStepContext<String, JasyncSaveResult<String>>(input)
+        step.start(startStopContext)
         step.execute(context)
 
         verify {
-            jasyncQueryMetrics.recordTimeToFailure(more(0L))
-            jasyncQueryMetrics.countRecords(eq(1))
-            jasyncQueryMetrics.countFailure()
+            recordsCounter.increment()
+            failureCounter.increment(1.0)
         }
-        confirmVerified(jasyncQueryMetrics)
+        confirmVerified(recordsCounter, successCounter, failureCounter)
 
         val output = (context.output as Channel).receive()
-        assertThat(output.failedSavedDocuments == 1)
         assertThat(output.input == "input data")
     }
 }

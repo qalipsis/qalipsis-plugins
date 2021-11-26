@@ -7,7 +7,6 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import com.github.jasync.sql.db.ConnectionPoolConfiguration
-import com.github.jasync.sql.db.ResultSet
 import com.github.jasync.sql.db.SuspendingConnection
 import com.github.jasync.sql.db.SuspendingConnectionImpl
 import io.aerisconsulting.catadioptre.invokeInvisible
@@ -20,9 +19,7 @@ import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepCreationContextImpl
 import io.qalipsis.plugins.r2dbc.jasync.JasyncConnection
-import io.qalipsis.plugins.r2dbc.jasync.converters.JasyncResultSetBatchConverter
 import io.qalipsis.plugins.r2dbc.jasync.converters.JasyncResultSetConverter
-import io.qalipsis.plugins.r2dbc.jasync.converters.JasyncResultSetSingleConverter
 import io.qalipsis.plugins.r2dbc.jasync.converters.ParametersConverter
 import io.qalipsis.plugins.r2dbc.jasync.converters.ResultValuesConverter
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Dialect
@@ -186,7 +183,7 @@ internal class JasyncSearchStepSpecificationConverterTest :
         val spec = JasyncSearchStepSpecificationImpl<Any>()
 
         // when
-        val converter = converter.invokeInvisible<JasyncResultSetConverter<ResultSet, *, *>>("buildConverter","my-step", spec)
+        val converter = converter.invokeInvisible<JasyncResultSetConverter<ResultSetWrapper, *, *>>("buildConverter","my-step", spec)
 
         // then
         assertThat(converter).isInstanceOf(JasyncResultSetBatchConverter::class).all {
@@ -202,7 +199,7 @@ internal class JasyncSearchStepSpecificationConverterTest :
         spec.flatten()
 
         // when
-        val converter = converter.invokeInvisible<JasyncResultSetConverter<ResultSet, *, *>>("buildConverter","my-step", spec)
+        val converter = converter.invokeInvisible<JasyncResultSetConverter<ResultSetWrapper, *, *>>("buildConverter","my-step", spec)
 
         // then
         assertThat(converter).isInstanceOf(JasyncResultSetSingleConverter::class).all {

@@ -1,6 +1,5 @@
 package io.qalipsis.plugins.r2dbc.jasync.poll
 
-import com.github.jasync.sql.db.SSLConfiguration
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.scenario.StepSpecificationRegistry
 import io.qalipsis.api.steps.AbstractStepSpecification
@@ -10,6 +9,7 @@ import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.UnicastSpecification
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.datasource.DatasourceRecord
 import io.qalipsis.plugins.r2dbc.jasync.Flattenable
 import io.qalipsis.plugins.r2dbc.jasync.JasyncConnection
@@ -17,11 +17,8 @@ import io.qalipsis.plugins.r2dbc.jasync.R2dbcJasyncScenarioSpecification
 import io.qalipsis.plugins.r2dbc.jasync.R2dbcJasyncStepSpecification
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Protocol
 import org.jetbrains.annotations.NotNull
-import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets
 import java.time.Duration
 import javax.validation.constraints.NotBlank
-import javax.validation.constraints.Positive
 
 /**
  * Specification for an [io.qalipsis.api.steps.datasource.IterativeDatasourceStep] to poll data from a PostgreSQL,
@@ -96,9 +93,9 @@ interface JasyncPollStepSpecification :
     fun pollDelay(delay: Duration)
 
     /**
-     * Configures the metrics of the poll step.
-     */
-    fun metrics(metricsConfiguration: JasyncPollMetricsConfiguration.() -> Unit)
+    * Configures the monitoring of the poll step.
+    */
+    fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit)
 }
 
 /**
@@ -131,7 +128,7 @@ internal class JasyncPollStepSpecificationImpl :
     @field:NotNull
     internal var pollDelay: Duration? = null
 
-    internal val metrics = JasyncPollMetricsConfiguration()
+    internal val monitoringConfig = StepMonitoringConfiguration()
 
     internal var flattenOutput = false
 
@@ -161,8 +158,8 @@ internal class JasyncPollStepSpecificationImpl :
         this.pollDelay = delay
     }
 
-    override fun metrics(metricsConfiguration: JasyncPollMetricsConfiguration.() -> Unit) {
-        this.metrics.metricsConfiguration()
+    override fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit) {
+        this.monitoringConfig.monitoringConfig()
     }
 
     override fun flatten(): StepSpecification<Unit, DatasourceRecord<Map<String, Any?>>, *> {
@@ -173,17 +170,7 @@ internal class JasyncPollStepSpecificationImpl :
     }
 }
 
-/**
- * Configuration of the metrics to record for the Jasync poll step.
- *
- * @property recordsCount when true, records the number of received records.
- *
- * @author Eric Jessé
- */
-@Spec
-data class JasyncPollMetricsConfiguration(
-        var recordsCount: Boolean = false,
-)
+
 
 /**
  * Creates a R2DBC-Jasync poll step in order to periodically fetch data from a PostgreSQL, MySQL or MariaDB database.

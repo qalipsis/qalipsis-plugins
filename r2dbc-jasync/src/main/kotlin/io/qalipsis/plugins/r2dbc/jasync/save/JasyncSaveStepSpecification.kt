@@ -3,6 +3,7 @@ package io.qalipsis.plugins.r2dbc.jasync.save
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.r2dbc.jasync.JasyncConnection
 import io.qalipsis.plugins.r2dbc.jasync.R2dbcJasyncStepSpecification
@@ -15,8 +16,8 @@ import org.jetbrains.annotations.NotNull
  * @author Carlos Vieira
  */
 @Spec
-interface JasyncSaveStepSpecification<I> : StepSpecification<I, R2DBCSaveResult<I>, JasyncSaveStepSpecification<I>>,
-    R2dbcJasyncStepSpecification<I, R2DBCSaveResult<I>, JasyncSaveStepSpecification<I>> {
+interface JasyncSaveStepSpecification<I> : StepSpecification<I, JasyncSaveResult<I>, JasyncSaveStepSpecification<I>>,
+    R2dbcJasyncStepSpecification<I, JasyncSaveResult<I>, JasyncSaveStepSpecification<I>> {
 
     /**
      * Configures the pool of connections to the database.
@@ -44,9 +45,9 @@ interface JasyncSaveStepSpecification<I> : StepSpecification<I, R2DBCSaveResult<
     fun rowsFactory(rowsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JasyncSaverRecord>)
 
     /**
-     * Configures the metrics of the save step.
+     * Configures the monitoring of the consume step.
      */
-    fun saveMetrics(saveMetrics: JasyncSaveMetricsConfiguration.() -> Unit)
+    fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit)
 }
 
 /**
@@ -57,7 +58,7 @@ interface JasyncSaveStepSpecification<I> : StepSpecification<I, R2DBCSaveResult<
 @Spec
 internal class JasyncSaveStepSpecificationImpl<I> :
     JasyncSaveStepSpecification<I>,
-    AbstractStepSpecification<I, R2DBCSaveResult<I>, JasyncSaveStepSpecification<I>>() {
+    AbstractStepSpecification<I, JasyncSaveResult<I>, JasyncSaveStepSpecification<I>>() {
 
     internal var connection = JasyncConnection()
 
@@ -72,6 +73,8 @@ internal class JasyncSaveStepSpecificationImpl<I> :
         { _, _ -> emptyList() }
 
     internal val metrics = JasyncSaveMetricsConfiguration()
+
+    internal val monitoringConfig = StepMonitoringConfiguration()
 
     override fun connection(configBlock: JasyncConnection.() -> Unit) {
         connection.configBlock()
@@ -93,8 +96,8 @@ internal class JasyncSaveStepSpecificationImpl<I> :
         this.rowsFactory = rowsFactory
     }
 
-    override fun saveMetrics(saveMetrics: JasyncSaveMetricsConfiguration.() -> Unit) {
-        this.metrics.saveMetrics()
+    override fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit) {
+        this.monitoringConfig.monitoringConfig()
     }
 }
 

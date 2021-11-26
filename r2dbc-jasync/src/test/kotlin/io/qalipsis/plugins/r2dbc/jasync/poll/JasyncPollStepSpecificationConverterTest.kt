@@ -13,8 +13,6 @@ import assertk.assertions.isTrue
 import com.github.jasync.sql.db.ResultSet
 import io.aerisconsulting.catadioptre.getProperty
 import io.aerisconsulting.catadioptre.invokeInvisible
-import io.micrometer.core.instrument.Counter
-import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.mockk
@@ -25,8 +23,6 @@ import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
 import io.qalipsis.plugins.r2dbc.jasync.converters.ParametersConverter
-import io.qalipsis.plugins.r2dbc.jasync.converters.ResultSetBatchConverter
-import io.qalipsis.plugins.r2dbc.jasync.converters.ResultSetSingleConverter
 import io.qalipsis.plugins.r2dbc.jasync.converters.ResultValuesConverter
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Dialect
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Protocol
@@ -209,9 +205,10 @@ internal class JasyncPollStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should build batch converter without record counter`() {
+    internal fun `should build batch converter with eventsLogger`() {
         // given
         val spec = JasyncPollStepSpecificationImpl()
+        spec.monitoring { events = true }
 
         // when
         val converter = converter.invokeInvisible<DatasourceObjectConverter<ResultSet, out Any>>("buildConverter", "my-step", spec)
@@ -219,73 +216,58 @@ internal class JasyncPollStepSpecificationConverterTest :
         // then
         assertThat(converter).isInstanceOf(ResultSetBatchConverter::class).all {
             prop("resultValuesConverter").isSameAs(resultValuesConverter)
-            prop("recordsCounter").isNull1()
+            prop("meterRegistry").isNull1()
+            prop("eventsLogger").isNotNull().isEqualTo(eventsLogger)
         }
-
-        confirmVerified(meterRegistry)
     }
-
     @Test
-    internal fun `should build batch converter with record counter`() {
+    internal fun `should build batch converter with monitoring`() {
         // given
         val spec = JasyncPollStepSpecificationImpl()
-        spec.metrics { recordsCount = true }
-
-        val counter: Counter = mockk()
-        every { meterRegistry.counter(eq("r2dbc-jasync-poll-records"), eq("step"), eq("my-step")) } returns counter
-
+        spec.monitoring { meters = true }
         // when
         val converter = converter.invokeInvisible<DatasourceObjectConverter<ResultSet, out Any>>("buildConverter", "my-step", spec)
 
         // then
         assertThat(converter).isInstanceOf(ResultSetBatchConverter::class).all {
             prop("resultValuesConverter").isSameAs(resultValuesConverter)
-            prop("recordsCounter").isSameAs(counter)
+            prop("meterRegistry").isNotNull().isEqualTo(meterRegistry)
+            prop("eventsLogger").isNull1()
         }
-
-        verifyOnce { meterRegistry.counter(eq("r2dbc-jasync-poll-records"), eq("step"), eq("my-step")) }
-        confirmVerified(meterRegistry)
     }
 
 
     @Test
-    internal fun `should build single converter without record counter`() {
+    internal fun `should build single converter with eventsLogger`() {
         // given
         val spec = JasyncPollStepSpecificationImpl()
         spec.flattenOutput = true
-
+        spec.monitoring { events = true }
         // when
         val converter = converter.invokeInvisible<DatasourceObjectConverter<ResultSet, out Any>>("buildConverter", "my-step", spec)
 
         // then
         assertThat(converter).isInstanceOf(ResultSetSingleConverter::class).all {
             prop("resultValuesConverter").isSameAs(resultValuesConverter)
-            prop("recordsCounter").isNull1()
+            prop("eventsLogger").isNotNull().isEqualTo(eventsLogger)
+            prop("meterRegistry").isNull1()
         }
-
-        confirmVerified(meterRegistry)
     }
 
     @Test
-    internal fun `should build single converter with record counter`() {
+    internal fun `should build single converter with monitoring`() {
         // given
         val spec = JasyncPollStepSpecificationImpl()
         spec.flattenOutput = true
-        spec.metrics { recordsCount = true }
-
-        val counter: Counter = mockk()
-        every { meterRegistry.counter(eq("r2dbc-jasync-poll-records"), eq("step"), eq("my-step")) } returns counter
-
+        spec.monitoring { meters = true }
         // when
         val converter = converter.invokeInvisible<DatasourceObjectConverter<ResultSet, out Any>>("buildConverter", "my-step", spec)
 
         // then
         assertThat(converter).isInstanceOf(ResultSetSingleConverter::class).all {
             prop("resultValuesConverter").isSameAs(resultValuesConverter)
-            prop("recordsCounter").isSameAs(counter)
+            prop("eventsLogger").isNull1()
+            prop("meterRegistry").isNotNull().isEqualTo(meterRegistry)
         }
-
-        verifyOnce { meterRegistry.counter(eq("r2dbc-jasync-poll-records"), eq("step"), eq("my-step")) }
-        confirmVerified(meterRegistry)
     }
 }

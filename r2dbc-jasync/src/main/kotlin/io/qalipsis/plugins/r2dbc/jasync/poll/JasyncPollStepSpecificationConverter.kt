@@ -8,6 +8,7 @@ import io.aerisconsulting.catadioptre.KTestable
 import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.Executors
 import io.qalipsis.api.annotations.StepConverter
+import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
@@ -15,8 +16,6 @@ import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
 import io.qalipsis.plugins.r2dbc.jasync.converters.ParametersConverter
-import io.qalipsis.plugins.r2dbc.jasync.converters.ResultSetBatchConverter
-import io.qalipsis.plugins.r2dbc.jasync.converters.ResultSetSingleConverter
 import io.qalipsis.plugins.r2dbc.jasync.converters.ResultValuesConverter
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Dialect
 import jakarta.inject.Named
@@ -33,6 +32,7 @@ import kotlinx.coroutines.channels.Channel
 @StepConverter
 internal class JasyncPollStepSpecificationConverter(
     private val meterRegistry: MeterRegistry,
+    private val eventsLogger: EventsLogger,
     private val parametersConverter: ParametersConverter,
     private val resultValuesConverter: ResultValuesConverter,
     @Named(Executors.IO_EXECUTOR_NAME) private val ioCoroutineScope: CoroutineScope,
@@ -59,7 +59,6 @@ internal class JasyncPollStepSpecificationConverter(
             spec.pollDelay!!,
             { Channel(Channel.UNLIMITED) }
         )
-
 
         val converter = buildConverter(stepId, spec)
 
@@ -90,19 +89,18 @@ internal class JasyncPollStepSpecificationConverter(
         stepId: String,
         spec: JasyncPollStepSpecificationImpl,
     ): DatasourceObjectConverter<ResultSet, out Any> {
-        val recordsCounter = if (spec.metrics.recordsCount) {
-            meterRegistry.counter("r2dbc-jasync-poll-records", "step", stepId)
-        } else {
-            null
-        }
 
         return if (spec.flattenOutput) {
             ResultSetSingleConverter(
                 resultValuesConverter,
-                recordsCounter
+                eventsLogger = eventsLogger.takeIf { spec.monitoringConfig.events },
+                meterRegistry = meterRegistry.takeIf { spec.monitoringConfig.meters }
             )
         } else {
-            ResultSetBatchConverter(resultValuesConverter, recordsCounter)
+            ResultSetBatchConverter(
+                resultValuesConverter,
+                eventsLogger = eventsLogger.takeIf { spec.monitoringConfig.events },
+                meterRegistry = meterRegistry.takeIf { spec.monitoringConfig.meters })
         }
     }
 
