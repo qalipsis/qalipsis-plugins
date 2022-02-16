@@ -1,5 +1,7 @@
 package io.qalipsis.plugins.r2dbc.jasync.poll
 
+import com.github.jasync.sql.db.RowData
+
 /**
  * SQL statement for polling, integrating the ability to be internally modified when a tie-breaker is set.
  *
@@ -8,9 +10,9 @@ package io.qalipsis.plugins.r2dbc.jasync.poll
 internal interface SqlPollStatement {
 
     /**
-     * The boundary value used to select the next batch of data.
+     * Saves the boundary value used to select the next batch of data.
      */
-    var tieBreaker: Any?
+    fun saveTiebreaker(record: RowData)
 
     /**
      * Provides the SQL prepared statement given the past executions and tie-breaker value.

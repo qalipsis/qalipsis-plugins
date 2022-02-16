@@ -69,7 +69,7 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
     internal fun `should run the save`() = runBlocking {
         val id = "step-id"
         val retryPolicyNull = null
-        val recordsList = listOf(JasyncSaverRecord(listOf("2020-10-20T12:34:21", "IN", "alice", true)))
+        val recordsList = listOf(JasyncSaveRecord(listOf("2020-10-20T12:34:21", "IN", "alice", true)))
         val columns = listOf("timestamp", "action", "username", "enabled")
         val tableName = "buildingentries"
         val metersTags = relaxedMockk<Tags>()
@@ -124,8 +124,8 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         val id = "step-id"
         val retryPolicyNull = null
         val recordsList = listOf(
-            JasyncSaverRecord(listOf("2020-10-20T12:34:21", "IN", "alice", true)),
-            JasyncSaverRecord(listOf("2020-10-20T12:44:10", "IN", "john", false))
+            JasyncSaveRecord(listOf("2020-10-20T12:34:21", "IN", "alice", true)),
+            JasyncSaveRecord(listOf("2020-10-20T12:44:10", "IN", "john", false))
         )
         val columns = listOf("timestamp", "action", "username", "enabled")
         val tableName = "buildingentries"
@@ -182,7 +182,7 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
     internal fun `should fail on save`() = runBlocking {
         val id = "step-id"
         val retryPolicyNull = null
-        val recordsList = listOf(JasyncSaverRecord(listOf("2020-10-20T12:34:21", "IN", "alice", "fail")))
+        val recordsList = listOf(JasyncSaveRecord(listOf("2020-10-20T12:34:21", "IN", "alice", "fail")))
         val columns = listOf("timestamp", "action", "username", "enabled")
         val tableName = "buildingentries"
 

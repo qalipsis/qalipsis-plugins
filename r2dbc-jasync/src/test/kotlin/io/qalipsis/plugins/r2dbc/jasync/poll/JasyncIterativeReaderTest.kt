@@ -52,7 +52,6 @@ internal class JasyncIterativeReaderTest {
                 this,
                 connectionPoolFactory,
                 sqlPollStatement,
-                "Any",
                 Duration.ofMillis(50),
                 { Channel(1) }
             ), recordPrivateCalls = true
@@ -76,7 +75,6 @@ internal class JasyncIterativeReaderTest {
                 this,
                 connectionPoolFactory,
                 sqlPollStatement,
-                "Any",
                 Duration.ofMillis(50),
                 { Channel(1) }
             ), recordPrivateCalls = true
@@ -105,7 +103,6 @@ internal class JasyncIterativeReaderTest {
                 this,
                 connectionPoolFactory,
                 sqlPollStatement,
-                "Any",
                 Duration.ofMillis(50),
                 { Channel(1) }
             ), recordPrivateCalls = true
@@ -145,7 +142,6 @@ internal class JasyncIterativeReaderTest {
                 this,
                 connectionPoolFactory,
                 sqlPollStatement,
-                "Any",
                 Duration.ofMillis(50),
                 { Channel(1) }
             ), recordPrivateCalls = true

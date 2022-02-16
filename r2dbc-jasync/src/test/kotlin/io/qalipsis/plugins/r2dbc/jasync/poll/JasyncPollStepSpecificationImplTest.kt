@@ -45,7 +45,6 @@ internal class JasyncPollStepSpecificationImplTest {
             }
             query("This is my query")
             parameters(123, "my-param", true, LocalDate.of(2020, 11, 13))
-            tieBreaker("my-tie-breaker")
             pollDelay(Duration.ofSeconds(12))
         }
 
@@ -71,8 +70,6 @@ internal class JasyncPollStepSpecificationImplTest {
                 hasSize(4)
                 containsExactly(123, "my-param", true, LocalDate.of(2020, 11, 13))
             }
-            prop(JasyncPollStepSpecificationImpl::tieBreaker).isEqualTo("my-tie-breaker")
-            prop(JasyncPollStepSpecificationImpl::strictTieBreaker).isFalse()
             prop(JasyncPollStepSpecificationImpl::pollDelay).isEqualTo(Duration.ofSeconds(12))
             prop(JasyncPollStepSpecificationImpl::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::meters).isFalse()
@@ -107,7 +104,6 @@ internal class JasyncPollStepSpecificationImplTest {
             }
             query("This is my other query")
             parameters()
-            tieBreaker("my-other-tie-breaker", true)
             pollDelay(Duration.ofSeconds(23))
             monitoring {
                 meters = true
@@ -135,8 +131,6 @@ internal class JasyncPollStepSpecificationImplTest {
             }
             prop(JasyncPollStepSpecificationImpl::query).isEqualTo("This is my other query")
             prop(JasyncPollStepSpecificationImpl::parameters).hasSize(0)
-            prop(JasyncPollStepSpecificationImpl::tieBreaker).isEqualTo("my-other-tie-breaker")
-            prop(JasyncPollStepSpecificationImpl::strictTieBreaker).isTrue()
             prop(JasyncPollStepSpecificationImpl::pollDelay).isEqualTo(Duration.ofSeconds(23))
             prop(JasyncPollStepSpecificationImpl::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::meters).isTrue()

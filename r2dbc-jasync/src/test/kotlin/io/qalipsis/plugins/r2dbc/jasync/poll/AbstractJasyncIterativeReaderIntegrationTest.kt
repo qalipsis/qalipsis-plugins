@@ -75,11 +75,8 @@ internal abstract class AbstractJasyncIterativeReaderIntegrationTest(
                         "timestamp"
                     )
                 } """,
-                listOf("Truck #1"),
-                "timestamp",
-                false
+                listOf("Truck #1")
             ),
-            tieBreaker = "timestamp",
             pollDelay = Duration.ofMillis(POLL_TIMEOUT),
             resultsChannelFactory = { Channel(5) }
         )
@@ -107,11 +104,8 @@ internal abstract class AbstractJasyncIterativeReaderIntegrationTest(
             sqlPollStatement = SqlPollStatementImpl(
                 dialect,
                 """SELECT ${dialect.quote("timestamp")}, device, eventname FROM events ORDER BY ${dialect.quote("timestamp")} """,
-                emptyList(),
-                "timestamp",
-                false
+                emptyList()
             ),
-            tieBreaker = "timestamp",
             pollDelay = Duration.ofMillis(POLL_TIMEOUT),
             resultsChannelFactory = { Channel(5) }
         ), recordPrivateCalls = true)
@@ -139,15 +133,15 @@ internal abstract class AbstractJasyncIterativeReaderIntegrationTest(
 
         execute(firstBatch)
         assertThat(count("events")).isEqualTo(firstBatch.size)
-        reader.coInvokeInvisible<Unit>("poll",connection)
+        reader.coInvokeInvisible<Unit>("poll", connection)
 
         execute(secondBatch)
         assertThat(count("events")).isEqualTo(firstBatch.size + secondBatch.size)
-        reader.coInvokeInvisible<Unit>("poll",connection)
+        reader.coInvokeInvisible<Unit>("poll", connection)
 
         execute(thirdBatch)
         assertThat(count("events")).isEqualTo(firstBatch.size + secondBatch.size + thirdBatch.size)
-        reader.coInvokeInvisible<Unit>("poll",connection)
+        reader.coInvokeInvisible<Unit>("poll", connection)
 
         // then
         val firstFetchedBatch = reader.next()

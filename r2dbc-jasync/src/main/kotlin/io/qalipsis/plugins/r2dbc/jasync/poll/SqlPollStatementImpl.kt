@@ -1,15 +1,19 @@
 package io.qalipsis.plugins.r2dbc.jasync.poll
 
+import com.github.jasync.sql.db.RowData
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Dialect
-import org.apache.calcite.sql.*
+import io.qalipsis.plugins.r2dbc.jasync.dialect.DialectConfigurations
+import org.apache.calcite.sql.SqlBasicCall
+import org.apache.calcite.sql.SqlIdentifier
+import org.apache.calcite.sql.SqlKind
+import org.apache.calcite.sql.SqlOrderBy
+import org.apache.calcite.sql.SqlSelect
 import org.apache.calcite.sql.parser.SqlParser
 
 internal class SqlPollStatementImpl(
-        private val dialect: Dialect,
-        private var sql: String,
-        private val initialParameters: List<Any?>,
-        private val tieBreakerName: String,
-        strictTieBreaker: Boolean
+    private val dialect: Dialect,
+    private var sql: String,
+    private val initialParameters: List<Any?>
 ) : SqlPollStatement {
 
     private val initialSql = sql
@@ -19,16 +23,24 @@ internal class SqlPollStatementImpl(
 
     private val tieBreakerOperator: String
 
+    private val tieBreakerName: String
+
+    /**
+     * Backed property that can be reset to null.
+     */
+    private var tieBreaker: Any? = null
+
     init {
-        val order = getTieBreakerSortingOrder()
-        tieBreakerOperator = if (order.kind == SqlKind.DESCENDING) {
-            if (strictTieBreaker) {
-                "<"
-            } else {
-                "<="
-            }
-        } else if (strictTieBreaker) {
-            ">"
+        val firstSortingStatement = getTieBreakerSortingOrder()
+        // Since the name of the field is uppercased, the actual value is extracted.
+        val position =
+            (firstSortingStatement.getComponentParserPosition(0).columnNum - 1) until firstSortingStatement.getComponentParserPosition(
+                0
+            ).endColumnNum
+        tieBreakerName = sql.substring(position)
+            .trim { it == DialectConfigurations.POSTGRESQL.quotingConfig.string[0] || it == DialectConfigurations.MYSQL.quotingConfig.string[0] }
+        tieBreakerOperator = if (firstSortingStatement.kind == SqlKind.DESCENDING) {
+            "<="
         } else {
             ">="
         }
@@ -37,7 +49,7 @@ internal class SqlPollStatementImpl(
     /**
      * Validates that the tie-breaker is the first sorting column and returns its sorting order.
      */
-    private fun getTieBreakerSortingOrder(): SqlNode {
+    private fun getTieBreakerSortingOrder(): SqlIdentifier {
         val firstOrder = sqlNode.orderList.firstOrNull()
         val firstOrderIdentifier = when (firstOrder) {
             is SqlIdentifier -> {
@@ -54,33 +66,8 @@ internal class SqlPollStatementImpl(
             }
         }
 
-        val order = if (firstOrderIdentifier.simple.lowercase() == tieBreakerName.lowercase()
-        ) {
-            firstOrder
-        } else {
-            null
-        }
-        requireNotNull(order) {
-            "The tie-breaker should be set as the first sorting column"
-        }
-        return order
+        return firstOrderIdentifier
     }
-
-    /**
-     * Backed property that can be reset to null.
-     */
-    private var actualTieBreaker: Any? = null
-
-    override var tieBreaker: Any?
-        set(value) {
-            if (value != null) {
-                if (tieBreaker == null) {
-                    insertTieBreakerClause()
-                }
-                actualTieBreaker = value
-            }
-        }
-        get() = actualTieBreaker
 
     private fun insertTieBreakerClause() {
         val stringBuilder = StringBuilder(sql)
@@ -108,6 +95,16 @@ internal class SqlPollStatementImpl(
         sql = stringBuilder.toString()
     }
 
+    override fun saveTiebreaker(record: RowData) {
+        val newTiebreaker = record[tieBreakerName]
+        if (newTiebreaker != null) {
+            if (tieBreaker == null) {
+                insertTieBreakerClause()
+            }
+            tieBreaker = newTiebreaker
+        }
+    }
+
     override val query: String
         get() = sql
 
@@ -117,7 +114,7 @@ internal class SqlPollStatementImpl(
         } else initialParameters
 
     override fun reset() {
-        actualTieBreaker = null
+        tieBreaker = null
         sql = initialSql
     }
 }

@@ -34,7 +34,7 @@ internal class JasyncSaveStep<I>(
     private val dialect: Dialect,
     private val tableNameFactory: suspend (ctx: StepContext<*, *>, input: I) -> String,
     private val columnsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<String>,
-    private val recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JasyncSaverRecord>,
+    private val recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JasyncSaveRecord>,
     private val meterRegistry: MeterRegistry?,
     private val eventsLogger: EventsLogger?
 ) : AbstractStep<I, JasyncSaveResult<I>>(id, retryPolicy) {

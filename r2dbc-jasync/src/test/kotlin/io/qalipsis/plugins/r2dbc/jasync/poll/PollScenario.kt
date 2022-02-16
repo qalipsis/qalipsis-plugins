@@ -60,7 +60,6 @@ object PollScenario {
                     database = dbName
                 }
                 query("""select username, "timestamp" from buildingentries where action = ? order by "timestamp"""")
-                tieBreaker("timestamp", true)
                 parameters("IN")
                 pollDelay(Duration.ofSeconds(1))
             }.flatten()
@@ -80,7 +79,6 @@ object PollScenario {
                                     database = dbName
                                 }
                                 query("""select username, "timestamp" from buildingentries where action = ? order by "timestamp"""")
-                                tieBreaker("timestamp", true)
                                 parameters("OUT")
                                 pollDelay(Duration.ofSeconds(1))
                             }

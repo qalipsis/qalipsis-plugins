@@ -49,7 +49,7 @@ internal class JasyncSaveStepSpecificationConverter(
             dialect,
             tableNameFactory = spec.tableNameFactory,
             columnsFactory = spec.columnsFactory,
-            recordsFactory = spec.rowsFactory as suspend (StepContext<*, *>, I) -> List<JasyncSaverRecord>,
+            recordsFactory = spec.rowsFactory as suspend (StepContext<*, *>, I) -> List<JasyncSaveRecord>,
             eventsLogger = eventsLogger.takeIf { spec.monitoringConfig.events },
             meterRegistry = meterRegistry.takeIf { spec.monitoringConfig.meters }
         )

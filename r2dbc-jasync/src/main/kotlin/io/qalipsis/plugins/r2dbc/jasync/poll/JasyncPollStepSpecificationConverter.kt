@@ -55,12 +55,11 @@ internal class JasyncPollStepSpecificationConverter(
             ioCoroutineScope,
             connectionPoolFactory,
             sqlStatement,
-            spec.tieBreaker!!,
             spec.pollDelay!!,
             { Channel(Channel.UNLIMITED) }
         )
 
-        val converter = buildConverter(stepId, spec)
+        val converter = buildConverter(spec)
 
         val step = IterativeDatasourceStep(
             stepId,
@@ -79,17 +78,11 @@ internal class JasyncPollStepSpecificationConverter(
         return SqlPollStatementImpl(
             dialect = dialect,
             sql = spec.query!!,
-            initialParameters = spec.parameters.map(parametersConverter::process),
-            tieBreakerName = spec.tieBreaker!!,
-            strictTieBreaker = spec.strictTieBreaker
+            initialParameters = spec.parameters.map(parametersConverter::process)
         )
     }
 
-    private fun buildConverter(
-        stepId: String,
-        spec: JasyncPollStepSpecificationImpl,
-    ): DatasourceObjectConverter<ResultSet, out Any> {
-
+    private fun buildConverter(spec: JasyncPollStepSpecificationImpl): DatasourceObjectConverter<ResultSet, out Any> {
         return if (spec.flattenOutput) {
             ResultSetSingleConverter(
                 resultValuesConverter,

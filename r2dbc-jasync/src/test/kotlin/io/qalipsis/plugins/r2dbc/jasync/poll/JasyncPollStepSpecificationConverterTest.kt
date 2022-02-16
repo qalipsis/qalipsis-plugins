@@ -88,7 +88,6 @@ internal class JasyncPollStepSpecificationConverterTest :
             }
             query("This is my query")
             parameters(123, "my-param", true, LocalDate.of(2020, 11, 13))
-            tieBreaker("my-tie-breaker")
             pollDelay(Duration.ofSeconds(23))
             broadcast(123, Duration.ofSeconds(20))
         }
@@ -97,7 +96,7 @@ internal class JasyncPollStepSpecificationConverterTest :
         val spiedConverter = spyk(converter, recordPrivateCalls = true)
 
         val recordsConverter: DatasourceObjectConverter<ResultSet, out Any> = relaxedMockk()
-        every { spiedConverter["buildConverter"](any<String>(), refEq(spec)) } returns recordsConverter
+        every { spiedConverter["buildConverter"](refEq(spec)) } returns recordsConverter
 
         val sqlPollStatement: SqlPollStatement = relaxedMockk()
         every {
@@ -120,7 +119,6 @@ internal class JasyncPollStepSpecificationConverterTest :
                     prop("connectionPoolFactory").isNotNull()
                     prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
                     prop("sqlPollStatement").isSameAs(sqlPollStatement)
-                    prop("tieBreaker").isEqualTo("my-tie-breaker")
                     prop("pollDelay").isEqualTo(Duration.ofSeconds(23))
                     prop("resultsChannelFactory").isNotNull()
                 }
@@ -128,7 +126,7 @@ internal class JasyncPollStepSpecificationConverterTest :
                 prop("converter").isNotNull().isSameAs(recordsConverter)
             }
         }
-        verifyOnce { spiedConverter["buildConverter"](eq(creationContext.createdStep!!.id), refEq(spec)) }
+        verifyOnce { spiedConverter["buildConverter"](refEq(spec)) }
 
         val channelFactory = creationContext.createdStep!!
             .getProperty<JasyncIterativeReader>("reader")
@@ -147,7 +145,6 @@ internal class JasyncPollStepSpecificationConverterTest :
         val dialect: Dialect = relaxedMockk()
         val spec = JasyncPollStepSpecificationImpl().also {
             it.query("select * from myTable order by myTieBreaker")
-            it.tieBreaker("myTieBreaker")
         }
         // Returns a mock for each converted parameter.
         val convertedParams = mutableListOf<Any>()
@@ -177,7 +174,6 @@ internal class JasyncPollStepSpecificationConverterTest :
         val spec = JasyncPollStepSpecificationImpl().also {
             it.query("select * from myTable order by myTieBreaker")
             it.parameters(123, "my-param", true, LocalDate.of(2020, 11, 13))
-            it.tieBreaker("myTieBreaker", true)
         }
 
         // Returns a mock for each converted parameter.
@@ -200,7 +196,7 @@ internal class JasyncPollStepSpecificationConverterTest :
                 containsExactly(*convertedParams.toTypedArray())
             }
             prop("tieBreakerName").isEqualTo("myTieBreaker")
-            prop("tieBreakerOperator").isEqualTo(">")
+            prop("tieBreakerOperator").isEqualTo(">=")
         }
     }
 
@@ -211,7 +207,8 @@ internal class JasyncPollStepSpecificationConverterTest :
         spec.monitoring { events = true }
 
         // when
-        val converter = converter.invokeInvisible<DatasourceObjectConverter<ResultSet, out Any>>("buildConverter", "my-step", spec)
+        val converter =
+            converter.invokeInvisible<DatasourceObjectConverter<ResultSet, out Any>>("buildConverter", spec)
 
         // then
         assertThat(converter).isInstanceOf(ResultSetBatchConverter::class).all {
@@ -220,13 +217,15 @@ internal class JasyncPollStepSpecificationConverterTest :
             prop("eventsLogger").isNotNull().isEqualTo(eventsLogger)
         }
     }
+
     @Test
     internal fun `should build batch converter with monitoring`() {
         // given
         val spec = JasyncPollStepSpecificationImpl()
         spec.monitoring { meters = true }
         // when
-        val converter = converter.invokeInvisible<DatasourceObjectConverter<ResultSet, out Any>>("buildConverter", "my-step", spec)
+        val converter =
+            converter.invokeInvisible<DatasourceObjectConverter<ResultSet, out Any>>("buildConverter", spec)
 
         // then
         assertThat(converter).isInstanceOf(ResultSetBatchConverter::class).all {
@@ -244,7 +243,8 @@ internal class JasyncPollStepSpecificationConverterTest :
         spec.flattenOutput = true
         spec.monitoring { events = true }
         // when
-        val converter = converter.invokeInvisible<DatasourceObjectConverter<ResultSet, out Any>>("buildConverter", "my-step", spec)
+        val converter =
+            converter.invokeInvisible<DatasourceObjectConverter<ResultSet, out Any>>("buildConverter", spec)
 
         // then
         assertThat(converter).isInstanceOf(ResultSetSingleConverter::class).all {
@@ -261,7 +261,8 @@ internal class JasyncPollStepSpecificationConverterTest :
         spec.flattenOutput = true
         spec.monitoring { meters = true }
         // when
-        val converter = converter.invokeInvisible<DatasourceObjectConverter<ResultSet, out Any>>("buildConverter", "my-step", spec)
+        val converter =
+            converter.invokeInvisible<DatasourceObjectConverter<ResultSet, out Any>>("buildConverter", spec)
 
         // then
         assertThat(converter).isInstanceOf(ResultSetSingleConverter::class).all {

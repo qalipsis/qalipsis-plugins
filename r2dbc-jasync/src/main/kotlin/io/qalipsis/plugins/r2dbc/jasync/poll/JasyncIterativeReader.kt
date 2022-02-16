@@ -33,7 +33,6 @@ internal class JasyncIterativeReader(
     private val ioCoroutineScope: CoroutineScope,
     private val connectionPoolFactory: () -> SuspendingConnection,
     private val sqlPollStatement: SqlPollStatement,
-    private val tieBreaker: String,
     private val pollDelay: Duration,
     private val resultsChannelFactory: () -> Channel<ResultSet>
 ) : DatasourceIterativeReader<ResultSet> {
@@ -82,9 +81,7 @@ internal class JasyncIterativeReader(
             if (result.rowsAffected > 0) {
                 log.debug { "A result set with ${result.rowsAffected} records(s) was received" }
                 resultsChannel?.send(result.rows)
-                val lastResult = result.rows.toList().last()
-                sqlPollStatement.tieBreaker = lastResult[tieBreaker]
-                log.debug { "New value for the tie-breaker is ${sqlPollStatement.tieBreaker}" }
+                sqlPollStatement.saveTiebreaker(result.rows.toList().last())
             } else {
                 log.debug { "An empty result set was received" }
                 result.statusMessage?.let { log.debug { it } }

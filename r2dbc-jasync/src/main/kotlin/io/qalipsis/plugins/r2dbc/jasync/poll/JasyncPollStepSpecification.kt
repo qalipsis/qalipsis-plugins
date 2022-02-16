@@ -7,9 +7,9 @@ import io.qalipsis.api.steps.BroadcastSpecification
 import io.qalipsis.api.steps.LoopableSpecification
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.UnicastSpecification
-import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.datasource.DatasourceRecord
 import io.qalipsis.plugins.r2dbc.jasync.Flattenable
 import io.qalipsis.plugins.r2dbc.jasync.JasyncConnection
@@ -72,20 +72,6 @@ interface JasyncPollStepSpecification :
     fun parameters(vararg params: Any?)
 
     /**
-     * Defines the name of the column to use as a tie-breaker, which is the value used to limit the records for the next poll.
-     * The tie-breaker must be used as the first sort clause of the [query] and always be not null. Only the records
-     * from the database having a [tieBreaker] greater (or less if sorted descending) than the last polled value will be fetched at next poll.
-     *
-     * Prefer to use a unique value and set [strict] to true to avoid duplicated records being polled.
-     *
-     * Important: the tie-breaker column has to be part of the selected column.
-     *
-     * @param tieBreaker name of the column used for the tie-breaker
-     * @param strict when set to true, the where clause using the tie-breaker will apply a strict comparison, otherwise with equality
-     */
-    fun tieBreaker(@NotBlank tieBreaker: String, strict: Boolean = false)
-
-    /**
      * Delay between two executions of poll.
      *
      * @param delay the delay to wait between the end of a poll and start of next one
@@ -120,11 +106,6 @@ internal class JasyncPollStepSpecificationImpl :
 
     internal val parameters = mutableListOf<Any?>()
 
-    @field:NotBlank
-    internal var tieBreaker: String? = null
-
-    internal var strictTieBreaker = false
-
     @field:NotNull
     internal var pollDelay: Duration? = null
 
@@ -147,11 +128,6 @@ internal class JasyncPollStepSpecificationImpl :
     override fun parameters(vararg params: Any?) {
         parameters.clear()
         parameters.addAll(params.toList())
-    }
-
-    override fun tieBreaker(tieBreaker: String, strict: Boolean) {
-        this.tieBreaker = tieBreaker
-        strictTieBreaker = strict
     }
 
     override fun pollDelay(delay: Duration) {

@@ -32,17 +32,17 @@ interface JasyncSaveStepSpecification<I> : StepSpecification<I, JasyncSaveResult
     /**
      * Defines the name of the database table to do the insert.
      */
-    fun tableNameFactory(tableNameFactory: suspend (ctx: StepContext<*, *>, input: I) -> String)
+    fun tableName(tableNameFactory: suspend (ctx: StepContext<*, *>, input: I) -> String)
 
     /**
      * Defines the name of the columns to do the insert.
      */
-    fun columnsFactory(columnsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<String>)
+    fun columns(columnsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<String>)
 
     /**
      * Defines the rows to be insert on save.
      */
-    fun rowsFactory(rowsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JasyncSaverRecord>)
+    fun values(rowsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JasyncSaveRecord>)
 
     /**
      * Configures the monitoring of the consume step.
@@ -69,7 +69,7 @@ internal class JasyncSaveStepSpecificationImpl<I> :
 
     internal var columnsFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<String>) = { _, _ -> emptyList() }
 
-    internal var rowsFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<JasyncSaverRecord>) =
+    internal var rowsFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<JasyncSaveRecord>) =
         { _, _ -> emptyList() }
 
     internal val metrics = JasyncSaveMetricsConfiguration()
@@ -84,15 +84,15 @@ internal class JasyncSaveStepSpecificationImpl<I> :
         this.protocol = protocol
     }
 
-    override fun tableNameFactory(tableNameFactory: suspend (ctx: StepContext<*, *>, input: I) -> String) {
+    override fun tableName(tableNameFactory: suspend (ctx: StepContext<*, *>, input: I) -> String) {
         this.tableNameFactory = tableNameFactory
     }
 
-    override fun columnsFactory(columnsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<String>) {
+    override fun columns(columnsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<String>) {
         this.columnsFactory = columnsFactory
     }
 
-    override fun rowsFactory(rowsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JasyncSaverRecord>) {
+    override fun values(rowsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JasyncSaveRecord>) {
         this.rowsFactory = rowsFactory
     }
 
