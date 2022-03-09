@@ -7,6 +7,7 @@ import assertk.assertions.hasSize
 import com.influxdb.client.domain.WritePrecision
 import com.influxdb.client.kotlin.InfluxDBClientKotlin
 import com.influxdb.client.write.Point
+import io.qalipsis.plugins.influxdb.AbstractInfluxDbIntegrationTest
 import io.qalipsis.runtime.test.QalipsisTestRunner
 import io.qalipsis.test.io.readResourceLines
 import org.junit.jupiter.api.Assertions

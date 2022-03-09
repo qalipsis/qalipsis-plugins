@@ -11,6 +11,7 @@ import assertk.assertions.prop
 import com.influxdb.client.domain.WritePrecision
 import com.influxdb.query.FluxRecord
 import io.aerisconsulting.catadioptre.coInvokeInvisible
+import io.qalipsis.plugins.influxdb.AbstractInfluxDbIntegrationTest
 import io.qalipsis.test.mockk.relaxedMockk
 import kotlinx.coroutines.channels.Channel
 import org.junit.jupiter.api.Test

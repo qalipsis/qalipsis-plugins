@@ -12,6 +12,7 @@ import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.api.steps.StepMonitoringConfiguration
+import io.qalipsis.plugins.influxdb.InfluxDbStepConnectionImpl
 import io.qalipsis.plugins.influxdb.influxdb
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -65,12 +66,12 @@ internal class InfluxDbSpecificationImplTest {
                 prop(StepMonitoringConfiguration::events).isFalse()
                 prop(StepMonitoringConfiguration::meters).isTrue()
             }
-            prop(InfluxDbPollStepSpecificationImpl::connectionConfiguration).isInstanceOf(InfluxDbPollStepConnectionImpl::class)
+            prop(InfluxDbPollStepSpecificationImpl::connectionConfiguration).isInstanceOf(InfluxDbStepConnectionImpl::class)
                 .all {
-                    prop(InfluxDbPollStepConnectionImpl::bucket).isEqualTo("DB")
-                    prop(InfluxDbPollStepConnectionImpl::user).isEqualTo("user")
-                    prop(InfluxDbPollStepConnectionImpl::url).isEqualTo("http://127.0.0.1:8086")
-                    prop(InfluxDbPollStepConnectionImpl::password).isEqualTo("pass")
+                    prop(InfluxDbStepConnectionImpl::bucket).isEqualTo("DB")
+                    prop(InfluxDbStepConnectionImpl::user).isEqualTo("user")
+                    prop(InfluxDbStepConnectionImpl::url).isEqualTo("http://127.0.0.1:8086")
+                    prop(InfluxDbStepConnectionImpl::password).isEqualTo("pass")
                 }
             prop(InfluxDbPollStepSpecificationImpl::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.BROADCAST)

@@ -18,6 +18,7 @@ import io.mockk.spyk
 import io.mockk.verify
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.sync.SuspendedCountLatch
+import io.qalipsis.plugins.influxdb.InfluxDbStepConnectionImpl
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
@@ -59,7 +60,7 @@ internal class InfluxDbIterativeReaderTest {
     @Test
     @Timeout(3)
     internal fun `should be restartable`() = testDispatcherProvider.run {
-        val connectionConfig = InfluxDbPollStepConnectionImpl()
+        val connectionConfig = InfluxDbStepConnectionImpl()
 
         connectionConfig.password = "pass"
         connectionConfig.url = "http://127.0.0.1:8086"
@@ -119,7 +120,7 @@ internal class InfluxDbIterativeReaderTest {
     @Test
     @Timeout(10)
     fun `should be empty before start`() = testDispatcherProvider.run {
-        val connectionConfig = InfluxDbPollStepConnectionImpl()
+        val connectionConfig = InfluxDbStepConnectionImpl()
 
         connectionConfig.password = "pass"
         connectionConfig.url = "http://127.0.0.1:8086"
@@ -147,7 +148,7 @@ internal class InfluxDbIterativeReaderTest {
     @Timeout(20)
     fun `should poll at least twice after start`() = runBlocking {
         // given
-        val connectionConfig = InfluxDbPollStepConnectionImpl()
+        val connectionConfig = InfluxDbStepConnectionImpl()
 
         connectionConfig.password = "pass"
         connectionConfig.url = "http://127.0.0.1:8086"

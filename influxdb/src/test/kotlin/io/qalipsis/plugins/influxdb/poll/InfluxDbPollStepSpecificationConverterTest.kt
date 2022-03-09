@@ -89,12 +89,12 @@ internal class InfluxDbPollStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
                 prop("id").isEqualTo("my-step")
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isSameAs(recordsConverter)
                 prop("reader").isNotNull().isInstanceOf(InfluxDbIterativeReader::class).all {
                     prop("pollStatement").isNotNull().isInstanceOf(InfluxDbPollStatement::class).all {
                         prop("query").isEqualTo("from(bucket: \"test\")")
                     }
-                    prop("meterRegistry").isNotNull().isEqualTo(meterRegistry)
+                    prop("meterRegistry").isEqualTo(meterRegistry)
                     prop("eventsLogger").isNull()
                 }
             }
@@ -149,13 +149,13 @@ internal class InfluxDbPollStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
                 prop("id").isEqualTo("my-step")
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isSameAs(recordsConverter)
                 prop("reader").isNotNull().isInstanceOf(InfluxDbIterativeReader::class).all {
                     prop("pollStatement").isNotNull().isInstanceOf(InfluxDbPollStatement::class).all {
                         prop("query").isEqualTo("from(bucket: \"test\")")
                     }
                     prop("meterRegistry").isNull()
-                    prop("eventsLogger").isNotNull().isEqualTo(eventsLogger)
+                    prop("eventsLogger").isEqualTo(eventsLogger)
                 }
             }
         }

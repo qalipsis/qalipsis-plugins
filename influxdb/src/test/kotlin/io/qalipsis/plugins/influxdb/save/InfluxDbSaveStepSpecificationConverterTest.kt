@@ -86,10 +86,10 @@ internal class InfluxDbSaveStepSpecificationConverterTest :
 
         // then
         assertThat(creationContext.createdStep!!).all {
-            prop("id").isNotNull().isEqualTo("influxdb-save-step")
+            prop("id").isEqualTo("influxdb-save-step")
             prop("influxDbSavePointClient").all {
                 prop("clientBuilder").isNotNull()
-                prop("meterRegistry").isNotNull().isSameAs(meterRegistry)
+                prop("meterRegistry").isSameAs(meterRegistry)
                 prop("eventsLogger").isNull()
             }
             prop("retryPolicy").isNotNull()
@@ -142,7 +142,7 @@ internal class InfluxDbSaveStepSpecificationConverterTest :
             prop("influxDbSavePointClient").all {
                 prop("clientBuilder").isNotNull()
                 prop("meterRegistry").isNull()
-                prop("eventsLogger").isNotNull().isSameAs(eventsLogger)
+                prop("eventsLogger").isSameAs(eventsLogger)
             }
         }
     }

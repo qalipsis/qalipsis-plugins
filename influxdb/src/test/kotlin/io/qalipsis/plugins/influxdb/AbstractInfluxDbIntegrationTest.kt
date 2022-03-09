@@ -4,7 +4,6 @@ import com.influxdb.client.InfluxDBClientFactory
 import com.influxdb.client.kotlin.InfluxDBClientKotlin
 import com.influxdb.client.kotlin.InfluxDBClientKotlinFactory
 import io.qalipsis.api.logging.LoggerHelper.logger
-import io.qalipsis.plugins.influxdb.poll.InfluxDbPollStepConnectionImpl
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import org.junit.jupiter.api.AfterEach
@@ -29,7 +28,7 @@ internal abstract class AbstractInfluxDbIntegrationTest {
 
     lateinit var client: InfluxDBClientKotlin
 
-    protected val connectionConfig = InfluxDbPollStepConnectionImpl()
+    protected val connectionConfig = InfluxDbStepConnectionImpl()
 
     @BeforeEach
     fun beforeAll() {

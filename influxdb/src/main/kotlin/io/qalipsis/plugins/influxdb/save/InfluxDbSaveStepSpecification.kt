@@ -9,8 +9,8 @@ import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
+import io.qalipsis.plugins.influxdb.InfluxDbStepConnectionImpl
 import io.qalipsis.plugins.influxdb.InfluxdbStepSpecification
-import javax.validation.constraints.NotBlank
 
 /**
  * Specification for a [io.qalipsis.plugins.influxdb.save.InfluxDbSaveStep] to save data to a InfluxDB.
@@ -24,7 +24,7 @@ interface InfluxDbSaveStepSpecification<I> :
     /**
      * Configures the connection to the InfluxDb server.
      */
-    fun connect(connectionConfiguration: InfluxDbSaveStepConnectionImpl.() -> Unit)
+    fun connect(connectionConfiguration: InfluxDbStepConnectionImpl.() -> Unit)
 
     /**
      * Defines the statement to execute when saving.
@@ -47,7 +47,7 @@ internal class InfluxDbSaveStepSpecificationImpl<I> :
     InfluxDbSaveStepSpecification<I>,
     AbstractStepSpecification<I, I, InfluxDbSaveStepSpecification<I>>() {
 
-    internal var connectionConfig = InfluxDbSaveStepConnectionImpl()
+    internal var connectionConfig = InfluxDbStepConnectionImpl()
 
     internal lateinit var clientBuilder: (() -> InfluxDBClientKotlin)
 
@@ -55,7 +55,7 @@ internal class InfluxDbSaveStepSpecificationImpl<I> :
 
     internal var monitoringConfig = StepMonitoringConfiguration()
 
-    override fun connect(connectionConfiguration: InfluxDbSaveStepConnectionImpl.() -> Unit) {
+    override fun connect(connectionConfiguration: InfluxDbStepConnectionImpl.() -> Unit) {
         connectionConfig.connectionConfiguration();
         clientBuilder = {
             InfluxDBClientKotlinFactory.create(
@@ -94,59 +94,6 @@ data class InfluxDbSavePointConfiguration<I>(
     var organization: suspend (ctx: StepContext<*, *>, input: I) -> String = { _, _ -> "" },
     var points: suspend (ctx: StepContext<*, *>, input: I) -> List<Point> = { _, _ -> listOf() }
 )
-
-/**
- * Interface to establish a connection with InfluxDb
- */
-interface InfluxDbSaveStepConnection {
-    /**
-     * Configures the servers settings.
-     */
-    fun server(url: String, bucket: String, org: String)
-
-    /**
-     * Configures the basic authentication.
-     */
-    fun basic(user: String, password: String)
-
-    /**
-     * When it is called, it sets the variable gzipEnabled of the specification to true, which will call influxDb.enableGzip() when creating the connection.
-     */
-    fun enableGzip()
-
-}
-
-class InfluxDbSaveStepConnectionImpl : InfluxDbSaveStepConnection {
-
-    @field:NotBlank
-    var url = "http://127.0.0.1:8086"
-
-    @field:NotBlank
-    var bucket = ""
-
-    var user: String = ""
-
-    var password: String = ""
-
-    var org: String = ""
-
-    var gzipEnabled = false
-
-    override fun server(url: String, bucket: String, org: String) {
-        this.url = url
-        this.bucket = bucket
-        this.org = org
-    }
-
-    override fun basic(user: String, password: String) {
-        this.user = user
-        this.password = password
-    }
-
-    override fun enableGzip() {
-        this.gzipEnabled = true
-    }
-}
 
 /**
  * Saves documents into InfluxDB.

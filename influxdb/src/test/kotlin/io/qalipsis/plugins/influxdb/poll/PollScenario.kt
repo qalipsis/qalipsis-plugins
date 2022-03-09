@@ -10,9 +10,9 @@ import io.qalipsis.api.steps.innerJoin
 import io.qalipsis.api.steps.logErrors
 import io.qalipsis.api.steps.map
 import io.qalipsis.api.steps.onEach
+import io.qalipsis.plugins.influxdb.AbstractInfluxDbIntegrationTest.Companion.BUCKET
+import io.qalipsis.plugins.influxdb.AbstractInfluxDbIntegrationTest.Companion.ORGANIZATION
 import io.qalipsis.plugins.influxdb.influxdb
-import io.qalipsis.plugins.influxdb.poll.AbstractInfluxDbIntegrationTest.Companion.BUCKET
-import io.qalipsis.plugins.influxdb.poll.AbstractInfluxDbIntegrationTest.Companion.ORGANIZATION
 import java.time.Duration
 import java.time.Instant
 

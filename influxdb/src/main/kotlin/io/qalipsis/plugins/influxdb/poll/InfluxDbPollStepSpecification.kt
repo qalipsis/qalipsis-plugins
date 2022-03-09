@@ -10,10 +10,11 @@ import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.UnicastSpecification
+import io.qalipsis.plugins.influxdb.InfluxDbStepConnection
+import io.qalipsis.plugins.influxdb.InfluxDbStepConnectionImpl
 import io.qalipsis.plugins.influxdb.InfluxdbScenarioSpecification
 import io.qalipsis.plugins.influxdb.InfluxdbStepSpecification
 import java.time.Duration
-import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotNull
 
 
@@ -26,7 +27,7 @@ interface InfluxDbPollStepSpecification :
     /**
      * Configures the connection to the InfluxDB Server.
      */
-    fun connect(connection: InfluxDbPollStepConnection.() -> Unit)
+    fun connect(connection: InfluxDbStepConnection.() -> Unit)
 
     /**
      * Creates the factory to execute to poll data.
@@ -46,27 +47,6 @@ interface InfluxDbPollStepSpecification :
     fun monitoring(monitoring: StepMonitoringConfiguration.() -> Unit)
 }
 
-/**
- * Interface to establish a connection with InfluxDb
- */
-interface InfluxDbPollStepConnection {
-    /**
-     * Configures the servers settings.
-     */
-    fun server(url: String, bucket: String, org: String)
-
-    /**
-     * Configures the users settings.
-     */
-    fun basic(user: String, password: String)
-
-    /**
-     * When it is called, it sets the variable gzipEnabled of the specification to true, which will call influxDb.enableGzip() when creating the connection.
-     */
-    fun enableGzip()
-
-}
-
 @Spec
 internal class InfluxDbPollStepSpecificationImpl(
 ) : AbstractStepSpecification<Unit, InfluxDbPollResults, InfluxDbPollStepSpecification>(),
@@ -74,7 +54,7 @@ internal class InfluxDbPollStepSpecificationImpl(
 
     override val singletonConfiguration: SingletonConfiguration = SingletonConfiguration(SingletonType.UNICAST)
 
-    val connectionConfiguration = InfluxDbPollStepConnectionImpl()
+    val connectionConfiguration = InfluxDbStepConnectionImpl()
 
     val monitoringConfiguration = StepMonitoringConfiguration()
 
@@ -84,7 +64,7 @@ internal class InfluxDbPollStepSpecificationImpl(
     @field:NotNull
     internal var pollPeriod: Duration = Duration.ofSeconds(10L)
 
-    override fun connect(connection: InfluxDbPollStepConnection.() -> Unit) {
+    override fun connect(connection: InfluxDbStepConnection.() -> Unit) {
         this.connectionConfiguration.connection()
     }
 
@@ -98,38 +78,6 @@ internal class InfluxDbPollStepSpecificationImpl(
 
     override fun monitoring(monitoring: StepMonitoringConfiguration.() -> Unit) {
         monitoringConfiguration.monitoring()
-    }
-}
-
-internal class InfluxDbPollStepConnectionImpl : InfluxDbPollStepConnection {
-
-    @field:NotBlank
-    var url = "http://127.0.0.1:8086"
-
-    @field:NotBlank
-    var bucket = ""
-
-    var user: String = ""
-
-    var password: String = ""
-
-    var org: String = ""
-
-    var gzipEnabled = false
-
-    override fun server(url: String, bucket: String, org: String) {
-        this.url = url
-        this.bucket = bucket
-        this.org = org
-    }
-
-    override fun basic(user: String, password: String) {
-        this.user = user
-        this.password = password
-    }
-
-    override fun enableGzip() {
-        this.gzipEnabled = true
     }
 }
 

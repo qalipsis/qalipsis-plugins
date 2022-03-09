@@ -10,7 +10,7 @@ import com.influxdb.query.FluxRecord
  *
  * @author Alex Averyanov
  */
-internal class InfluxDbQueryResult(
+class InfluxDbQueryResult(
     val results: List<FluxRecord>,
     val meters: InfluxDbQueryMeters
 )
