@@ -1,0 +1,25 @@
+events:
+  export:
+    influxdb:
+      url: http://localhost:8086
+      enabled: false
+      min-level: INFO
+      linger-period: 10s
+      batch-size: 2000
+      publishers: 1
+      username: user
+      password: passpasspass
+      org: qalipsis
+      bucket: qalipsis-event
+
+# Disables the native micronaut registry.
+micronaut.metrics.export.influx.enabled: false
+
+meters:
+  influxdb:
+    url: http://localhost:8086
+    enabled: false
+    step: PT10S
+    org: qalipsis
+    bucket: qalipsis-event
+
