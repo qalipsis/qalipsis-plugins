@@ -1,0 +1,4 @@
+<root level="info">
+    <appender-ref ref="FILE" />
+    <appender-ref ref="STDOUT" />
+</root>
