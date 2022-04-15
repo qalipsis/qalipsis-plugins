@@ -9,7 +9,7 @@ package io.qalipsis.plugins.graphite.save
  *
  * @author Palina Bril
  */
-class GraphiteSaveResult<I>(
+data class GraphiteSaveResult<I>(
     val input: I,
     val messages: List<String>,
     val meters: GraphiteSaveQueryMeters

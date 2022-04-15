@@ -7,7 +7,6 @@ import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLog
 import io.qalipsis.api.logging.LoggerHelper.logger
-import io.qalipsis.plugins.graphite.GraphiteClient
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
@@ -22,12 +21,12 @@ import java.util.concurrent.TimeUnit
  * @author Palina Bril
  */
 internal class GraphiteSaveMessageClientImpl(
-    private val clientBuilder: () -> GraphiteClient,
+    private val clientBuilder: () -> GraphiteSaveClient,
     private val eventsLogger: EventsLogger?,
     private val meterRegistry: MeterRegistry?
 ) : GraphiteSaveMessageClient {
 
-    private lateinit var client: GraphiteClient
+    private lateinit var client: GraphiteSaveClient
 
     private val eventPrefix = "graphite.save"
 
@@ -56,14 +55,17 @@ internal class GraphiteSaveMessageClientImpl(
     ): GraphiteSaveQueryMeters {
         eventsLogger?.debug("$eventPrefix.saving-messages", messages.size, tags = contextEventTags)
         messageCounter?.increment(messages.size.toDouble())
+
         val requestStart = System.nanoTime()
         client.publish(messages)
         val timeToResponseNano = System.nanoTime() - requestStart
         val timeToResponse = Duration.ofNanos(timeToResponseNano)
+
         eventsLogger?.info("${eventPrefix}.time-to-response", timeToResponse, tags = contextEventTags)
         eventsLogger?.info("${eventPrefix}.successes", messages.size, tags = contextEventTags)
         successCounter?.increment(messages.size.toDouble())
         this.timeToResponse?.record(timeToResponseNano, TimeUnit.NANOSECONDS)
+
         return GraphiteSaveQueryMeters(
             timeToResult = timeToResponse,
             savedMessages = messages.size

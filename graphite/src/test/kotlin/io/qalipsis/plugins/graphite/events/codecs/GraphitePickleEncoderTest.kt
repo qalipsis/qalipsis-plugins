@@ -10,10 +10,10 @@ import io.qalipsis.api.events.Event
 import io.qalipsis.api.events.EventLevel
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.coVerifyOnce
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import java.time.Instant
-import org.junit.Assert
 import java.nio.ByteBuffer
+import java.time.Instant
 
 /**
  * @author rklymenko
@@ -42,7 +42,7 @@ internal class GraphitePickleEncoderTest {
         val actualMessage = graphitePickleEncoder.invokeInvisible<String>("generatePayload", events)
 
         //then
-        Assert.assertEquals(expectedMessage, actualMessage)
+        Assertions.assertEquals(expectedMessage, actualMessage)
     }
 
     @Test
@@ -62,7 +62,7 @@ internal class GraphitePickleEncoderTest {
         val actualMessage = graphitePickleEncoder.invokeInvisible<String>("generatePayload", events)
 
         //then
-        Assert.assertEquals(expectedMessage, actualMessage)
+        Assertions.assertEquals(expectedMessage, actualMessage)
     }
 
     @Test
@@ -78,7 +78,7 @@ internal class GraphitePickleEncoderTest {
         val actualEvent = graphitePickleEncoder.invokeInvisible<ByteArray>("generateEvent", events)
 
         //then
-        Assert.assertArrayEquals(expectedEvent, actualEvent)
+        Assertions.assertArrayEquals(expectedEvent, actualEvent)
     }
 
     @Test
@@ -94,7 +94,7 @@ internal class GraphitePickleEncoderTest {
         val actualEvent = graphitePickleEncoder.invokeInvisible<ByteArray>("generateEvent", events)
 
         //then
-        Assert.assertArrayEquals(expectedEvent, actualEvent)
+        Assertions.assertArrayEquals(expectedEvent, actualEvent)
     }
 
     @Test

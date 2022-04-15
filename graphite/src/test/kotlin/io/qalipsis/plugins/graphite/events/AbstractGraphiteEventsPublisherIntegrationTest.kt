@@ -1,17 +1,15 @@
 package io.qalipsis.plugins.graphite.events
 
 import io.micronaut.http.HttpStatus
+import io.mockk.spyk
 import io.qalipsis.api.events.Event
 import io.qalipsis.api.events.EventLevel
 import io.qalipsis.api.events.EventTag
 import io.qalipsis.plugins.graphite.events.model.GraphiteProtocol
 import io.qalipsis.test.coroutines.TestDispatcherProvider
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
+import io.qalipsis.test.mockk.coVerifyNever
 import kotlinx.coroutines.delay
-import org.junit.Assert
+import org.awaitility.kotlin.await
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
@@ -32,7 +30,7 @@ import java.util.concurrent.TimeUnit
  * @author rklymenko
  */
 @Testcontainers
-@Timeout(3, unit = TimeUnit.MINUTES)
+@Timeout(60)
 internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val protocol: GraphiteProtocol) {
 
     @JvmField
@@ -47,11 +45,192 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val proto
 
     private val httpClient = createSimpleHttpClient()
 
-    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    private lateinit var graphiteEventsPublisher: GraphiteEventsPublisher
-
     private var protocolPort = -1
+
+    @BeforeAll
+    fun setUp() {
+        containerHttpPort = container.getMappedPort(HTTP_PORT)
+        val request = generateHttpGet("http://$LOCALHOST_HOST:${containerHttpPort}/render")
+        while (httpClient.send(request, HttpResponse.BodyHandlers.ofString()).statusCode() != HttpStatus.OK.code) {
+            Thread.sleep(1_000)
+        }
+
+        protocolPort =
+            if (protocol == GraphiteProtocol.PICKLE) container.getMappedPort(GRAPHITE_PICKLE_PORT)
+            else container.getMappedPort(GRAPHITE_PLAINTEXT_PORT)
+        val thatProtocol = protocol
+        configuration = object : GraphiteEventsConfiguration {
+            override val host: String
+                get() = LOCALHOST_HOST
+            override val port: Int
+                get() = protocolPort
+            override val protocol: GraphiteProtocol
+                get() = thatProtocol
+            override val batchSize: Int
+                get() = 1
+            override val lingerPeriod: Duration
+                get() = Duration.ofSeconds(100)
+            override val minLevel: EventLevel
+                get() = EventLevel.INFO
+            override val publishers: Int
+                get() = 2
+        }
+    }
+
+    @Test
+    @Timeout(15)
+    fun `should save single event into graphite`() = testDispatcherProvider.run {
+        //given
+        val graphiteEventsPublisher = GraphiteEventsPublisher(
+            this,
+            configuration
+        )
+        graphiteEventsPublisher.start()
+
+        val key = "my.test.path.$protocol"
+        val event = Event(key, EventLevel.INFO, emptyList(), 123)
+
+        //when
+        graphiteEventsPublisher.publish(event)
+
+        //then
+        val request =
+            generateHttpGet("http://${configuration.host}:${containerHttpPort}/render?target=$key&format=json")
+        await.atMost(10, TimeUnit.SECONDS).until {
+            kotlin.runCatching {
+                httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
+            }.getOrNull()?.contains(key) ?: false
+        }
+        graphiteEventsPublisher.stop()
+    }
+
+    @Test
+    @Timeout(20)
+    fun `should save multiple events one by one into graphite`() = testDispatcherProvider.run {
+        //given
+        val graphiteEventsPublisher = GraphiteEventsPublisher(
+            this,
+            configuration
+        )
+        graphiteEventsPublisher.start()
+        val keys = (1..5).map { "my.tests-separate.$protocol.path$it" }
+        val events = keys.map { Event(it, EventLevel.INFO, emptyList(), 123) }
+
+        //when
+        events.forEach { graphiteEventsPublisher.publish(it) }
+
+        //then
+        for (key in keys) {
+            val request =
+                generateHttpGet("http://${configuration.host}:${containerHttpPort}/render?target=$key&format=json")
+
+            await.atMost(5, TimeUnit.SECONDS).until {
+                kotlin.runCatching {
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
+                }.getOrNull()?.contains(key) ?: false
+            }
+        }
+        graphiteEventsPublisher.stop()
+    }
+
+    @Test
+    @Timeout(15)
+    fun `should save multiple events all together into graphite`() = testDispatcherProvider.run {
+        //given
+        val graphiteEventsPublisher = GraphiteEventsPublisher(
+            this,
+            configuration
+        )
+        graphiteEventsPublisher.start()
+        val keys = (1..5).map { "my.tests-alltogether.$protocol.path$it" }
+        val events = keys.map { Event(it, EventLevel.INFO, emptyList(), 123) }
+
+        //when
+        graphiteEventsPublisher.publish(events)
+
+        //then
+        for (key in keys) {
+            val request =
+                generateHttpGet("http://${configuration.host}:${containerHttpPort}/render?target=$key&format=json")
+
+            await.atMost(5, TimeUnit.SECONDS).until {
+                kotlin.runCatching {
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
+                }.getOrNull()?.contains(key) ?: false
+            }
+        }
+        graphiteEventsPublisher.stop()
+    }
+
+    @Test
+    @Timeout(15)
+    fun `should save single event into graphite with tags`() = testDispatcherProvider.run {
+        //given
+        val graphiteEventsPublisher = GraphiteEventsPublisher(
+            this,
+            configuration
+        )
+        graphiteEventsPublisher.start()
+        val key = "my.test.tagged.$protocol"
+        val event = Event(key, EventLevel.INFO, listOf(EventTag("a", "1"), EventTag("b", "2")), 123.123)
+
+        val url = StringBuilder()
+        url.append("http://${configuration.host}:${containerHttpPort}/render?target=$key")
+        for (tag in event.tags) {
+            url.append(";")
+            url.append(tag.key)
+            url.append("=")
+            url.append(tag.value)
+        }
+        url.append("&format=json")
+        val request = generateHttpGet(url.toString())
+
+        //when
+        graphiteEventsPublisher.publish(event)
+
+        //then
+        await.atMost(5, TimeUnit.SECONDS).until {
+            kotlin.runCatching {
+                httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
+            }.getOrNull()?.contains(key) ?: false
+        }
+        graphiteEventsPublisher.stop()
+    }
+
+    @Test
+    @Timeout(15)
+    fun `should save nothing due to insufficient event level`() = testDispatcherProvider.run {
+        //given
+        val graphiteEventsPublisher = spyk(
+            GraphiteEventsPublisher(
+                this,
+                configuration
+            )
+        )
+        graphiteEventsPublisher.start()
+        val key = "fakekey.$protocol"
+        val event = Event(key, EventLevel.TRACE, emptyList(), 123.123)
+
+        //when
+        graphiteEventsPublisher.publish(event)
+        delay(200)
+
+        //then
+        coVerifyNever { graphiteEventsPublisher.publish(any<List<Event>>()) }
+        graphiteEventsPublisher.stop()
+    }
+
+    private fun generateHttpGet(uri: String): HttpRequest =
+        HttpRequest.newBuilder()
+            .GET()
+            .uri(URI.create(uri))
+            .build()
+
+    private fun createSimpleHttpClient(): HttpClient =
+        HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
+            .build()!!
+
 
     companion object {
 
@@ -73,161 +252,4 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val proto
             withCreateContainerCmdModifier { it.hostConfig!!.withMemory((512 * 1e20).toLong()).withCpuCount(2) }
         }
     }
-
-    @BeforeAll
-    fun setUp() {
-        containerHttpPort = container.getMappedPort(HTTP_PORT)
-        val request = generateHttpGet("http://$LOCALHOST_HOST:${containerHttpPort}/render")
-        while(httpClient.send(request, HttpResponse.BodyHandlers.ofString()).statusCode() != HttpStatus.OK.code) {
-            Thread.sleep(1_000)
-        }
-
-        protocolPort =
-            if (protocol == GraphiteProtocol.PICKLE) container.getMappedPort(GRAPHITE_PICKLE_PORT)
-            else container.getMappedPort(GRAPHITE_PLAINTEXT_PORT)
-        val thatProtocol = protocol
-        configuration = object: GraphiteEventsConfiguration{
-            override val host: String
-                get() = "$LOCALHOST_HOST"
-            override val port: Int
-                get() = protocolPort
-            override val protocol: GraphiteProtocol
-                get() = thatProtocol
-            override val batchSize: Int
-                get() = 1
-            override val lingerPeriod: Duration
-                get() = Duration.ofSeconds(1)
-            override val minLevel: EventLevel
-                get() = EventLevel.INFO
-            override val publishers: Int
-                get() = 2
-        }
-
-        graphiteEventsPublisher = GraphiteEventsPublisher(
-            coroutineScope,
-            configuration
-        )
-        graphiteEventsPublisher.start()
-    }
-
-    @Test
-    @Timeout(value = 10, unit = TimeUnit.SECONDS)
-    fun `should save single event into graphite`() = testDispatcherProvider.runTest {
-        //given
-        val key = "my.test.path$protocol"
-        val event = Event(key, EventLevel.INFO, emptyList(), 123)
-
-        val request = generateHttpGet("http://${configuration.host}:${containerHttpPort}/render?target=$key&format=json")
-
-        //when
-        async {
-            graphiteEventsPublisher.publish(event)
-        }
-
-        //then
-        while(!httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body().contains(key)) {
-            delay(200)
-        }
-    }
-
-    @Test
-    @Timeout(value = 20, unit = TimeUnit.SECONDS)
-    fun `should save multiple events one by one into graphite`() = testDispatcherProvider.runTest {
-        //given
-        val keys = (1 .. 5).map { "my.tests-separate$protocol.path$it" }
-        val events = keys.map { Event(it, EventLevel.INFO, emptyList(), 123) }
-
-        //when
-        async {
-            events.forEach { graphiteEventsPublisher.publish(it) }
-        }
-
-        //then
-        for(key in keys) {
-            val request = generateHttpGet("http://${configuration.host}:${containerHttpPort}/render?target=$key&format=json")
-
-            while(!httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body().contains(key)) {
-                delay(200)
-            }
-        }
-    }
-
-    @Test
-    @Timeout(value = 10, unit = TimeUnit.SECONDS)
-    fun `should save multiple events alltogether into graphite`() = testDispatcherProvider.runTest {
-        //given
-        val keys = (1 .. 5).map { "my.tests-alltogether$protocol.path$it" }
-        val events = keys.map { Event(it, EventLevel.INFO, emptyList(), 123) }
-
-        //when
-        async {
-            graphiteEventsPublisher.publish(events)
-        }
-
-        //then
-        for(key in keys) {
-            val request = generateHttpGet("http://${configuration.host}:${containerHttpPort}/render?target=$key&format=json")
-
-            while(!httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body().contains(key)) {
-                delay(200)
-            }
-        }
-    }
-
-    @Test
-    @Timeout(value = 10, unit = TimeUnit.SECONDS)
-    fun `should save single event into graphite with tags`() = testDispatcherProvider.runTest {
-        //given
-        val key = "my.test.tagged$protocol"
-        val event = Event(key, EventLevel.INFO, listOf(EventTag("a", "1"), EventTag("b", "2")), 123.123)
-
-        val url = StringBuilder()
-        url.append("http://${configuration.host}:${containerHttpPort}/render?target=$key")
-        for(tag in event.tags) {
-            url.append(";")
-            url.append(tag.key)
-            url.append("=")
-            url.append(tag.value)
-        }
-        url.append("&format=json")
-        val request = generateHttpGet(url.toString())
-
-        //when
-        async {
-            graphiteEventsPublisher.publish(event)
-        }
-
-        //then
-        while(!httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body().contains(key)) {
-            delay(200)
-        }
-    }
-
-    @Test
-    @Timeout(value = 10, unit = TimeUnit.SECONDS)
-    fun `should save nothing due to insufficient event level`() = testDispatcherProvider.runTest {
-        //given
-        val key = "fakekey$protocol"
-        val event = Event(key, EventLevel.TRACE, emptyList(), 123.123)
-
-        val request = generateHttpGet("http://${configuration.host}:${containerHttpPort}/render?target=$key&format=json")
-
-        //when
-        graphiteEventsPublisher.publish(event)
-        delay(2_000)
-
-        //then
-        Assert.assertFalse(httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body().contains(key))
-    }
-
-    protected fun generateHttpGet(uri: String) =
-        HttpRequest.newBuilder()
-            .GET()
-            .uri(URI.create(uri))
-            .build()
-
-    protected fun createSimpleHttpClient() =
-        HttpClient.newBuilder()
-            .version(HttpClient.Version.HTTP_1_1)
-            .build()
 }

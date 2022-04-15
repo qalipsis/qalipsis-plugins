@@ -1,4 +1,4 @@
-package io.qalipsis.plugins.graphite.events
+package io.qalipsis.plugins.graphite.save
 
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.Channel
@@ -8,13 +8,12 @@ import io.netty.channel.ChannelOption
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
-import io.qalipsis.api.events.Event
 import io.qalipsis.api.io.Closeable
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.sync.ImmutableSlot
-import io.qalipsis.plugins.graphite.events.codecs.GraphitePickleEncoder
-import io.qalipsis.plugins.graphite.events.codecs.GraphitePlaintextEncoder
-import io.qalipsis.plugins.graphite.events.model.GraphiteProtocol
+import io.qalipsis.plugins.graphite.save.codecs.GraphitePlaintextStringEncoder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -22,11 +21,11 @@ import kotlinx.coroutines.runBlocking
  *
  * @author rklymenko
  */
-internal class GraphiteClient(
-    private val protocolType: GraphiteProtocol,
+internal class GraphiteSaveClient(
     private val host: String,
     private val port: Int,
-    private val workerGroup: EventLoopGroup
+    private val workerGroup: EventLoopGroup,
+    private val coroutineScope: CoroutineScope
 ) : Closeable {
 
     private var started = false
@@ -35,13 +34,11 @@ internal class GraphiteClient(
 
     protected val channel: Channel
         get() = channelFuture.channel()
-//
-//    private lateinit var openedChannel: Channel
 
     val isOpen: Boolean
         get() = started && channel.isOpen
 
-    suspend fun start(): GraphiteClient {
+    suspend fun start(): GraphiteSaveClient {
         started = false
         val readinessLatch = ImmutableSlot<Result<Unit>>()
 
@@ -50,7 +47,7 @@ internal class GraphiteClient(
         b.channel(NioSocketChannel::class.java).option(ChannelOption.SO_KEEPALIVE, true)
         b.handler(object : ChannelInitializer<SocketChannel>() {
             override fun initChannel(ch: SocketChannel) {
-                ch.pipeline().addLast(resolveProtocolEncoder())
+                ch.pipeline().addLast(GraphitePlaintextStringEncoder())
             }
         }).option(ChannelOption.SO_KEEPALIVE, true)
 
@@ -63,7 +60,7 @@ internal class GraphiteClient(
                 }
             }
         }
-        log.info { "Graphite connection established. Host: $host, port: $port, protocol: $protocolType" }
+        log.info { "Graphite connection established. Host: $host, port: $port" }
 
         readinessLatch.get().getOrThrow()
         started = true
@@ -71,12 +68,10 @@ internal class GraphiteClient(
     }
 
 
-
-
-    suspend fun publish(values: List<Event>) {
+    suspend fun publish(values: List<String>) {
         val readinessLatch = ImmutableSlot<Result<Unit>>()
         channel.writeAndFlush(values).addListener {
-            runBlocking {
+            coroutineScope.launch {
                 if (it.isSuccess) {
                     readinessLatch.set(Result.success(Unit))
                 } else {
@@ -90,11 +85,6 @@ internal class GraphiteClient(
     override suspend fun close() {
         started = false
         channel.closeFuture()
-    }
-
-    private fun resolveProtocolEncoder() = when (protocolType) {
-        GraphiteProtocol.PLAINTEXT -> GraphitePlaintextEncoder()
-        GraphiteProtocol.PICKLE -> GraphitePickleEncoder()
     }
 
     companion object {

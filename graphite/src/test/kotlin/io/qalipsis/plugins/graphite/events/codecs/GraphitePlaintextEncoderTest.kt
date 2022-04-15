@@ -11,9 +11,9 @@ import io.qalipsis.api.events.EventLevel
 import io.qalipsis.api.events.EventTag
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.coVerifyOnce
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import org.junit.Assert
 
 /**
  * @author rklymenko
@@ -39,7 +39,7 @@ internal class GraphitePlaintextEncoderTest {
         val actualMessage = graphitePickleEncoder.invokeInvisible<String>("generatePayload", event)
 
         //then
-        Assert.assertEquals(expectedMessage, actualMessage)
+        Assertions.assertEquals(expectedMessage, actualMessage)
     }
 
     @Test
@@ -55,7 +55,7 @@ internal class GraphitePlaintextEncoderTest {
         val actualMessage = graphitePickleEncoder.invokeInvisible<String>("generatePayload", event)
 
         //then
-        Assert.assertEquals(expectedMessage, actualMessage)
+        Assertions.assertEquals(expectedMessage, actualMessage)
     }
 
     @Test

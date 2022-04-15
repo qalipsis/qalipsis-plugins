@@ -1,13 +1,15 @@
 package io.qalipsis.plugins.graphite.save
 
 import io.micrometer.core.instrument.MeterRegistry
+import io.qalipsis.api.Executors
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.supplyIf
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
-import io.qalipsis.plugins.graphite.GraphiteClient
+import jakarta.inject.Named
+import kotlinx.coroutines.CoroutineScope
 
 /**
  * [StepSpecificationConverter] from [GraphiteSaveStepSpecificationImpl] to [GraphiteSaveStep]
@@ -18,7 +20,8 @@ import io.qalipsis.plugins.graphite.GraphiteClient
 @StepConverter
 internal class GraphiteSaveStepSpecificationConverter(
     private val meterRegistry: MeterRegistry,
-    private val eventsLogger: EventsLogger
+    private val eventsLogger: EventsLogger,
+    @Named(Executors.IO_EXECUTOR_NAME) private val coroutineScope: CoroutineScope,
 ) : StepSpecificationConverter<GraphiteSaveStepSpecificationImpl<*>> {
 
     override fun support(stepSpecification: StepSpecification<*, *, *>): Boolean {
@@ -30,10 +33,11 @@ internal class GraphiteSaveStepSpecificationConverter(
         val stepId = spec.name
         val workerGroup = spec.connectionConfig.workerGroup()
         val clientBuilder = {
-            GraphiteClient(
+            GraphiteSaveClient(
                 host = spec.connectionConfig.host,
                 port = spec.connectionConfig.port,
-                workerGroup = workerGroup
+                workerGroup = workerGroup,
+                coroutineScope = coroutineScope
             )
         }
 

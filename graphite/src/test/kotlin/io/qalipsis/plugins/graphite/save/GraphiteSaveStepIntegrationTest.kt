@@ -15,20 +15,18 @@ import io.micrometer.core.instrument.Timer
 import io.micronaut.http.HttpStatus
 import io.mockk.confirmVerified
 import io.mockk.every
+import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.verify
 import io.netty.channel.nio.NioEventLoopGroup
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
-import io.qalipsis.plugins.graphite.GraphiteClient
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
-import kotlinx.coroutines.async
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.HostPortWaitStrategy
@@ -48,8 +46,8 @@ import java.util.concurrent.TimeUnit
  *
  * @author Palina Bril
  */
-@Testcontainers
 @WithMockk
+@Testcontainers
 internal class GraphiteSaveStepIntegrationTest {
 
     @JvmField
@@ -64,33 +62,14 @@ internal class GraphiteSaveStepIntegrationTest {
 
     private var protocolPort = -1
 
-    private lateinit var client: GraphiteClient
+    @RelaxedMockK
+    private lateinit var timeToResponse: Timer
 
-    private val timeToResponse = relaxedMockk<Timer>()
+    @RelaxedMockK
+    private lateinit var recordsCount: Counter
 
-    private val recordsCount = relaxedMockk<Counter>()
-
-    private val eventsLogger = relaxedMockk<EventsLogger>()
-
-    companion object {
-
-        const val GRAPHITE_IMAGE_NAME = "graphiteapp/graphite-statsd:latest"
-        const val HTTP_PORT = 80
-        const val GRAPHITE_PLAINTEXT_PORT = 2003
-        const val LOCALHOST_HOST = "localhost"
-
-        @Container
-        @JvmStatic
-        private val CONTAINER = GenericContainer<Nothing>(
-            DockerImageName.parse(GRAPHITE_IMAGE_NAME)
-        ).apply {
-            setWaitStrategy(HostPortWaitStrategy())
-            withExposedPorts(HTTP_PORT, GRAPHITE_PLAINTEXT_PORT)
-            withAccessToHost(true)
-            withStartupTimeout(Duration.ofSeconds(60))
-            withCreateContainerCmdModifier { it.hostConfig!!.withMemory((512 * 1e20).toLong()).withCpuCount(2) }
-        }
-    }
+    @RelaxedMockK
+    private lateinit var eventsLogger: EventsLogger
 
     @BeforeEach
     fun setUp() {
@@ -100,12 +79,6 @@ internal class GraphiteSaveStepIntegrationTest {
             Thread.sleep(1_000)
         }
         protocolPort = container.getMappedPort(GRAPHITE_PLAINTEXT_PORT)
-
-        client = GraphiteClient(
-            host = LOCALHOST_HOST,
-            port = protocolPort,
-            workerGroup = NioEventLoopGroup()
-        )
     }
 
     @Test
@@ -122,7 +95,14 @@ internal class GraphiteSaveStepIntegrationTest {
         }
         val results = mutableListOf<String>()
         val saveClient = GraphiteSaveMessageClientImpl(
-            clientBuilder = { client },
+            clientBuilder = {
+                GraphiteSaveClient(
+                    host = LOCALHOST_HOST,
+                    port = protocolPort,
+                    workerGroup = NioEventLoopGroup(),
+                    coroutineScope = this
+                )
+            },
             meterRegistry = meterRegistry,
             eventsLogger = eventsLogger
         )
@@ -142,28 +122,27 @@ internal class GraphiteSaveStepIntegrationTest {
 
         val now = Instant.now().toEpochMilli() / 1000
 
-        //when+then
-        async {
-            val resultOfExecute = saveClient.execute(
-                listOf(
-                    "foo.first 1.1 $now\n", "foo.second 1.2 $now\n", "foo.third 1.3 $now\n"
-                ), tags
-            )
-            assertThat(resultOfExecute).isInstanceOf(GraphiteSaveQueryMeters::class.java).all {
-                prop("savedMessages").isEqualTo(3)
-                prop("timeToResult").isNotNull()
-            }
-            verify {
-                eventsLogger.debug("graphite.save.saving-messages", 3, any(), tags = tags)
-                timeToResponse.record(more(0L), TimeUnit.NANOSECONDS)
-                recordsCount.increment(3.0)
-                eventsLogger.info("graphite.save.time-to-response", any<Duration>(), any(), tags = tags)
-                eventsLogger.info("graphite.save.successes", any<Array<*>>(), any(), tags = tags)
-            }
-            confirmVerified(timeToResponse, recordsCount, eventsLogger)
-        }
+        // when
+        val resultOfExecute = saveClient.execute(
+            listOf(
+                "foo.first 1.1 $now\n", "foo.second 1.2 $now\n", "foo.third 1.3 $now\n"
+            ), tags
+        )
 
-        //then
+        // then
+        assertThat(resultOfExecute).isInstanceOf(GraphiteSaveQueryMeters::class.java).all {
+            prop("savedMessages").isEqualTo(3)
+            prop("timeToResult").isNotNull()
+        }
+        verify {
+            eventsLogger.debug("graphite.save.saving-messages", 3, any(), tags = tags)
+            timeToResponse.record(more(0L), TimeUnit.NANOSECONDS)
+            recordsCount.increment(3.0)
+            eventsLogger.info("graphite.save.time-to-response", any<Duration>(), any(), tags = tags)
+            eventsLogger.info("graphite.save.successes", any<Array<*>>(), any(), tags = tags)
+        }
+        confirmVerified(timeToResponse, recordsCount, eventsLogger)
+
         await().atMost(10, TimeUnit.SECONDS)
             .until { httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body().contains(key) }
 
@@ -199,30 +178,27 @@ internal class GraphiteSaveStepIntegrationTest {
         }
         val results = mutableListOf<String>()
         val saveClient = GraphiteSaveMessageClientImpl(
-            clientBuilder = { client },
+            clientBuilder = {
+                GraphiteSaveClient(
+                    host = LOCALHOST_HOST,
+                    port = protocolPort,
+                    workerGroup = NioEventLoopGroup(),
+                    coroutineScope = this
+                )
+            },
             meterRegistry = meterRegistry,
             eventsLogger = eventsLogger
         )
+        saveClient.start(startStopContext)
         val tags: Map<String, String> = emptyMap()
 
-        saveClient.start(startStopContext)
+        // when
+        // No exception can be returned since there is no response from the server to know whether the records were saved or not.
+        saveClient.execute(listOf("hola.first 1.1", "hola.second 1.2"), tags)
 
-        val key = "hola.first"
-
-        val request = generateHttpGet("http://$LOCALHOST_HOST:${containerHttpPort}/render?target=$key&format=json")
-
-        //when+then
-        async {
-            assertThrows<Exception> {
-                saveClient.execute(
-                    listOf(
-                        "hola.first 1.1", "hola.second 1.2"
-                    ),
-                    tags
-                )
-            }
-        }
         //then
+        val key = "hola.first"
+        val request = generateHttpGet("http://$LOCALHOST_HOST:${containerHttpPort}/render?target=$key&format=json")
         results.add(httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body())
         assertThat(results).all {
             hasSize(1)
@@ -230,16 +206,38 @@ internal class GraphiteSaveStepIntegrationTest {
                 isEqualTo("[]")
             }
         }
+        saveClient.stop(startStopContext)
     }
 
-    private fun generateHttpGet(uri: String) =
+    private fun generateHttpGet(uri: String): HttpRequest =
         HttpRequest.newBuilder()
             .GET()
             .uri(URI.create(uri))
             .build()
 
-    protected fun createSimpleHttpClient() =
+    private fun createSimpleHttpClient(): HttpClient =
         HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .build()
+
+
+    companion object {
+
+        const val GRAPHITE_IMAGE_NAME = "graphiteapp/graphite-statsd:latest"
+        const val HTTP_PORT = 80
+        const val GRAPHITE_PLAINTEXT_PORT = 2003
+        const val LOCALHOST_HOST = "localhost"
+
+        @Container
+        @JvmStatic
+        private val CONTAINER = GenericContainer<Nothing>(
+            DockerImageName.parse(GRAPHITE_IMAGE_NAME)
+        ).apply {
+            setWaitStrategy(HostPortWaitStrategy())
+            withExposedPorts(HTTP_PORT, GRAPHITE_PLAINTEXT_PORT)
+            withAccessToHost(true)
+            withStartupTimeout(Duration.ofSeconds(60))
+            withCreateContainerCmdModifier { it.hostConfig!!.withMemory((512 * 1e20).toLong()).withCpuCount(2) }
+        }
+    }
 }

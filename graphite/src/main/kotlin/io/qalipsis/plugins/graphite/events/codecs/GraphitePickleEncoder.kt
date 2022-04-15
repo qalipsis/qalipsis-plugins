@@ -4,7 +4,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.MessageToByteEncoder
 import io.qalipsis.api.events.Event
-import mu.KotlinLogging
+import io.qalipsis.api.logging.LoggerHelper.logger
 import java.nio.ByteBuffer
 
 /**
@@ -15,18 +15,6 @@ import java.nio.ByteBuffer
  */
 internal class GraphitePickleEncoder : MessageToByteEncoder<List<Event>>() {
 
-    private val MARK = '('
-    private val STOP = '.'
-    private val LONG = 'L'
-    private val STRING = 'S'
-    private val APPEND = 'a'
-    private val LIST = 'l'
-    private val TUPLE = 't'
-    private val QUOTE = '\''
-    private val LF = '\n'
-    private val SEMICOLON = ";"
-    private val EQ = "="
-
     /**
      * Encodes incoming list of [Event] to [pickle][https://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-pickle-protocol]
      * Sends encoded message to [ChannelHandlerContext]
@@ -35,12 +23,12 @@ internal class GraphitePickleEncoder : MessageToByteEncoder<List<Event>>() {
         ctx: ChannelHandlerContext,
         events: List<Event>, out: ByteBuf
     ) {
-        log.info { "Encoding events: " + events }
+        out.retain()
+        log.trace { "Encoding events: $events" }
         val message = generateEvent(events)
         out.writeBytes(message)
         ctx.writeAndFlush(out)
-        log.info { "Events flushed: " + events }
-        out.retain()
+        log.trace { "Events flushed: $events" }
     }
 
     /**
@@ -49,7 +37,7 @@ internal class GraphitePickleEncoder : MessageToByteEncoder<List<Event>>() {
      */
     private fun generateEvent(events: List<Event>): ByteArray {
         val payload = generatePayload(events)
-        val payloadBytes = payload.toByteArray()
+        val payloadBytes = payload.encodeToByteArray()
         val header = ByteBuffer.allocate(4).putInt(payloadBytes.size).array()
         return header + payloadBytes
     }
@@ -95,7 +83,19 @@ internal class GraphitePickleEncoder : MessageToByteEncoder<List<Event>>() {
     }
 
     companion object {
-        @JvmStatic
-        private val log = KotlinLogging.logger {}
+
+        private val log = logger()
+
+        private const val MARK = '('
+        private const val STOP = '.'
+        private const val LONG = 'L'
+        private const val STRING = 'S'
+        private const val APPEND = 'a'
+        private const val LIST = 'l'
+        private const val TUPLE = 't'
+        private const val QUOTE = '\''
+        private const val LF = '\n'
+        private const val SEMICOLON = ";"
+        private const val EQ = "="
     }
 }

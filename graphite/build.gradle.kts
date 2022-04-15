@@ -15,6 +15,11 @@ tasks.withType<KotlinCompile> {
     }
 }
 
+tasks.withType<Test> {
+    // Enables the search of memory leaks in the Netty buffers when running all tests.
+    systemProperties("io.netty.leakDetectionLevel" to "paranoid")
+}
+
 allOpen {
     annotations(
         "io.micronaut.aop.Around",
@@ -44,10 +49,14 @@ dependencies {
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:${kotlinCoroutinesVersion}")
 
     implementation(platform("io.netty:netty-bom:$nettyVersion"))
-    implementation("io.micronaut:micronaut-http-server-netty")
+    implementation("io.netty:netty-handler")
+    implementation("io.netty:netty-transport")
+    implementation(group = "io.netty", name = "netty-transport-native-epoll", classifier = "linux-x86_64")
+    implementation(group = "io.netty", name = "netty-transport-native-kqueue", classifier = "osx-x86_64")
+    implementation("io.netty:netty-buffer")
+    implementation("io.micronaut.micrometer:micronaut-micrometer-registry-graphite")
 
     api("io.qalipsis:api-common:${project.version}")
-    api("io.micronaut.micrometer:micronaut-micrometer-registry-graphite")
     api("io.qalipsis:api-dsl:${project.version}")
 
     kapt(platform("io.micronaut:micronaut-bom:$micronautVersion"))
@@ -70,6 +79,7 @@ dependencies {
     testImplementation("javax.annotation:javax.annotation-api")
     testImplementation("io.micronaut:micronaut-runtime")
     testImplementation("io.aeris-consulting:catadioptre-kotlin:${catadioptreVersion}")
+    testImplementation("org.awaitility:awaitility-kotlin:4.+")
     testRuntimeOnly("io.qalipsis:runtime:${project.version}")
 
     kaptTest(platform("io.micronaut:micronaut-bom:$micronautVersion"))

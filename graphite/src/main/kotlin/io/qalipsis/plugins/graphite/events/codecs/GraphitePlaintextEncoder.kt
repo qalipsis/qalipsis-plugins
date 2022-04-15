@@ -4,7 +4,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.MessageToByteEncoder
 import io.qalipsis.api.events.Event
-import mu.KotlinLogging
+import io.qalipsis.api.logging.LoggerHelper.logger
 
 /**
  * Implementation of [MessageToByteEncoder] for [graphite][https://github.com/graphite-project] plaintext protocol.
@@ -14,9 +14,6 @@ import mu.KotlinLogging
  */
 internal class GraphitePlaintextEncoder : MessageToByteEncoder<List<Event>>() {
 
-    private val SEMICOLON = ";"
-    private val EQ = "="
-
     /**
      * Encodes incoming list of [Event] to [plaintext][https://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-plaintext-protocol]
      * Sends encoded messages one by one to [ChannelHandlerContext]
@@ -25,13 +22,13 @@ internal class GraphitePlaintextEncoder : MessageToByteEncoder<List<Event>>() {
         ctx: ChannelHandlerContext,
         events: List<Event>, out: ByteBuf
     ) {
-        log.info { "Encoding events: " + events }
+        out.retain()
+        log.trace { "Encoding events: $events" }
         events.forEach {
-            out.writeBytes(generatePayload(it).toByteArray())
+            out.writeBytes(generatePayload(it).encodeToByteArray())
         }
         ctx.writeAndFlush(out)
-        out.retain()
-        log.info { "Events flushed: " + events }
+        log.trace { "Events flushed: $events" }
     }
 
     /**
@@ -55,7 +52,10 @@ internal class GraphitePlaintextEncoder : MessageToByteEncoder<List<Event>>() {
     }
 
     companion object {
-        @JvmStatic
-        private val log = KotlinLogging.logger {}
+
+        private const val SEMICOLON = ";"
+        private const val EQ = "="
+
+        private val log = logger()
     }
 }

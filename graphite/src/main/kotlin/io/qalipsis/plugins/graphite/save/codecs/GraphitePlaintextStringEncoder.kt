@@ -18,13 +18,13 @@ internal class GraphitePlaintextStringEncoder : MessageToByteEncoder<List<String
      * Sends encoded messages one by one to [ChannelHandlerContext]
      */
     override fun encode(ctx: ChannelHandlerContext, messages: List<String>, out: ByteBuf) {
-        log.info { "Encoding messages: " + messages }
+        out.retain()
+        log.trace { "Encoding messages: $messages" }
         messages.forEach {
-            out.writeBytes(it.toByteArray())
+            out.writeBytes(it.encodeToByteArray())
         }
         ctx.writeAndFlush(out)
-        out.retain()
-        log.info { "Messages flushed: " + messages }
+        log.trace { "Messages flushed: $messages" }
     }
 
     companion object {

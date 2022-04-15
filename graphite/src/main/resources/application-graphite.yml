@@ -1,7 +1,3 @@
-micronaut:
-  application:
-    name: qalipsisPluginGraphite
-
 events:
   export:
     graphite:
@@ -18,7 +14,7 @@ events:
 micronaut.metrics.export.graphite.enabled: false
 
 meters:
-  graphitedb:
+  graphite:
     host: localhost
     port: 2004
     enabled: false

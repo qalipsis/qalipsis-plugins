@@ -36,13 +36,14 @@ internal class GraphiteMeterRegistryFactory {
             override fun get(key: String?): String? {
                 return properties.getProperty(key)
             }
-            override fun prefix() = "graphitedb"
+
+            override fun prefix() = "graphite"
         }, Clock.SYSTEM, HierarchicalNameMapper.DEFAULT)
     }
 
     companion object {
 
-        internal const val GRAPHITE_CONFIGURATION = "${MetersConfig.CONFIGURATION}.graphitedb"
+        internal const val GRAPHITE_CONFIGURATION = "${MetersConfig.CONFIGURATION}.graphite"
 
         internal const val GRAPHITE_ENABLED = "$GRAPHITE_CONFIGURATION.enabled"
     }
