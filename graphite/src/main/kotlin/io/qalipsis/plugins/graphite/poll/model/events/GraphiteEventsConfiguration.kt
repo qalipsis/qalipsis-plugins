@@ -14,12 +14,12 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.graphite.events
+package io.qalipsis.plugins.graphite.poll.model.events
 
 import io.micronaut.context.annotation.ConfigurationProperties
 import io.micronaut.context.annotation.Requires
 import io.qalipsis.api.events.EventLevel
-import io.qalipsis.plugins.graphite.events.model.GraphiteProtocol
+import io.qalipsis.plugins.graphite.poll.model.events.model.GraphiteProtocol
 import java.time.Duration
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotNull

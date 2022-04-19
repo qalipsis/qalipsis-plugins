@@ -14,12 +14,13 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.graphite.events
-
-import io.qalipsis.plugins.graphite.poll.model.events.model.GraphiteProtocol
+package io.qalipsis.plugins.graphite.poll.model.events.model
 
 /**
+ * Enumerates supported [graphite][https://github.com/graphite-project] transport protocols.
+ *
  * @author rklymenko
  */
-internal class GraphiteEventsPublisherPlaintextIntegrationTest :
-    AbstractGraphiteEventsPublisherIntegrationTest(GraphiteProtocol.PLAINTEXT)
+internal enum class GraphiteProtocol {
+    PLAINTEXT, PICKLE
+}

@@ -42,6 +42,7 @@ import org.junit.jupiter.api.extension.RegisterExtension
  * @author Palina Bril
  */
 @WithMockk
+@Suppress("UNCHECKED_CAST")
 internal class GraphiteSaveStepSpecificationConverterTest :
     AbstractStepSpecificationConverterTest<GraphiteSaveStepSpecificationConverter>() {
 

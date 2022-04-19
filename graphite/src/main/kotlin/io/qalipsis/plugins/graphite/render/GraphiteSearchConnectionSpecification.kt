@@ -14,12 +14,21 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.graphite.events
+package io.qalipsis.plugins.graphite.render
 
-import io.qalipsis.plugins.graphite.poll.model.events.model.GraphiteProtocol
+import io.qalipsis.api.annotations.Spec
 
-/**
- * @author rklymenko
- */
-internal class GraphiteEventsPublisherPlaintextIntegrationTest :
-    AbstractGraphiteEventsPublisherIntegrationTest(GraphiteProtocol.PLAINTEXT)
+@Spec
+interface GraphiteSearchConnectionSpecification {
+
+    /**
+     * Configures the servers settings.
+     */
+    fun server(url: String)
+
+    /**
+     * Configures the basic authentication.
+     */
+    fun basicAuthentication(username: String, password: String)
+
+}

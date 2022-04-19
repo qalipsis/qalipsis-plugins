@@ -81,7 +81,7 @@ internal class GraphiteMeterRegistryFactory(environment: Environment) : MeterReg
 
     companion object {
 
-        internal const val GRAPHITE_CONFIGURATION = "${MetersConfig.EXPORT_CONFIGURATION}.graphite"
+        private const val GRAPHITE_CONFIGURATION = "${MetersConfig.EXPORT_CONFIGURATION}.graphite"
 
         internal const val GRAPHITE_ENABLED = "$GRAPHITE_CONFIGURATION.enabled"
     }

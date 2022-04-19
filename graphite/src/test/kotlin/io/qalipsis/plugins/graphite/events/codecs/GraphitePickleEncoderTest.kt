@@ -24,6 +24,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.qalipsis.api.events.Event
 import io.qalipsis.api.events.EventLevel
+import io.qalipsis.plugins.graphite.poll.model.events.codecs.GraphitePickleEncoder
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.coVerifyOnce
 import org.junit.jupiter.api.Assertions
@@ -55,7 +56,7 @@ internal class GraphitePickleEncoderTest {
                 "tta."
 
         //when
-        val actualMessage = graphitePickleEncoder.invokeInvisible<String>("generatePayload", events)
+        val actualMessage = graphitePickleEncoder.convertToPickle(events)
 
         //then
         Assertions.assertEquals(expectedMessage, actualMessage)
@@ -65,7 +66,10 @@ internal class GraphitePickleEncoderTest {
     fun `should generate payload for multiple events`() {
         //given
         val graphitePickleEncoder = GraphitePickleEncoder()
-        val events = listOf(Event("boo", EventLevel.DEBUG, timestamp = Instant.ofEpochMilli(0L)), Event("boo2", EventLevel.DEBUG, timestamp = Instant.ofEpochMilli(0L)))
+        val events = listOf(
+            Event("boo", EventLevel.DEBUG, timestamp = Instant.ofEpochMilli(0L)),
+            Event("boo2", EventLevel.DEBUG, timestamp = Instant.ofEpochMilli(0L))
+        )
         val expectedMessage = "(l(S'boo'\n" +
                 "(L0L\n" +
                 "S'null'\n" +
@@ -75,7 +79,7 @@ internal class GraphitePickleEncoderTest {
                 "tta."
 
         //when
-        val actualMessage = graphitePickleEncoder.invokeInvisible<String>("generatePayload", events)
+        val actualMessage = graphitePickleEncoder.convertToPickle(events)
 
         //then
         Assertions.assertEquals(expectedMessage, actualMessage)
@@ -86,12 +90,12 @@ internal class GraphitePickleEncoderTest {
         //given
         val graphitePickleEncoder = GraphitePickleEncoder()
         val events = listOf(Event("boo", EventLevel.DEBUG, timestamp = Instant.ofEpochMilli(0L)))
-        val payload = graphitePickleEncoder.invokeInvisible<String>("generatePayload", events).toByteArray()
+        val payload = graphitePickleEncoder.convertToPickle(events).encodeToByteArray()
         val header = ByteBuffer.allocate(4).putInt(payload.size).array()
         val expectedEvent = header + payload
 
         //when
-        val actualEvent = graphitePickleEncoder.invokeInvisible<ByteArray>("generateEvent", events)
+        val actualEvent = graphitePickleEncoder.invokeInvisible<ByteArray>("serializeEvents", events)
 
         //then
         Assertions.assertArrayEquals(expectedEvent, actualEvent)
@@ -101,13 +105,16 @@ internal class GraphitePickleEncoderTest {
     fun `should generate event bytes for multiple events`() {
         //given
         val graphitePickleEncoder = GraphitePickleEncoder()
-        val events = listOf(Event("boo", EventLevel.DEBUG, timestamp = Instant.ofEpochMilli(0L)), Event("boo2", EventLevel.DEBUG, timestamp = Instant.ofEpochMilli(0L)))
-        val payload = graphitePickleEncoder.invokeInvisible<String>("generatePayload", events).toByteArray()
+        val events = listOf(
+            Event("boo", EventLevel.DEBUG, timestamp = Instant.ofEpochMilli(0L)),
+            Event("boo2", EventLevel.DEBUG, timestamp = Instant.ofEpochMilli(0L))
+        )
+        val payload = graphitePickleEncoder.convertToPickle(events).encodeToByteArray()
         val header = ByteBuffer.allocate(4).putInt(payload.size).array()
         val expectedEvent = header + payload
 
         //when
-        val actualEvent = graphitePickleEncoder.invokeInvisible<ByteArray>("generateEvent", events)
+        val actualEvent = graphitePickleEncoder.invokeInvisible<ByteArray>("serializeEvents", events)
 
         //then
         Assertions.assertArrayEquals(expectedEvent, actualEvent)
@@ -117,13 +124,16 @@ internal class GraphitePickleEncoderTest {
     fun `should encode messages from context`() {
         //given
         val graphitePickleEncoder = GraphitePickleEncoder()
-        val events = listOf(Event("boo", EventLevel.DEBUG, timestamp = Instant.ofEpochMilli(0L)), Event("boo2", EventLevel.DEBUG, timestamp = Instant.ofEpochMilli(0L)))
-        val payload = graphitePickleEncoder.invokeInvisible<String>("generatePayload", events).toByteArray()
+        val events = listOf(
+            Event("boo", EventLevel.DEBUG, timestamp = Instant.ofEpochMilli(0L)),
+            Event("boo2", EventLevel.DEBUG, timestamp = Instant.ofEpochMilli(0L))
+        )
+        val payload = graphitePickleEncoder.convertToPickle(events).encodeToByteArray()
         val header = ByteBuffer.allocate(4).putInt(payload.size).array()
         val expectedEvents = header + payload
 
         //when
-        graphitePickleEncoder.invokeInvisible<Unit>("encode", ctx, events, out)
+        graphitePickleEncoder.encode(ctx, events, out)
 
         //then
         coVerifyOnce {

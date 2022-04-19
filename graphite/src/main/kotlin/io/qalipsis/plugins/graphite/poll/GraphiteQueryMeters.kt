@@ -14,12 +14,19 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.graphite.events
+package io.qalipsis.plugins.graphite.poll
 
-import io.qalipsis.plugins.graphite.poll.model.events.model.GraphiteProtocol
+import java.time.Duration
 
 /**
- * @author rklymenko
+ * Meters of the performed query.
+ *
+ * @property fetchedRecords count of received records
+ * @property timeToResult elapsed time from the query execution until the complete successful reception of results
+ *
+ * @author Sandro Mamukelashvili
  */
-internal class GraphiteEventsPublisherPlaintextIntegrationTest :
-    AbstractGraphiteEventsPublisherIntegrationTest(GraphiteProtocol.PLAINTEXT)
+data class GraphiteQueryMeters(
+    val fetchedRecords: Int,
+    val timeToResult: Duration
+)

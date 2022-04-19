@@ -14,8 +14,9 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.graphite.events.codecs
+package io.qalipsis.plugins.graphite.poll.model.events.codecs
 
+import io.aerisconsulting.catadioptre.KTestable
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.MessageToByteEncoder
@@ -35,24 +36,30 @@ internal class GraphitePickleEncoder : MessageToByteEncoder<List<Event>>() {
      * Encodes incoming list of [Event] to [pickle][https://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-pickle-protocol]
      * Sends encoded message to [ChannelHandlerContext]
      */
-    override fun encode(
+    @KTestable
+    public override fun encode(
         ctx: ChannelHandlerContext,
         events: List<Event>, out: ByteBuf
     ) {
         out.retain()
         log.trace { "Encoding events: $events" }
-        val message = generateEvent(events)
+        val message = serializeEvents(events)
         out.writeBytes(message)
-        ctx.writeAndFlush(out)
-        log.trace { "Events flushed: $events" }
+        ctx.writeAndFlush(out).addListener {
+            if (!it.isSuccess) {
+                log.debug(it.cause()) { "Failed to send $events with the pickle encoder" }
+            } else {
+                log.trace { "Events flushed: $events" }
+            }
+        }
     }
 
     /**
      * Receives a list of [Event] and encodes it to [pickle][https://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-pickle-protocol]
      * with payload header
      */
-    private fun generateEvent(events: List<Event>): ByteArray {
-        val payload = generatePayload(events)
+    private fun serializeEvents(events: List<Event>): ByteArray {
+        val payload = convertToPickle(events)
         val payloadBytes = payload.encodeToByteArray()
         val header = ByteBuffer.allocate(4).putInt(payloadBytes.size).array()
         return header + payloadBytes
@@ -61,7 +68,8 @@ internal class GraphitePickleEncoder : MessageToByteEncoder<List<Event>>() {
     /**
      * Receives a list of [Event] and encodes it to [pickle][https://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-pickle-protocol]
      */
-    private fun generatePayload(events: List<Event>): String {
+    @KTestable
+    fun convertToPickle(events: List<Event>): String {
         val payload = StringBuilder()
         payload.append(MARK)
         payload.append(LIST)

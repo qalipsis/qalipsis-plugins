@@ -24,6 +24,9 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.startsWith
+import io.ktor.client.call.body
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.request.get
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.Tags
 import io.micrometer.core.instrument.Timer
@@ -40,6 +43,7 @@ import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
+import kotlinx.coroutines.delay
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
@@ -57,13 +61,14 @@ import java.net.http.HttpResponse
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.TimeUnit
+import io.ktor.client.HttpClient as KtorHttpClient
 
 /**
  *
  * @author Palina Bril
  */
-@WithMockk
 @Testcontainers
+@WithMockk
 internal class GraphiteSaveStepIntegrationTest {
 
     @JvmField
@@ -72,11 +77,13 @@ internal class GraphiteSaveStepIntegrationTest {
 
     private val container = CONTAINER
 
-    private var containerHttpPort = -1
+    private var httpPort = -1
 
-    private val httpClient = createSimpleHttpClient()
+    private var graphiteProtocolPort = -1
 
-    private var protocolPort = -1
+    private val ktorHttpClient = KtorHttpClient(CIO)
+
+    private val httpClient = createSyncHttpClient()
 
     @RelaxedMockK
     private lateinit var timeToResponse: Timer
@@ -88,13 +95,13 @@ internal class GraphiteSaveStepIntegrationTest {
     private lateinit var eventsLogger: EventsLogger
 
     @BeforeEach
-    fun setUp() {
-        containerHttpPort = container.getMappedPort(HTTP_PORT)
-        val request = generateHttpGet("http://$LOCALHOST_HOST:${containerHttpPort}/render")
-        while (httpClient.send(request, HttpResponse.BodyHandlers.ofString()).statusCode() != HttpStatus.OK.code) {
-            Thread.sleep(1_000)
+    fun setUp() = testDispatcherProvider.run {
+        httpPort = container.getMappedPort(HTTP_PORT)
+        val request = "http://localhost:${httpPort}/render"
+        while (ktorHttpClient.get(request).status.value != HttpStatus.OK.code) {
+            delay(1_000)
         }
-        protocolPort = container.getMappedPort(GRAPHITE_PLAINTEXT_PORT)
+        graphiteProtocolPort = container.getMappedPort(GRAPHITE_PLAINTEXT_PORT)
     }
 
     @Test
@@ -113,8 +120,8 @@ internal class GraphiteSaveStepIntegrationTest {
         val saveClient = GraphiteSaveMessageClientImpl(
             clientBuilder = {
                 GraphiteSaveClient(
-                    host = LOCALHOST_HOST,
-                    port = protocolPort,
+                    host = "localhost",
+                    port = graphiteProtocolPort,
                     workerGroup = NioEventLoopGroup(),
                     coroutineScope = this
                 )
@@ -130,11 +137,10 @@ internal class GraphiteSaveStepIntegrationTest {
         val keyTwo = "foo.second"
         val keyThird = "foo.third"
 
-        val request = generateHttpGet("http://$LOCALHOST_HOST:${containerHttpPort}/render?target=$key&format=json")
-        val requestTwo =
-            generateHttpGet("http://$LOCALHOST_HOST:${containerHttpPort}/render?target=$keyTwo&format=json")
-        val requestThird =
-            generateHttpGet("http://$LOCALHOST_HOST:${containerHttpPort}/render?target=$keyThird&format=json")
+        val request = generateHttpGet("http://localhost:${httpPort}/render?target=$key&format=json")
+        val strRequest = "http://localhost:${httpPort}/render?target=$key&format=json"
+        val strRequestTwo = "http://localhost:${httpPort}/render?target=$keyTwo&format=json"
+        val strRequestThree = "http://localhost:${httpPort}/render?target=$keyThird&format=json"
 
         val now = Instant.now().toEpochMilli() / 1000
 
@@ -158,13 +164,12 @@ internal class GraphiteSaveStepIntegrationTest {
             eventsLogger.info("graphite.save.successes", any<Array<*>>(), any(), tags = tags)
         }
         confirmVerified(timeToResponse, recordsCount, eventsLogger)
-
         await().atMost(10, TimeUnit.SECONDS)
             .until { httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body().contains(key) }
 
-        results.add(httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body())
-        results.add(httpClient.send(requestTwo, HttpResponse.BodyHandlers.ofString()).body())
-        results.add(httpClient.send(requestThird, HttpResponse.BodyHandlers.ofString()).body())
+        results.add(ktorHttpClient.get(strRequest).body())
+        results.add(ktorHttpClient.get(strRequestTwo).body())
+        results.add(ktorHttpClient.get(strRequestThree).body())
         assertThat(results).all {
             hasSize(3)
             index(0).all {
@@ -196,8 +201,8 @@ internal class GraphiteSaveStepIntegrationTest {
         val saveClient = GraphiteSaveMessageClientImpl(
             clientBuilder = {
                 GraphiteSaveClient(
-                    host = LOCALHOST_HOST,
-                    port = protocolPort,
+                    host = "localhost",
+                    port = graphiteProtocolPort,
                     workerGroup = NioEventLoopGroup(),
                     coroutineScope = this
                 )
@@ -214,8 +219,8 @@ internal class GraphiteSaveStepIntegrationTest {
 
         //then
         val key = "hola.first"
-        val request = generateHttpGet("http://$LOCALHOST_HOST:${containerHttpPort}/render?target=$key&format=json")
-        results.add(httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body())
+        val request = "http://localhost:${httpPort}/render?target=$key&format=json"
+        results.add(ktorHttpClient.get(request).body())
         assertThat(results).all {
             hasSize(1)
             index(0).all {
@@ -231,18 +236,18 @@ internal class GraphiteSaveStepIntegrationTest {
             .uri(URI.create(uri))
             .build()
 
-    private fun createSimpleHttpClient(): HttpClient =
+    private fun createSyncHttpClient(): HttpClient =
         HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .build()
 
-
     companion object {
 
         const val GRAPHITE_IMAGE_NAME = "graphiteapp/graphite-statsd:latest"
+
         const val HTTP_PORT = 80
+
         const val GRAPHITE_PLAINTEXT_PORT = 2003
-        const val LOCALHOST_HOST = "localhost"
 
         @Container
         @JvmStatic

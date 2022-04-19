@@ -57,7 +57,6 @@ internal class GraphiteSaveStepSpecificationConverter(
             )
         }
 
-        @Suppress("UNCHECKED_CAST")
         val step = GraphiteSaveStep(
             id = stepId,
             retryPolicy = spec.retryPolicy,

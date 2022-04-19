@@ -14,12 +14,17 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.graphite.events
-
-import io.qalipsis.plugins.graphite.poll.model.events.model.GraphiteProtocol
+package io.qalipsis.plugins.graphite.render.model
 
 /**
+ * A wrapper class for graphite value and timestamp.
+ *
+ * @property value a numeric or null value
+ * @property timestamp a point in time in which values can be associated
+ *
  * @author rklymenko
  */
-internal class GraphiteEventsPublisherPlaintextIntegrationTest :
-    AbstractGraphiteEventsPublisherIntegrationTest(GraphiteProtocol.PLAINTEXT)
+data class GraphiteRenderApiJsonPairResponse(
+    val value: Double?,
+    val timestamp: Long?,
+)

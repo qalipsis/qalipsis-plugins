@@ -16,7 +16,7 @@
 
 package io.qalipsis.plugins.graphite.events
 
-import io.qalipsis.plugins.graphite.events.model.GraphiteProtocol
+import io.qalipsis.plugins.graphite.poll.model.events.model.GraphiteProtocol
 
 /**
  * @author rklymenko

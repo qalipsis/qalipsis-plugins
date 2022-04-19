@@ -14,8 +14,9 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.graphite.events.codecs
+package io.qalipsis.plugins.graphite.poll.model.events.codecs
 
+import io.aerisconsulting.catadioptre.KTestable
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.MessageToByteEncoder
@@ -34,23 +35,30 @@ internal class GraphitePlaintextEncoder : MessageToByteEncoder<List<Event>>() {
      * Encodes incoming list of [Event] to [plaintext][https://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-plaintext-protocol]
      * Sends encoded messages one by one to [ChannelHandlerContext]
      */
-    override fun encode(
+    @KTestable
+    public override fun encode(
         ctx: ChannelHandlerContext,
         events: List<Event>, out: ByteBuf
     ) {
         out.retain()
         log.trace { "Encoding events: $events" }
         events.forEach {
-            out.writeBytes(generatePayload(it).encodeToByteArray())
+            out.writeBytes(convertToPlaintext(it).encodeToByteArray())
         }
-        ctx.writeAndFlush(out)
-        log.trace { "Events flushed: $events" }
+        ctx.writeAndFlush(out).addListener {
+            if (!it.isSuccess) {
+                log.debug(it.cause()) { " Failed to send $events with the plaintext encoder" }
+            } else {
+                log.trace { "Events flushed: $events" }
+            }
+        }
     }
 
     /**
      * Receives an [Event] and encodes it to [plaintext][https://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-plaintext-protocol]
      */
-    private fun generatePayload(event: Event): String {
+    @KTestable
+    fun convertToPlaintext(event: Event): String {
         val payload = StringBuilder()
         payload.append(event.name)
         for (tag in event.tags) {

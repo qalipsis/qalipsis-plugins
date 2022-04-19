@@ -32,9 +32,9 @@ import io.qalipsis.plugins.graphite.GraphiteStepSpecification
  * @author Palina Bril
  */
 interface GraphiteSaveStepSpecification<I> :
-    StepSpecification<I, I, GraphiteSaveStepSpecification<I>>,
-    ConfigurableStepSpecification<I, I, GraphiteSaveStepSpecification<I>>,
-    GraphiteStepSpecification<I, I, GraphiteSaveStepSpecification<I>> {
+    StepSpecification<I, GraphiteSaveResult<I>, GraphiteSaveStepSpecification<I>>,
+    ConfigurableStepSpecification<I, GraphiteSaveResult<I>, GraphiteSaveStepSpecification<I>>,
+    GraphiteStepSpecification<I, GraphiteSaveResult<I>, GraphiteSaveStepSpecification<I>> {
 
     /**
      * Configures the connection to the Graphite server.
@@ -60,7 +60,7 @@ interface GraphiteSaveStepSpecification<I> :
 @Spec
 internal class GraphiteSaveStepSpecificationImpl<I> :
     GraphiteSaveStepSpecification<I>,
-    AbstractStepSpecification<I, I, GraphiteSaveStepSpecification<I>>() {
+    AbstractStepSpecification<I, GraphiteSaveResult<I>, GraphiteSaveStepSpecification<I>>() {
 
     internal var connectionConfig = GraphiteConnectionSpecificationImpl()
 
@@ -69,7 +69,7 @@ internal class GraphiteSaveStepSpecificationImpl<I> :
     internal var monitoringConfig = StepMonitoringConfiguration()
 
     override fun connect(connectionConfiguration: GraphiteConnectionSpecification.() -> Unit) {
-        connectionConfig.connectionConfiguration();
+        connectionConfig.connectionConfiguration()
     }
 
     override fun records(recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<String>) {

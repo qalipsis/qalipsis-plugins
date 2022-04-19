@@ -21,7 +21,9 @@ import io.mockk.spyk
 import io.qalipsis.api.events.Event
 import io.qalipsis.api.events.EventLevel
 import io.qalipsis.api.events.EventTag
-import io.qalipsis.plugins.graphite.events.model.GraphiteProtocol
+import io.qalipsis.plugins.graphite.poll.model.events.model.GraphiteProtocol
+import io.qalipsis.plugins.graphite.poll.model.events.GraphiteEventsConfiguration
+import io.qalipsis.plugins.graphite.poll.model.events.GraphiteEventsPublisher
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.coVerifyNever
 import kotlinx.coroutines.delay
@@ -47,7 +49,7 @@ import java.util.concurrent.TimeUnit
  */
 @Testcontainers
 @Timeout(60)
-internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val protocol: GraphiteProtocol) {
+internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(private val protocol: GraphiteProtocol) {
 
     @JvmField
     @RegisterExtension
@@ -57,11 +59,11 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val proto
 
     private val container = CONTAINER
 
-    private var containerHttpPort = -1
+    private var containerHttpPort = 2006
 
     private val httpClient = createSimpleHttpClient()
 
-    private var protocolPort = -1
+    private var protocolPort = 2006
 
     @BeforeAll
     fun setUp() {
@@ -94,7 +96,7 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val proto
     }
 
     @Test
-    @Timeout(15)
+    @Timeout(35)
     fun `should save single event into graphite`() = testDispatcherProvider.run {
         //given
         val graphiteEventsPublisher = GraphiteEventsPublisher(
@@ -112,7 +114,7 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val proto
         //then
         val request =
             generateHttpGet("http://${configuration.host}:${containerHttpPort}/render?target=$key&format=json")
-        await.atMost(10, TimeUnit.SECONDS).until {
+        await.atMost(30, TimeUnit.SECONDS).until {
             kotlin.runCatching {
                 httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
             }.getOrNull()?.contains(key) ?: false
@@ -121,7 +123,7 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val proto
     }
 
     @Test
-    @Timeout(20)
+    @Timeout(25)
     fun `should save multiple events one by one into graphite`() = testDispatcherProvider.run {
         //given
         val graphiteEventsPublisher = GraphiteEventsPublisher(
@@ -140,7 +142,7 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val proto
             val request =
                 generateHttpGet("http://${configuration.host}:${containerHttpPort}/render?target=$key&format=json")
 
-            await.atMost(5, TimeUnit.SECONDS).until {
+            await.atMost(20, TimeUnit.SECONDS).until {
                 kotlin.runCatching {
                     httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
                 }.getOrNull()?.contains(key) ?: false
@@ -150,7 +152,7 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val proto
     }
 
     @Test
-    @Timeout(15)
+    @Timeout(25)
     fun `should save multiple events all together into graphite`() = testDispatcherProvider.run {
         //given
         val graphiteEventsPublisher = GraphiteEventsPublisher(
@@ -158,7 +160,7 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val proto
             configuration
         )
         graphiteEventsPublisher.start()
-        val keys = (1..5).map { "my.tests-alltogether.$protocol.path$it" }
+        val keys = (1..5).map { "my.tests-altogether.$protocol.path$it" }
         val events = keys.map { Event(it, EventLevel.INFO, emptyList(), 123) }
 
         //when
@@ -169,7 +171,7 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val proto
             val request =
                 generateHttpGet("http://${configuration.host}:${containerHttpPort}/render?target=$key&format=json")
 
-            await.atMost(5, TimeUnit.SECONDS).until {
+            await.atMost(20, TimeUnit.SECONDS).until {
                 kotlin.runCatching {
                     httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
                 }.getOrNull()?.contains(key) ?: false
@@ -179,7 +181,7 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val proto
     }
 
     @Test
-    @Timeout(15)
+    @Timeout(25)
     fun `should save single event into graphite with tags`() = testDispatcherProvider.run {
         //given
         val graphiteEventsPublisher = GraphiteEventsPublisher(
@@ -205,7 +207,7 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val proto
         graphiteEventsPublisher.publish(event)
 
         //then
-        await.atMost(5, TimeUnit.SECONDS).until {
+        await.atMost(20, TimeUnit.SECONDS).until {
             kotlin.runCatching {
                 httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
             }.getOrNull()?.contains(key) ?: false
@@ -224,7 +226,7 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val proto
             )
         )
         graphiteEventsPublisher.start()
-        val key = "fakekey.$protocol"
+        val key = "fake-key.$protocol"
         val event = Event(key, EventLevel.TRACE, emptyList(), 123.123)
 
         //when
@@ -250,7 +252,7 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(val proto
 
     companion object {
 
-        const val GRAPHITE_IMAGE_NAME = "graphiteapp/graphite-statsd:latest"
+        private const val GRAPHITE_IMAGE_NAME = "graphiteapp/graphite-statsd:latest"
         const val HTTP_PORT = 80
         const val GRAPHITE_PLAINTEXT_PORT = 2003
         const val GRAPHITE_PICKLE_PORT = 2004

@@ -14,7 +14,7 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.graphite.events
+package io.qalipsis.plugins.graphite.poll.model.events
 
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.Channel
@@ -28,9 +28,9 @@ import io.qalipsis.api.events.Event
 import io.qalipsis.api.io.Closeable
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.sync.ImmutableSlot
-import io.qalipsis.plugins.graphite.events.codecs.GraphitePickleEncoder
-import io.qalipsis.plugins.graphite.events.codecs.GraphitePlaintextEncoder
-import io.qalipsis.plugins.graphite.events.model.GraphiteProtocol
+import io.qalipsis.plugins.graphite.poll.model.events.codecs.GraphitePickleEncoder
+import io.qalipsis.plugins.graphite.poll.model.events.codecs.GraphitePlaintextEncoder
+import io.qalipsis.plugins.graphite.poll.model.events.model.GraphiteProtocol
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -48,7 +48,7 @@ internal class GraphiteEventsClient(
     private val coroutineScope: CoroutineScope
 ) : Closeable {
 
-    private var started = false
+    private var connected = false
 
     private lateinit var channelFuture: ChannelFuture
 
@@ -56,20 +56,21 @@ internal class GraphiteEventsClient(
         get() = channelFuture.channel()
 
     val isOpen: Boolean
-        get() = started && channel.isOpen
+        get() = connected && channel.isOpen
 
-    suspend fun start(): GraphiteEventsClient {
-        started = false
+    suspend fun open(): GraphiteEventsClient {
+        connected = false
         val readinessLatch = ImmutableSlot<Result<Unit>>()
 
         val b = Bootstrap()
-        b.group(workerGroup)
-        b.channel(NioSocketChannel::class.java).option(ChannelOption.SO_KEEPALIVE, true)
-        b.handler(object : ChannelInitializer<SocketChannel>() {
-            override fun initChannel(ch: SocketChannel) {
-                ch.pipeline().addLast(resolveProtocolEncoder())
-            }
-        }).option(ChannelOption.SO_KEEPALIVE, true)
+            .group(workerGroup)
+            .channel(NioSocketChannel::class.java)
+            .option(ChannelOption.SO_KEEPALIVE, true)
+            .handler(object : ChannelInitializer<SocketChannel>() {
+                override fun initChannel(ch: SocketChannel) {
+                    ch.pipeline().addLast(resolveProtocolEncoder())
+                }
+            })
 
         channelFuture = b.connect(host, port).addListener {
             runBlocking {
@@ -83,7 +84,7 @@ internal class GraphiteEventsClient(
         log.info { "Graphite connection established. Host: $host, port: $port, protocol: $protocolType" }
 
         readinessLatch.get().getOrThrow()
-        started = true
+        connected = true
         return this
     }
 
@@ -93,8 +94,10 @@ internal class GraphiteEventsClient(
         channel.writeAndFlush(values).addListener {
             coroutineScope.launch {
                 if (it.isSuccess) {
+                    log.trace { "Events $values were sent" }
                     readinessLatch.set(Result.success(Unit))
                 } else {
+                    log.debug(it.cause()) { "Failure when sending the records $values" }
                     readinessLatch.set(Result.failure(it.cause()))
                 }
             }
@@ -103,7 +106,7 @@ internal class GraphiteEventsClient(
     }
 
     override suspend fun close() {
-        started = false
+        connected = false
         channel.closeFuture()
     }
 

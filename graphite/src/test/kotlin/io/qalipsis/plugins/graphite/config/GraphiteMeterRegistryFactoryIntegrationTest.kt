@@ -70,7 +70,6 @@ internal class GraphiteMeterRegistryFactoryIntegrationTest {
         @Test
         @Timeout(10)
         internal fun `should start without graphite meter registry`() {
-            assertThat(applicationContext.getBeansOfType(MeterRegistry::class.java)).isNotEmpty()
             assertThat(applicationContext.getBeansOfType(GraphiteMeterRegistry::class.java)).isEmpty()
         }
     }
@@ -116,7 +115,6 @@ internal class GraphiteMeterRegistryFactoryIntegrationTest {
         @Test
         @Timeout(10)
         internal fun `should start with graphite meter registry`() {
-            assertThat(applicationContext.getBeansOfType(MeterRegistry::class.java)).isNotEmpty()
             assertThat(applicationContext.getBeansOfType(GraphiteMeterRegistry::class.java)).hasSize(1)
         }
     }

@@ -14,13 +14,19 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.graphite.events.model
+package io.qalipsis.plugins.graphite.poll
+
+import io.qalipsis.plugins.graphite.render.model.GraphiteRenderApiJsonResponse
 
 /**
- * Enumerates supported [graphite][https://github.com/graphite-project] transport protocols.
+ * A wrapper for meters and documents.
  *
- * @author rklymenko
+ * @property results result of search query procedure in InfluxDb
+ * @property meters meters of the query
+ *
+ * @author Sandro Mamukelashvili
  */
-internal enum class GraphiteProtocol {
-    PLAINTEXT, PICKLE
-}
+class GraphiteQueryResult(
+    val results: List<GraphiteRenderApiJsonResponse>,
+    val meters: GraphiteQueryMeters
+)
