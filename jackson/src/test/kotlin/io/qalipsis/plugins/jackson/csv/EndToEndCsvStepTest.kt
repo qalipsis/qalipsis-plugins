@@ -62,6 +62,7 @@ internal class EndToEndCsvStepTest {
                 column("3rd value").string(true)
                 column("4th value").string(true)
             }
+            broadcast()
         }
         val result = executeStep<Map<String, *>>(this, scenario.rootSteps.first())
 
@@ -100,6 +101,7 @@ internal class EndToEndCsvStepTest {
                 column("3rd value").string(true)
                 column("4th value").string(true)
             }
+            broadcast()
         }
         assertThrows<AssertionFailedError> {
             executeStep<Map<String, *>>(this, scenario.rootSteps.first())
@@ -119,6 +121,7 @@ internal class EndToEndCsvStepTest {
                     columnSeparator(';')
                     withHeader()
                 }
+                broadcast()
             }
             val result = executeStep<Map<String, *>>(this, scenario.rootSteps.first())
 
@@ -144,6 +147,7 @@ internal class EndToEndCsvStepTest {
                 column(2).string(true)
                 column(3).string(true)
             }
+            broadcast()
         }
         val result = executeStep<List<*>>(this, scenario.rootSteps.first())
 
@@ -180,6 +184,7 @@ internal class EndToEndCsvStepTest {
                 column(2)
                 column(3)
             }
+            broadcast()
         }
         val result = executeStep<List<*>>(this, scenario.rootSteps.first())
 
@@ -206,6 +211,7 @@ internal class EndToEndCsvStepTest {
                 column("theField3")
                 column("theField4")
             }
+            broadcast()
         }
         val result = executeStep<PojoForTest>(this, scenario.rootSteps.first())
 
@@ -235,15 +241,14 @@ internal class EndToEndCsvStepTest {
         val creationContext = StepCreationContextImpl(relaxedMockk(), relaxedMockk(), spec)
         val stepContext = TestStepContext<Unit, DatasourceRecord<T?>>(
             minionId = "",
-            scenarioId = "",
-            directedAcyclicGraphId = "",
-            stepId = ""
+            scenarioName = "",
+            stepName = ""
         )
 
         val latch = Latch(true)
         coroutineScope.launch {
             for (outputRecord in stepContext.output as Channel) {
-                result.add(outputRecord)
+                result.add(outputRecord.value)
             }
             latch.release()
         }

@@ -39,7 +39,8 @@ internal class XmlReaderStepSpecificationTest {
                     url = URL("http://path/to/my/file")
             ))
             prop(XmlReaderStepSpecification<*>::singletonConfiguration).isDataClassEqualTo(
-                SingletonConfiguration(SingletonType.BROADCAST))
+                SingletonConfiguration(SingletonType.SEQUENTIAL)
+            )
         }
     }
 
@@ -120,7 +121,7 @@ internal class XmlReaderStepSpecificationTest {
     internal fun `should configure the singleton as default unicast`() {
         val previousStep = DummyStepSpecification()
         previousStep.jackson().xmlToObject(MyPojo::class) {
-            forwardOnce()
+            unicast()
         }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(XmlReaderStepSpecification::class).all {
@@ -136,7 +137,7 @@ internal class XmlReaderStepSpecificationTest {
     internal fun `should configure the singleton as unicast with specified timeout and buffer`() {
         val previousStep = DummyStepSpecification()
         previousStep.jackson().xmlToObject(MyPojo::class) {
-            forwardOnce(123, Duration.ofDays(3))
+            unicast(123, Duration.ofDays(3))
         }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(XmlReaderStepSpecification::class).all {

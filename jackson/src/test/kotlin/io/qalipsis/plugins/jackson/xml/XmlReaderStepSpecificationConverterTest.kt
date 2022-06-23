@@ -20,17 +20,19 @@ import io.qalipsis.api.steps.StepCreationContextImpl
 import io.qalipsis.api.steps.datasource.DatasourceIterativeReader
 import io.qalipsis.api.steps.datasource.DatasourceRecordObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
+import io.qalipsis.api.steps.datasource.SequentialDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
 import io.qalipsis.plugins.jackson.JacksonDatasourceIterativeReader
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.assertk.typedProp
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.io.InputStreamReader
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.createTempFile
@@ -42,6 +44,10 @@ import kotlin.io.path.createTempFile
 @Suppress("UNCHECKED_CAST")
 internal class XmlReaderStepSpecificationConverterTest :
     AbstractStepSpecificationConverterTest<XmlReaderStepSpecificationConverter>() {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     lateinit var spiedConverter: XmlReaderStepSpecificationConverter
 
@@ -63,7 +69,7 @@ internal class XmlReaderStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should convert spec with name`() = runBlockingTest {
+    internal fun `should convert spec with name`() = testDispatcherProvider.runTest {
         // given
         val spec = XmlReaderStepSpecification(TestPojo::class)
         spec.apply {
@@ -82,8 +88,8 @@ internal class XmlReaderStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).all {
-                isInstanceOf(IterativeDatasourceStep::class)
-                prop("id").isEqualTo("my-step")
+                isInstanceOf(SequentialDatasourceStep::class)
+                prop("name").isEqualTo("my-step")
                 prop("reader").isSameAs(reader)
                 typedProp<Any>("processor").isInstanceOf(NoopDatasourceObjectProcessor::class)
                 typedProp<Any>("converter").isInstanceOf(DatasourceRecordObjectConverter::class)
@@ -92,11 +98,12 @@ internal class XmlReaderStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should convert spec without name`() = runBlockingTest {
+    internal fun `should convert spec without name`() = testDispatcherProvider.runTest {
         // given
         val spec = XmlReaderStepSpecification(TestPojo::class)
         spec.apply {
             file(createTempFile().toFile().absolutePath)
+            unicast()
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
         val reader: DatasourceIterativeReader<TestPojo> = relaxedMockk { }
@@ -111,7 +118,7 @@ internal class XmlReaderStepSpecificationConverterTest :
         creationContext.createdStep!!.let {
             assertThat(it).all {
                 isInstanceOf(IterativeDatasourceStep::class)
-                prop("id").isNotNull()
+                prop("name").isNotNull()
                 prop("reader").isSameAs(reader)
                 typedProp<Any>("processor").isInstanceOf(NoopDatasourceObjectProcessor::class)
                 typedProp<Any>("converter").isInstanceOf(DatasourceRecordObjectConverter::class)
@@ -120,7 +127,7 @@ internal class XmlReaderStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should generate an error when creating a mapper without source`() = runBlockingTest {
+    internal fun `should generate an error when creating a mapper without source`() = testDispatcherProvider.runTest {
         // given
         val spec = XmlReaderStepSpecification(TestPojo::class)
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)

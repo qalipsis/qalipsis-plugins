@@ -7,6 +7,7 @@ import io.aerisconsulting.catadioptre.KTestable
 import io.micronaut.jackson.modules.BeanIntrospectionModule
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.exceptions.InvalidSpecificationException
+import io.qalipsis.api.steps.Step
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
@@ -15,6 +16,7 @@ import io.qalipsis.api.steps.datasource.DatasourceObjectProcessor
 import io.qalipsis.api.steps.datasource.DatasourceRecord
 import io.qalipsis.api.steps.datasource.DatasourceRecordObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
+import io.qalipsis.api.steps.datasource.SequentialDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.MapDatasourceObjectProcessor
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
 import io.qalipsis.plugins.jackson.JacksonDatasourceIterativeReader
@@ -37,20 +39,26 @@ internal class CsvReaderStepSpecificationConverter : StepSpecificationConverter<
         creationContext.createdStep(convert(creationContext.stepSpecification as CsvReaderStepSpecification<out Any>))
     }
 
-    private fun <O : Any> convert(
-            spec: CsvReaderStepSpecification<O>): IterativeDatasourceStep<O, O, DatasourceRecord<O>> {
-        return IterativeDatasourceStep(
-            spec.name,
-            createReader(spec), createProcessor(spec), DatasourceRecordObjectConverter()
-        )
+    private fun <O : Any> convert(spec: CsvReaderStepSpecification<O>): Step<*, DatasourceRecord<O>> {
+        return if (spec.isReallySingleton) {
+            IterativeDatasourceStep(
+                spec.name,
+                createReader(spec), createProcessor(spec), DatasourceRecordObjectConverter()
+            )
+        } else {
+            SequentialDatasourceStep(
+                spec.name,
+                createReader(spec), createProcessor(spec), DatasourceRecordObjectConverter()
+            )
+        }
     }
 
     private fun <O : Any> createReader(spec: CsvReaderStepSpecification<O>): DatasourceIterativeReader<O> {
         val sourceUrl = spec.sourceConfiguration.url ?: throw InvalidSpecificationException("No source specified")
         val targetClass = if (List::class.isSuperclassOf(spec.targetClass)) LinkedHashMap::class else spec.targetClass
         return JacksonDatasourceIterativeReader(
-                InputStreamReader(sourceUrl.openStream(), spec.sourceConfiguration.encoding),
-                createMapper().readerFor(targetClass.java).with(createSchema(spec))
+            InputStreamReader(sourceUrl.openStream(), spec.sourceConfiguration.encoding),
+            createMapper().readerFor(targetClass.java).with(createSchema(spec))
         )
     }
 
@@ -58,11 +66,16 @@ internal class CsvReaderStepSpecificationConverter : StepSpecificationConverter<
         val schemaBuilder = CsvSchema.builder()
         spec.headerConfiguration.columns.filterNotNull().forEach { column ->
             if (column.isArray) {
-                schemaBuilder.addColumn(CsvSchema.Column(column.index, column.name, CsvSchema.ColumnType.ARRAY,
-                        column.listSeparator))
+                schemaBuilder.addColumn(
+                    CsvSchema.Column(
+                        column.index, column.name, CsvSchema.ColumnType.ARRAY,
+                        column.listSeparator
+                    )
+                )
             } else {
                 schemaBuilder.addColumn(
-                        CsvSchema.Column(column.index, column.name, CsvSchema.ColumnType.STRING))
+                    CsvSchema.Column(column.index, column.name, CsvSchema.ColumnType.STRING)
+                )
             }
         }
         schemaBuilder
@@ -88,9 +101,11 @@ internal class CsvReaderStepSpecificationConverter : StepSpecificationConverter<
     private fun <O : Any> createProcessor(spec: CsvReaderStepSpecification<O>): DatasourceObjectProcessor<O, O> {
         return when {
             List::class.isSuperclassOf(spec.targetClass) -> createListProcessor(
-                    spec as CsvReaderStepSpecification<List<*>>)
+                spec as CsvReaderStepSpecification<List<*>>
+            )
             Map::class.isSuperclassOf(spec.targetClass) -> createMapProcessor(
-                    spec as CsvReaderStepSpecification<Map<String, *>>)
+                spec as CsvReaderStepSpecification<Map<String, *>>
+            )
             else -> NoopDatasourceObjectProcessor()
         }
     }
@@ -105,7 +120,8 @@ internal class CsvReaderStepSpecificationConverter : StepSpecificationConverter<
     }
 
     private fun <O> createMapProcessor(
-            spec: CsvReaderStepSpecification<Map<String, Any?>>): DatasourceObjectProcessor<O, O> {
+        spec: CsvReaderStepSpecification<Map<String, Any?>>
+    ): DatasourceObjectProcessor<O, O> {
         val columnConversionByName = mutableMapOf<String, ((Any?) -> Any?)>()
         spec.headerConfiguration.columns.filterNotNull().forEach { column ->
             columnConversionByName[column.name] = buildConverter(column)

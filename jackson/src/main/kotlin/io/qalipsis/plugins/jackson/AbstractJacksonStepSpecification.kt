@@ -3,6 +3,7 @@ package io.qalipsis.plugins.jackson
 import io.qalipsis.api.steps.AbstractStepSpecification
 import io.qalipsis.api.steps.BroadcastSpecification
 import io.qalipsis.api.steps.LoopableSpecification
+import io.qalipsis.api.steps.NoSingletonSpecification
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.api.steps.UnicastSpecification
@@ -19,11 +20,11 @@ import java.nio.file.Path
 abstract class AbstractJacksonStepSpecification<O : Any?, SELF : AbstractJacksonStepSpecification<O, SELF>> :
     AbstractStepSpecification<Unit, DatasourceRecord<O>, SELF>(),
     JacksonStepSpecification<Unit, DatasourceRecord<O>, SELF>,
-    LoopableSpecification, UnicastSpecification, BroadcastSpecification {
+    LoopableSpecification, UnicastSpecification, BroadcastSpecification, NoSingletonSpecification {
 
     internal val sourceConfiguration = SourceConfiguration()
 
-    override val singletonConfiguration: SingletonConfiguration = SingletonConfiguration(SingletonType.BROADCAST)
+    override val singletonConfiguration: SingletonConfiguration = SingletonConfiguration(SingletonType.SEQUENTIAL)
 
     /**
      * Reads the CSV data from a plain file on the file system.

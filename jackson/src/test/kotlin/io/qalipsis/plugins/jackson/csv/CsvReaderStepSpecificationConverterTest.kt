@@ -24,20 +24,22 @@ import io.qalipsis.api.steps.datasource.DatasourceIterativeReader
 import io.qalipsis.api.steps.datasource.DatasourceObjectProcessor
 import io.qalipsis.api.steps.datasource.DatasourceRecordObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
+import io.qalipsis.api.steps.datasource.SequentialDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.MapDatasourceObjectProcessor
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
 import io.qalipsis.plugins.jackson.JacksonDatasourceIterativeReader
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.assertk.typedProp
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyNever
 import io.qalipsis.test.mockk.verifyOnce
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -54,6 +56,10 @@ import kotlin.reflect.KClass
 @Suppress("UNCHECKED_CAST")
 internal class CsvReaderStepSpecificationConverterTest :
     AbstractStepSpecificationConverterTest<CsvReaderStepSpecificationConverter>() {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     lateinit var spiedConverter: CsvReaderStepSpecificationConverter
 
@@ -75,12 +81,13 @@ internal class CsvReaderStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should convert spec with name`() = runBlockingTest {
+    internal fun `should convert spec with name`() = testDispatcherProvider.runTest {
         // given
         val spec = CsvReaderStepSpecification(Map::class as KClass<Map<String, *>>)
         spec.apply {
             name = "my-step"
             file(createTempFile().toFile().absolutePath)
+            unicast()
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
         val reader: DatasourceIterativeReader<Map<String, Any?>> = relaxedMockk { }
@@ -96,7 +103,7 @@ internal class CsvReaderStepSpecificationConverterTest :
         creationContext.createdStep!!.let {
             assertThat(it).all {
                 isInstanceOf(IterativeDatasourceStep::class)
-                prop("id").isEqualTo("my-step")
+                prop("name").isEqualTo("my-step")
                 prop("reader").isSameAs(reader)
                 prop("processor").isSameAs(processor)
                 typedProp<Any>("converter").isInstanceOf(DatasourceRecordObjectConverter::class)
@@ -105,7 +112,7 @@ internal class CsvReaderStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should convert spec without name`() = runBlockingTest {
+    internal fun `should convert spec without name`() = testDispatcherProvider.runTest {
         // given
         val spec = CsvReaderStepSpecification(List::class)
         spec.apply {
@@ -124,8 +131,8 @@ internal class CsvReaderStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).all {
-                isInstanceOf(IterativeDatasourceStep::class)
-                prop("id").isNotNull()
+                isInstanceOf(SequentialDatasourceStep::class)
+                prop("name").isNotNull()
                 prop("reader").isSameAs(reader)
                 prop("processor").isSameAs(processor)
                 typedProp<Any>("converter").isInstanceOf(DatasourceRecordObjectConverter::class)
@@ -134,7 +141,7 @@ internal class CsvReaderStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should generate an error when creating a mapper without source`() = runBlockingTest {
+    internal fun `should generate an error when creating a mapper without source`() = testDispatcherProvider.runTest {
         // given
         val spec = CsvReaderStepSpecification(Map::class as KClass<Map<String, *>>)
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -142,7 +149,8 @@ internal class CsvReaderStepSpecificationConverterTest :
         // when
         assertThrows<InvalidSpecificationException> {
             converter.convert<Unit, List<*>>(
-                creationContext as StepCreationContext<CsvReaderStepSpecification<*>>)
+                creationContext as StepCreationContext<CsvReaderStepSpecification<*>>
+            )
         }
     }
 

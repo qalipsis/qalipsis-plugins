@@ -49,6 +49,7 @@ internal class EndToEndXmlStepTest {
         val scenario = scenario("my-scenario") as StepSpecificationRegistry
         scenario.jackson().xmlToObject(PojoForTest::class) {
             classpath(file)
+            broadcast()
         }
         val result = executeStep<PojoForTest>(this, scenario.rootSteps.first())
 
@@ -83,15 +84,14 @@ internal class EndToEndXmlStepTest {
         val creationContext = StepCreationContextImpl(relaxedMockk(), relaxedMockk(), spec)
         val stepContext = TestStepContext<Unit, DatasourceRecord<T?>>(
             minionId = "",
-            scenarioId = "",
-            directedAcyclicGraphId = "",
-            stepId = ""
+            scenarioName = "",
+            stepName = ""
         )
 
         val latch = Latch(true)
         coroutineScope.launch {
             for (outputRecord in stepContext.output as Channel) {
-                result.add(outputRecord)
+                result.add(outputRecord.value)
             }
             latch.release()
         }

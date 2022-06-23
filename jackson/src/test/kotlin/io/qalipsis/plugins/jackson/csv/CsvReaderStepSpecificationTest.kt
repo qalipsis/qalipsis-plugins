@@ -39,7 +39,8 @@ internal class CsvReaderStepSpecificationTest {
             ))
             prop("targetClass").isEqualTo(List::class)
             prop(CsvReaderStepSpecification<*>::singletonConfiguration).isDataClassEqualTo(
-                    SingletonConfiguration(SingletonType.BROADCAST))
+                SingletonConfiguration(SingletonType.SEQUENTIAL)
+            )
             prop(CsvReaderStepSpecification<*>::parsingConfiguration).isDataClassEqualTo(
                     CsvParsingConfiguration())
             prop(CsvReaderStepSpecification<*>::headerConfiguration).isDataClassEqualTo(
@@ -61,7 +62,8 @@ internal class CsvReaderStepSpecificationTest {
                             url = this::class.java.getResource("path/to/my/file")
                     ))
             prop(CsvReaderStepSpecification<*>::singletonConfiguration).isDataClassEqualTo(
-                    SingletonConfiguration(SingletonType.BROADCAST))
+                SingletonConfiguration(SingletonType.SEQUENTIAL)
+            )
             prop(CsvReaderStepSpecification<*>::parsingConfiguration).isDataClassEqualTo(
                     CsvParsingConfiguration())
             prop(CsvReaderStepSpecification<*>::headerConfiguration).isDataClassEqualTo(
@@ -82,7 +84,8 @@ internal class CsvReaderStepSpecificationTest {
                     url = URL("http://path/to/my/file")
             ))
             prop(CsvReaderStepSpecification<*>::singletonConfiguration).isDataClassEqualTo(
-                    SingletonConfiguration(SingletonType.BROADCAST))
+                SingletonConfiguration(SingletonType.SEQUENTIAL)
+            )
             prop(CsvReaderStepSpecification<*>::parsingConfiguration).isDataClassEqualTo(CsvParsingConfiguration())
             prop(CsvReaderStepSpecification<*>::headerConfiguration).isDataClassEqualTo(CsvHeaderConfiguration())
         }
@@ -101,7 +104,8 @@ internal class CsvReaderStepSpecificationTest {
                     url = Path.of("/path/to/my/file").toUri().toURL()
             ))
             prop(CsvReaderStepSpecification<*>::singletonConfiguration).isDataClassEqualTo(
-                    SingletonConfiguration(SingletonType.BROADCAST))
+                SingletonConfiguration(SingletonType.SEQUENTIAL)
+            )
             prop(CsvReaderStepSpecification<*>::parsingConfiguration).isDataClassEqualTo(
                     CsvParsingConfiguration())
             prop(CsvReaderStepSpecification<*>::headerConfiguration).isDataClassEqualTo(
@@ -123,7 +127,8 @@ internal class CsvReaderStepSpecificationTest {
                             url = this::class.java.getResource("path/to/my/file")
                     ))
             prop(CsvReaderStepSpecification<*>::singletonConfiguration).isDataClassEqualTo(
-                    SingletonConfiguration(SingletonType.BROADCAST))
+                SingletonConfiguration(SingletonType.SEQUENTIAL)
+            )
             prop(CsvReaderStepSpecification<*>::parsingConfiguration).isDataClassEqualTo(
                     CsvParsingConfiguration())
             prop(CsvReaderStepSpecification<*>::headerConfiguration).isDataClassEqualTo(
@@ -144,7 +149,8 @@ internal class CsvReaderStepSpecificationTest {
                     url = URL("http://path/to/my/file")
             ))
             prop(CsvReaderStepSpecification<*>::singletonConfiguration).isDataClassEqualTo(
-                    SingletonConfiguration(SingletonType.BROADCAST))
+                SingletonConfiguration(SingletonType.SEQUENTIAL)
+            )
             prop(CsvReaderStepSpecification<*>::parsingConfiguration).isDataClassEqualTo(CsvParsingConfiguration())
             prop(CsvReaderStepSpecification<*>::headerConfiguration).isDataClassEqualTo(CsvHeaderConfiguration())
         }
@@ -258,7 +264,7 @@ internal class CsvReaderStepSpecificationTest {
     internal fun `should configure the singleton as default unicast`() {
         val previousStep = DummyStepSpecification()
         previousStep.jackson().csvToObject(MyPojo::class) {
-            forwardOnce()
+            unicast()
         }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(CsvReaderStepSpecification::class).all {
@@ -274,7 +280,7 @@ internal class CsvReaderStepSpecificationTest {
     internal fun `should configure the singleton as unicast with specified timeout and buffer`() {
         val previousStep = DummyStepSpecification()
         previousStep.jackson().csvToObject(MyPojo::class) {
-            forwardOnce(123, Duration.ofDays(3))
+            unicast(123, Duration.ofDays(3))
         }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(CsvReaderStepSpecification::class).all {

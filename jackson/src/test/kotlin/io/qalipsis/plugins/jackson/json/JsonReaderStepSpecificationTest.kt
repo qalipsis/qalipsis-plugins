@@ -39,7 +39,8 @@ internal class JsonReaderStepSpecificationTest {
                     url = URL("http://path/to/my/file")
             ))
             prop(JsonReaderStepSpecification<*>::singletonConfiguration).isDataClassEqualTo(
-                SingletonConfiguration(SingletonType.BROADCAST))
+                SingletonConfiguration(SingletonType.SEQUENTIAL)
+            )
         }
     }
 
@@ -57,7 +58,8 @@ internal class JsonReaderStepSpecificationTest {
                             url = this::class.java.getResource("path/to/my/file")
                     ))
             prop(JsonReaderStepSpecification<*>::singletonConfiguration).isDataClassEqualTo(
-                SingletonConfiguration(SingletonType.BROADCAST))
+                SingletonConfiguration(SingletonType.SEQUENTIAL)
+            )
         }
     }
 
@@ -138,7 +140,7 @@ internal class JsonReaderStepSpecificationTest {
     internal fun `should configure the singleton as default unicast`() {
         val previousStep = DummyStepSpecification()
         previousStep.jackson().jsonToObject(MyPojo::class) {
-            forwardOnce()
+            unicast()
         }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(JsonReaderStepSpecification::class).all {
@@ -154,7 +156,7 @@ internal class JsonReaderStepSpecificationTest {
     internal fun `should configure the singleton as unicast with specified timeout and buffer`() {
         val previousStep = DummyStepSpecification()
         previousStep.jackson().jsonToObject(MyPojo::class) {
-            forwardOnce(123, Duration.ofDays(3))
+            unicast(123, Duration.ofDays(3))
         }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(JsonReaderStepSpecification::class).all {

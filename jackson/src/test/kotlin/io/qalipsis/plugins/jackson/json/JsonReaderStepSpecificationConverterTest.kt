@@ -20,17 +20,19 @@ import io.qalipsis.api.steps.StepCreationContextImpl
 import io.qalipsis.api.steps.datasource.DatasourceIterativeReader
 import io.qalipsis.api.steps.datasource.DatasourceRecordObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
+import io.qalipsis.api.steps.datasource.SequentialDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
 import io.qalipsis.plugins.jackson.JacksonDatasourceIterativeReader
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.assertk.typedProp
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.io.InputStreamReader
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.createTempFile
@@ -43,6 +45,10 @@ import kotlin.reflect.KClass
 @Suppress("UNCHECKED_CAST")
 internal class JsonReaderStepSpecificationConverterTest :
     AbstractStepSpecificationConverterTest<JsonReaderStepSpecificationConverter>() {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     lateinit var spiedConverter: JsonReaderStepSpecificationConverter
 
@@ -64,7 +70,7 @@ internal class JsonReaderStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should convert spec with name`() = runBlockingTest {
+    internal fun `should convert spec with name`() = testDispatcherProvider.runTest {
         // given
         val spec = JsonReaderStepSpecification(Map::class as KClass<Map<String, *>>)
         spec.apply {
@@ -83,8 +89,8 @@ internal class JsonReaderStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).all {
-                isInstanceOf(IterativeDatasourceStep::class)
-                prop("id").isEqualTo("my-step")
+                isInstanceOf(SequentialDatasourceStep::class)
+                prop("name").isEqualTo("my-step")
                 prop("reader").isSameAs(reader)
                 typedProp<Any>("processor").isInstanceOf(NoopDatasourceObjectProcessor::class)
                 typedProp<Any>("converter").isInstanceOf(DatasourceRecordObjectConverter::class)
@@ -93,11 +99,12 @@ internal class JsonReaderStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should convert spec without name`() = runBlockingTest {
+    internal fun `should convert spec without name`() = testDispatcherProvider.runTest {
         // given
         val spec = JsonReaderStepSpecification(Map::class as KClass<Map<String, *>>)
         spec.apply {
             file(createTempFile().toFile().absolutePath)
+            unicast()
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
         val reader: DatasourceIterativeReader<Map<String, Any?>> = relaxedMockk { }
@@ -112,7 +119,7 @@ internal class JsonReaderStepSpecificationConverterTest :
         creationContext.createdStep!!.let {
             assertThat(it).all {
                 isInstanceOf(IterativeDatasourceStep::class)
-                prop("id").isNotNull()
+                prop("name").isNotNull()
                 prop("reader").isSameAs(reader)
                 typedProp<Any>("processor").isInstanceOf(NoopDatasourceObjectProcessor::class)
                 typedProp<Any>("converter").isInstanceOf(DatasourceRecordObjectConverter::class)
@@ -121,7 +128,7 @@ internal class JsonReaderStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should generate an error when creating a mapper without source`() = runBlockingTest {
+    internal fun `should generate an error when creating a mapper without source`() = testDispatcherProvider.runTest {
         // given
         val spec = JsonReaderStepSpecification(Map::class as KClass<Map<String, *>>)
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -145,7 +152,7 @@ internal class JsonReaderStepSpecificationConverterTest :
         }
 
         // when
-        val mapper = converter.invokeInvisible<JsonMapper>("createMapper",spec)
+        val mapper = converter.invokeInvisible<JsonMapper>("createMapper", spec)
 
         // then
         assertThat(mapper).all {
@@ -157,7 +164,8 @@ internal class JsonReaderStepSpecificationConverterTest :
             )
         }
         Assertions.assertTrue(
-            mapper.deserializationConfig.isEnabled(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECT))
+            mapper.deserializationConfig.isEnabled(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECT)
+        )
     }
 
     @Test
@@ -177,7 +185,7 @@ internal class JsonReaderStepSpecificationConverterTest :
         every { mapper.readerFor(any<Class<*>>()) } returns objectReader
 
         // when
-        val reader = spiedConverter.invokeInvisible<DatasourceIterativeReader<*>>("createReader",spec)
+        val reader = spiedConverter.invokeInvisible<DatasourceIterativeReader<*>>("createReader", spec)
 
         // then
         assertThat(reader).all {

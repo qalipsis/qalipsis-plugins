@@ -7,6 +7,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.micronaut.jackson.modules.BeanIntrospectionModule
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.exceptions.InvalidSpecificationException
+import io.qalipsis.api.steps.Step
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
@@ -14,6 +15,7 @@ import io.qalipsis.api.steps.datasource.DatasourceIterativeReader
 import io.qalipsis.api.steps.datasource.DatasourceRecord
 import io.qalipsis.api.steps.datasource.DatasourceRecordObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
+import io.qalipsis.api.steps.datasource.SequentialDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
 import io.qalipsis.plugins.jackson.JacksonDatasourceIterativeReader
 import java.io.InputStreamReader
@@ -34,13 +36,18 @@ internal class XmlReaderStepSpecificationConverter : StepSpecificationConverter<
         creationContext.createdStep(convert(creationContext.stepSpecification as XmlReaderStepSpecification<out Any>))
     }
 
-    private fun <O : Any> convert(
-        spec: XmlReaderStepSpecification<O>
-    ): IterativeDatasourceStep<O, O, DatasourceRecord<O>> {
-        return IterativeDatasourceStep(
-            spec.name,
-            createReader(spec), NoopDatasourceObjectProcessor(), DatasourceRecordObjectConverter()
-        )
+    private fun <O : Any> convert(spec: XmlReaderStepSpecification<O>): Step<*, DatasourceRecord<O>> {
+        return if (spec.isReallySingleton) {
+            IterativeDatasourceStep(
+                spec.name,
+                createReader(spec), NoopDatasourceObjectProcessor(), DatasourceRecordObjectConverter()
+            )
+        } else {
+            SequentialDatasourceStep(
+                spec.name,
+                createReader(spec), NoopDatasourceObjectProcessor(), DatasourceRecordObjectConverter()
+            )
+        }
     }
 
     private fun <O : Any> createReader(spec: XmlReaderStepSpecification<O>): DatasourceIterativeReader<O> {
