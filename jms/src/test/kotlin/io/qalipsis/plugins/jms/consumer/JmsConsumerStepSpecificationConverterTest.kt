@@ -9,6 +9,7 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isSameAs
+import io.aerisconsulting.catadioptre.invokeInvisible
 import io.mockk.every
 import io.mockk.spyk
 import io.qalipsis.api.steps.StepCreationContext
@@ -17,7 +18,6 @@ import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
-import io.qalipsis.plugins.jms.consumer.JmsScenario.queueConnection
 import io.qalipsis.plugins.jms.deserializer.JmsStringDeserializer
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.assertk.typedProp
@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Test
 import javax.jms.Message
 import javax.jms.QueueConnection
 import javax.jms.TopicConnection
-import io.aerisconsulting.catadioptre.invokeInvisible
 
 /**
  *
@@ -83,7 +82,7 @@ internal class JmsConsumerStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
-                prop("id").isEqualTo("my-step")
+                prop("name").isEqualTo("my-step")
                 prop("reader").isNotNull().isInstanceOf(JmsConsumerIterativeReader::class).all {
                     prop("stepId").isEqualTo("my-step")
                     prop("topicConnectionFactory").isNull()
@@ -127,7 +126,7 @@ internal class JmsConsumerStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
-                prop("id").isEqualTo("my-step")
+                prop("name").isEqualTo("my-step")
                 prop("reader").isNotNull().isInstanceOf(JmsConsumerIterativeReader::class).all {
                     prop("stepId").isEqualTo("my-step")
                     prop("topicConnectionFactory").isSameAs(topicConnectionFactory)

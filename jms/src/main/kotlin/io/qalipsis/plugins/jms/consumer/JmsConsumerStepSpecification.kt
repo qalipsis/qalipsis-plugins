@@ -124,7 +124,7 @@ internal class JmsConsumerStepSpecification<O : Any> internal constructor(
         metrics.metricsConfiguration()
     }
 
-    override fun forwardOnce(bufferSize: Int, idleTimeout: Duration) {
+    override fun unicast(bufferSize: Int, idleTimeout: Duration) {
         singletonConfiguration.bufferSize = bufferSize
         singletonConfiguration.idleTimeout = idleTimeout
     }

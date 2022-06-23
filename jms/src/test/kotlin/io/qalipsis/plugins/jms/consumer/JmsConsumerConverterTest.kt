@@ -15,16 +15,17 @@ import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.plugins.jms.JmsDeserializer
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.CleanMockkRecordedCalls
 import io.qalipsis.test.mockk.relaxedMockk
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.runBlocking
 import org.apache.activemq.command.ActiveMQDestination
 import org.apache.activemq.command.ActiveMQTextMessage
 import org.apache.activemq.command.ActiveMQTopic
 import org.apache.activemq.command.MessageId
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.util.concurrent.atomic.AtomicLong
 import javax.jms.Message
 import javax.jms.TextMessage
@@ -36,6 +37,10 @@ import javax.jms.TextMessage
  */
 @CleanMockkRecordedCalls
 internal class JmsConsumerConverterTest {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     private val valueDeserializer: JmsDeserializer<String> = relaxedMockk {
         every { deserialize(any()) } answers { firstArg<TextMessage>().text }
@@ -62,7 +67,7 @@ internal class JmsConsumerConverterTest {
 
     @Timeout(2)
     @Test
-    internal fun `should deserialize without monitor`() {
+    internal fun `should deserialize without monitor`() = testDispatcherProvider.runTest {
         // when
         executeConversion()
         val consumedBytesCounter = relaxedMockk<Counter>()
@@ -71,7 +76,7 @@ internal class JmsConsumerConverterTest {
 
     @Timeout(2)
     @Test
-    internal fun `should deserialize and monitor`() {
+    internal fun `should deserialize and monitor`() = testDispatcherProvider.runTest {
         // when
         executeConversion(meterRegistry = meterRegistry, eventsLogger = eventsLogger)
 
@@ -125,7 +130,7 @@ internal class JmsConsumerConverterTest {
         confirmVerified(consumedBytesCounter, eventsLogger)
     }
 
-    private fun executeConversion(
+    private suspend fun executeConversion(
         meterRegistry: MeterRegistry? = null,
         eventsLogger: EventsLogger? = null
     ) {
@@ -154,24 +159,22 @@ internal class JmsConsumerConverterTest {
         }
 
         //when
-        val results = runBlocking {
-            converter.start(startStopContext)
-            converter.supply(
-                offset, message1, output
-            )
-            converter.supply(
-                offset, message2, output
-            )
-            converter.supply(
-                offset, message3, output
-            )
-            // Each message is sent in a unitary statement.
-            listOf(
-                channel.receive(),
-                channel.receive(),
-                channel.receive()
-            )
-        }
+        converter.start(startStopContext)
+        converter.supply(
+            offset, message1, output
+        )
+        converter.supply(
+            offset, message2, output
+        )
+        converter.supply(
+            offset, message3, output
+        )
+        // Each message is sent in a unitary statement.
+        val results = listOf(
+            channel.receive(),
+            channel.receive(),
+            channel.receive()
+        )
 
         // then
         assertThat(results).all {

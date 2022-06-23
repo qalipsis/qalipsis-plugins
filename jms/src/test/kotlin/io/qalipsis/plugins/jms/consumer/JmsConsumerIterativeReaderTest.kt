@@ -2,12 +2,13 @@ package io.qalipsis.plugins.jms.consumer;
 
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.extension.RegisterExtension
 import javax.jms.QueueConnection
 import javax.jms.TopicConnection
 
@@ -17,6 +18,10 @@ import javax.jms.TopicConnection
  */
 @WithMockk
 internal class JmsConsumerIterativeReaderTest {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     @RelaxedMockK
     private lateinit var topicConnectionFactory: () -> TopicConnection
@@ -39,13 +44,13 @@ internal class JmsConsumerIterativeReaderTest {
     }
 
     @Test
-    internal fun `should throw exception if both connection are provided`() = runBlockingTest {
+    internal fun `should throw exception if both connection are provided`() = testDispatcherProvider.runTest {
         reader = JmsConsumerIterativeReader(
-                "any",
-                queues = listOf(),
-                queueConnectionFactory = queueConnectionFactory,
-                topics = listOf(),
-                topicConnectionFactory = topicConnectionFactory
+            "any",
+            queues = listOf(),
+            queueConnectionFactory = queueConnectionFactory,
+            topics = listOf(),
+            topicConnectionFactory = topicConnectionFactory
         )
 
         assertThrows<IllegalArgumentException> {
@@ -54,7 +59,7 @@ internal class JmsConsumerIterativeReaderTest {
     }
 
     @Test
-    internal fun `should throw exception if queues not provided for connection`() = runBlockingTest {
+    internal fun `should throw exception if queues not provided for connection`() = testDispatcherProvider.runTest {
         reader = JmsConsumerIterativeReader(
             "any",
             queues = listOf(),
@@ -69,7 +74,7 @@ internal class JmsConsumerIterativeReaderTest {
     }
 
     @Test
-    internal fun `should throw exception if topics not provided for connection`() = runBlockingTest {
+    internal fun `should throw exception if topics not provided for connection`() = testDispatcherProvider.runTest {
         reader = JmsConsumerIterativeReader(
             "any",
             queues = listOf(),
@@ -84,7 +89,7 @@ internal class JmsConsumerIterativeReaderTest {
     }
 
     @Test
-    internal fun `should throw exception if no connection provided`() = runBlockingTest {
+    internal fun `should throw exception if no connection provided`() = testDispatcherProvider.runTest {
         reader = JmsConsumerIterativeReader(
             "any",
             queues = listOf(),

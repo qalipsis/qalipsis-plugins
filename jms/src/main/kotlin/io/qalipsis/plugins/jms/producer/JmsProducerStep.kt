@@ -1,7 +1,7 @@
 package io.qalipsis.plugins.jms.producer
 
 import io.qalipsis.api.context.StepContext
-import io.qalipsis.api.context.StepId
+import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
@@ -16,7 +16,7 @@ import io.qalipsis.api.steps.AbstractStep
  * @author Alexander Sosnovsky
  */
 internal class JmsProducerStep<I>(
-    stepId: StepId,
+    stepId: StepName,
     retryPolicy: RetryPolicy?,
     private val jmsProducer: JmsProducer,
     private val recordFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<JmsProducerRecord>),

@@ -9,9 +9,9 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.prop
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.plugins.jms.Constants
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.apache.activemq.ActiveMQConnectionFactory
 import org.junit.jupiter.api.Assertions
@@ -20,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.extension.RegisterExtension
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -38,6 +39,10 @@ import kotlin.math.pow
  */
 @Testcontainers
 internal class JmsConsumerIterativeReaderIntegrationTest {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     private lateinit var connectionFactory: ActiveMQConnectionFactory
 
@@ -85,7 +90,7 @@ internal class JmsConsumerIterativeReaderIntegrationTest {
 
     @Test
     @Timeout(50)
-    internal fun `should consume all the data from subscribed queues only`(): Unit = runBlocking {
+    internal fun `should consume all the data from subscribed queues only`(): Unit = testDispatcherProvider.run {
         val producer1 = prepareQueueProducer("queue-1")
         val producer2 = prepareQueueProducer("queue-2")
         val producer3 = prepareQueueProducer("queue-3")
@@ -142,7 +147,7 @@ internal class JmsConsumerIterativeReaderIntegrationTest {
 
     @Test
     @Timeout(50)
-    internal fun `should consume all the data from subscribed topics only`(): Unit = runBlocking {
+    internal fun `should consume all the data from subscribed topics only`(): Unit = testDispatcherProvider.run {
         val producer1 = prepareTopicProducer("topic-1")
         val producer2 = prepareTopicProducer("topic-2")
         val producer3 = prepareTopicProducer("topic-3")
@@ -199,7 +204,7 @@ internal class JmsConsumerIterativeReaderIntegrationTest {
 
     @Test
     @Timeout(10)
-    internal fun `should always have next at start but not at stop`() = runBlocking {
+    internal fun `should always have next at start but not at stop`() = testDispatcherProvider.run {
         reader = JmsConsumerIterativeReader(
             "any",
             queues = listOf(),
@@ -217,7 +222,7 @@ internal class JmsConsumerIterativeReaderIntegrationTest {
 
     @Test
     @Timeout(50)
-    internal fun `should accept start after stop and consume`() = runBlocking {
+    internal fun `should accept start after stop and consume`() = testDispatcherProvider.run {
         val producer1 = prepareTopicProducer("topic-1")
         val producer2 = prepareTopicProducer("topic-2")
 

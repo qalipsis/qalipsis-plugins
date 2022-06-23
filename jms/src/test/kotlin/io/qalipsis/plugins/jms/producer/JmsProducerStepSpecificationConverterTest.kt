@@ -11,13 +11,14 @@ import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepCreationContextImpl
 import io.qalipsis.test.assertk.prop
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.runBlockingTest
 import org.apache.activemq.command.ActiveMQTopic
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import javax.jms.Connection
 
 /**
@@ -27,6 +28,10 @@ import javax.jms.Connection
 @Suppress("UNCHECKED_CAST")
 internal class JmsProducerStepSpecificationConverterTest :
     AbstractStepSpecificationConverterTest<JmsProducerStepSpecificationConverter>() {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     private val connectionFactory: () -> Connection = { relaxedMockk() }
 
@@ -41,7 +46,7 @@ internal class JmsProducerStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should convert spec with name`() = runBlockingTest {
+    internal fun `should convert spec with name`() = testDispatcherProvider.runTest {
         val rec1 = JmsProducerRecord(
             destination = ActiveMQTopic().createDestination("dest-1"),
             value = "text-1"
@@ -51,7 +56,8 @@ internal class JmsProducerStepSpecificationConverterTest :
             value = "text-2"
         )
 
-        val recordSupplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<JmsProducerRecord>) = { _, _ -> listOf(rec1, rec2) }
+        val recordSupplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<JmsProducerRecord>) =
+            { _, _ -> listOf(rec1, rec2) }
 
         val spec = JmsProducerStepSpecificationImpl<Any>()
         spec.also {
@@ -73,7 +79,7 @@ internal class JmsProducerStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(JmsProducerStep::class).all {
-                prop("id").isEqualTo("my-step")
+                prop("name").isEqualTo("my-step")
                 prop("recordFactory").isEqualTo(recordSupplier)
                 prop("jmsProducer").isNotNull().all {
                     prop("connectionFactory").isEqualTo(connectionFactory)

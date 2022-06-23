@@ -14,13 +14,14 @@ import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.verify
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.plugins.jms.Constants
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
-import kotlinx.coroutines.runBlocking
 import org.apache.activemq.ActiveMQConnectionFactory
 import org.apache.activemq.command.ActiveMQQueue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -39,6 +40,10 @@ import kotlin.math.pow
 @Testcontainers
 @WithMockk
 internal class JmsProducerIntegrationTest {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     @RelaxedMockK
     private lateinit var bytesCounter: Counter
@@ -74,7 +79,7 @@ internal class JmsProducerIntegrationTest {
     }
 
     @Test
-    internal fun `should produce all the data to queue`(): Unit = runBlocking {
+    internal fun `should produce all the data to queue`(): Unit = testDispatcherProvider.run {
         // given
         val tags: Map<String, String> = emptyMap()
         val eventsLogger = relaxedMockk<EventsLogger>()

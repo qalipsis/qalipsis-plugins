@@ -1,6 +1,6 @@
 package io.qalipsis.plugins.jms.consumer
 
-import io.qalipsis.api.context.StepId
+import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.steps.datasource.DatasourceIterativeReader
@@ -22,7 +22,7 @@ import javax.jms.TopicConnection
  * @author Alexander Sosnovsky
  */
 internal class JmsConsumerIterativeReader(
-    private val stepId: StepId,
+    private val stepId: StepName,
     private val topics: Collection<String>,
     private val queues: Collection<String>,
     private val topicConnectionFactory: (() -> TopicConnection)?,
