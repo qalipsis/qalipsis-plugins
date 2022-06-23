@@ -5,6 +5,7 @@ import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify
+import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.spyk
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.sync.SuspendedCountLatch
@@ -27,17 +28,19 @@ import java.time.Duration
 @WithMockk
 internal class LettuceIterativeReaderTest {
 
-    private val scanner: LettuceScanner = relaxedMockk()
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
-    private val connection: StatefulConnection<ByteArray, ByteArray> = relaxedMockk()
+    @RelaxedMockK
+    private lateinit var scanner: LettuceScanner
+
+    @RelaxedMockK
+    private lateinit var connection: StatefulConnection<ByteArray, ByteArray>
 
     private val connectionFactory: suspend () -> StatefulConnection<ByteArray, ByteArray> = suspend {
         connection
     }
-
-    @JvmField
-    @RegisterExtension
-    val testDispatcherProvider = TestDispatcherProvider()
 
     @Test
     @Timeout(10)
@@ -51,10 +54,10 @@ internal class LettuceIterativeReaderTest {
                 "test",
                 scanner
             ) { Channel(1) }, recordPrivateCalls = true
-        ) 
-        
+        )
+
         coJustRun { reader["poll"](any<StatefulConnection<ByteArray, ByteArray>>(), any<StepStartStopContext>()) }
-        
+
 
         // when + then
         Assertions.assertFalse(reader.hasNext())
@@ -75,9 +78,14 @@ internal class LettuceIterativeReaderTest {
                 "test",
                 scanner
             ) { Channel(1) }, recordPrivateCalls = true
-        ) 
-        coEvery { reader["poll"](any<StatefulConnection<ByteArray, ByteArray>>(), any<StepStartStopContext>()) } coAnswers { countDownLatch.decrement() }
-        
+        )
+        coEvery {
+            reader["poll"](
+                any<StatefulConnection<ByteArray, ByteArray>>(),
+                any<StepStartStopContext>()
+            )
+        } coAnswers { countDownLatch.decrement() }
+
 
         // when
         reader.start(relaxedMockk())
@@ -104,7 +112,12 @@ internal class LettuceIterativeReaderTest {
                 scanner
             ) { Channel(1) }, recordPrivateCalls = true
         )
-        coEvery { reader["poll"](any<StatefulConnection<ByteArray, ByteArray>>(), any<StepStartStopContext>()) } coAnswers { countDownLatch.decrement() }
+        coEvery {
+            reader["poll"](
+                any<StatefulConnection<ByteArray, ByteArray>>(),
+                any<StepStartStopContext>()
+            )
+        } coAnswers { countDownLatch.decrement() }
 
 
         // when
@@ -143,13 +156,18 @@ internal class LettuceIterativeReaderTest {
                 scanner
             ) { Channel(1) }, recordPrivateCalls = true
         )
-        coEvery { reader["poll"](any<StatefulConnection<ByteArray, ByteArray>>(), any<StepStartStopContext>()) } coAnswers {
-                if (countDownLatch1.get() > 0) {
-                    countDownLatch1.decrement()
-                } else {
-                    countDownLatch2.decrement()
-                }
+        coEvery {
+            reader["poll"](
+                any<StatefulConnection<ByteArray, ByteArray>>(),
+                any<StepStartStopContext>()
+            )
+        } coAnswers {
+            if (countDownLatch1.get() > 0) {
+                countDownLatch1.decrement()
+            } else {
+                countDownLatch2.decrement()
             }
+        }
 
 
         // when

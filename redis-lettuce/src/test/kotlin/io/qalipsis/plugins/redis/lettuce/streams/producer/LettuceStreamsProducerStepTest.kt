@@ -17,7 +17,7 @@ import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.slot
 import io.mockk.spyk
 import io.qalipsis.api.context.StepContext
-import io.qalipsis.api.context.StepId
+import io.qalipsis.api.context.StepName
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.plugins.redis.lettuce.LettuceMonitoringCollector
 import io.qalipsis.test.assertk.prop
@@ -56,7 +56,7 @@ internal class LettuceStreamsProducerStepTest {
 
         val lettuceStreamsProducerStep = spyk(
             LettuceStreamsProducerStep(
-                StepId(), null, this.coroutineContext, relaxedMockk { },
+                StepName(), null, this.coroutineContext, relaxedMockk { },
                 recordsFactory, null, null
             ), recordPrivateCalls = true
         )
@@ -81,7 +81,8 @@ internal class LettuceStreamsProducerStepTest {
 
         lettuceStreamsProducerStep.execute(context)
 
-        val result = (context.output as Channel<LettuceStreamsProducerResult<String>>).receive()
+        val result =
+            (context.output as Channel<StepContext.StepOutputRecord<LettuceStreamsProducerResult<String>>>).receive().value
         assertThat(result).all {
             prop(LettuceStreamsProducerResult<String>::input).isEqualTo("Any")
             prop(LettuceStreamsProducerResult<String>::sendingFailures).isNullOrEmpty()
@@ -113,7 +114,7 @@ internal class LettuceStreamsProducerStepTest {
 
         val lettuceStreamsProducerStep = spyk(
             LettuceStreamsProducerStep(
-                StepId(), null, this.coroutineContext, relaxedMockk { },
+                StepName(), null, this.coroutineContext, relaxedMockk { },
                 recordsFactory, meterRegistry, eventsLogger
             ), recordPrivateCalls = true
         )
@@ -139,7 +140,8 @@ internal class LettuceStreamsProducerStepTest {
 
         lettuceStreamsProducerStep.execute(context)
 
-        val result = (context.output as Channel<LettuceStreamsProducerResult<String>>).receive()
+        val result =
+            (context.output as Channel<StepContext.StepOutputRecord<LettuceStreamsProducerResult<String>>>).receive().value
         assertThat(result).all {
             prop(LettuceStreamsProducerResult<String>::input).isEqualTo("Any")
             prop(LettuceStreamsProducerResult<String>::sendingFailures).isNullOrEmpty()

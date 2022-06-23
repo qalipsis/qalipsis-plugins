@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit
 internal class RedisSentinelLettucePollScenarioIntegrationTest {
 
     private lateinit var redisClient: RedisClient
+
     private lateinit var connection: StatefulRedisConnection<ByteArray, ByteArray>
 
     @BeforeEach

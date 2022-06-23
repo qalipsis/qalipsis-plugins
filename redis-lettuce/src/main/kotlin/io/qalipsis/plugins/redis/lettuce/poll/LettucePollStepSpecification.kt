@@ -121,7 +121,7 @@ internal class LettucePollStepSpecificationImpl<V : Any> internal constructor(
         this.monitoringConfig.monitoringConfig()
     }
 
-    override fun forwardOnce(bufferSize: Int, idleTimeout: Duration) {
+    override fun unicast(bufferSize: Int, idleTimeout: Duration) {
         singletonConfiguration.bufferSize = bufferSize
         singletonConfiguration.idleTimeout = idleTimeout
     }

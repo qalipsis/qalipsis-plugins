@@ -6,7 +6,7 @@ import io.lettuce.core.cluster.api.async.RedisClusterAsyncCommands
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.context.StepContext
-import io.qalipsis.api.context.StepId
+import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLog
@@ -37,7 +37,7 @@ import kotlin.coroutines.CoroutineContext
  * @author Gabriel Moraes
  */
 internal class LettuceSaveStep<I>(
-    id: StepId,
+    id: StepName,
     retryPolicy: RetryPolicy?,
     private val ioCoroutineContext: CoroutineContext,
     private val connectionFactory: suspend () -> StatefulConnection<ByteArray, ByteArray>,

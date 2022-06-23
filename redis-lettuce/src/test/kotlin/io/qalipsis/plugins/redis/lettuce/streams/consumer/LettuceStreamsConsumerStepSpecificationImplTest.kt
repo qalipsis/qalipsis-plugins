@@ -15,23 +15,30 @@ import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType
 import io.qalipsis.plugins.redis.lettuce.redisLettuce
-import kotlinx.coroutines.test.runBlockingTest
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.time.Duration
 
 internal class LettuceStreamsConsumerStepSpecificationImplTest {
-    @Test
-    internal fun `should add minimal specification to the scenario with default values`() = runBlockingTest {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
-        scenario.redisLettuce().streamsConsume {
-            name = "my-step"
-            streamKey("test")
-            group("group")
-        }
 
-        assertThat(scenario.rootSteps.first()).isInstanceOf(LettuceStreamsConsumerStepSpecificationImpl::class)
-            .all {
-                prop(LettuceStreamsConsumerStepSpecificationImpl::name).isEqualTo("my-step")
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
+
+    @Test
+    internal fun `should add minimal specification to the scenario with default values`() =
+        testDispatcherProvider.runTest {
+            val scenario = scenario("my-scenario") as StepSpecificationRegistry
+            scenario.redisLettuce().streamsConsume {
+                name = "my-step"
+                streamKey("test")
+                group("group")
+            }
+
+            assertThat(scenario.rootSteps.first()).isInstanceOf(LettuceStreamsConsumerStepSpecificationImpl::class)
+                .all {
+                    prop(LettuceStreamsConsumerStepSpecificationImpl::name).isEqualTo("my-step")
                 prop(LettuceStreamsConsumerStepSpecificationImpl::connection).all {
                     prop(RedisConnectionConfiguration::nodes).isEqualTo(listOf("localhost:6379"))
                     prop(RedisConnectionConfiguration::database).isEqualTo(0)
@@ -61,7 +68,7 @@ internal class LettuceStreamsConsumerStepSpecificationImplTest {
     }
 
     @Test
-    internal fun `should add a complete specification to the scenario as broadcast`() = runBlockingTest {
+    internal fun `should add a complete specification to the scenario as broadcast`() = testDispatcherProvider.runTest {
 
         val scenario = scenario("my-scenario") as StepSpecificationRegistry
         scenario.redisLettuce().streamsConsume {
@@ -81,7 +88,7 @@ internal class LettuceStreamsConsumerStepSpecificationImplTest {
             streamKey("test")
             group("group")
             concurrency(10)
-            forwardOnce(6, Duration.ofDays(1))
+            unicast(6, Duration.ofDays(1))
         }.flatten()
 
 

@@ -98,7 +98,7 @@ internal class LettucePollStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
-                prop("id").isNotNull().isEqualTo("redis-lettuce-poll-step")
+                prop("name").isNotNull().isEqualTo("redis-lettuce-poll-step")
                 prop("reader").isNotNull().isInstanceOf(LettuceIterativeReader::class).all {
                     prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
                     prop("connectionFactory").isNotNull()
@@ -154,7 +154,7 @@ internal class LettucePollStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let { it ->
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
-                prop("id").isEqualTo("")
+                prop("name").isEqualTo("")
                 prop("reader").isNotNull().isInstanceOf(LettuceIterativeReader::class).all {
                     prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
                     prop("connectionFactory").isNotNull()

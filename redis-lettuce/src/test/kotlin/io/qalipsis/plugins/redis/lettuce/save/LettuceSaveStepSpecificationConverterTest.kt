@@ -13,17 +13,22 @@ import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepCreationContextImpl
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType
 import io.qalipsis.test.assertk.prop
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import kotlin.coroutines.CoroutineContext
 
 @WithMockk
 @Suppress("UNCHECKED_CAST")
-internal class LettuceSaveStepSpecificationConverterTest: AbstractStepSpecificationConverterTest<LettuceSaveStepSpecificationConverter>(){
+internal class LettuceSaveStepSpecificationConverterTest: AbstractStepSpecificationConverterTest<LettuceSaveStepSpecificationConverter>() {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     @RelaxedMockK
     private lateinit var ioCoroutineContext: CoroutineContext
@@ -40,7 +45,7 @@ internal class LettuceSaveStepSpecificationConverterTest: AbstractStepSpecificat
 
 
     @Test
-    internal fun `should convert spec with name and retry policy`() = runBlockingTest {
+    internal fun `should convert spec with name and retry policy`() = testDispatcherProvider.runTest {
         // given
         val spec = LettuceSaveStepSpecificationImpl<Any>()
         spec.apply {
@@ -67,7 +72,7 @@ internal class LettuceSaveStepSpecificationConverterTest: AbstractStepSpecificat
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(LettuceSaveStep::class).all {
-                prop("id").isEqualTo("my-step")
+                prop("name").isEqualTo("my-step")
                 prop("meterRegistry").isNull()
                 prop("ioCoroutineContext").isSameAs(ioCoroutineContext)
                 prop("eventsLogger").isNull()
@@ -80,7 +85,7 @@ internal class LettuceSaveStepSpecificationConverterTest: AbstractStepSpecificat
 
 
     @Test
-    internal fun `should convert spec without name and retry policy`() = runBlockingTest {
+    internal fun `should convert spec without name and retry policy`() = testDispatcherProvider.runTest {
         // given
         val spec = LettuceSaveStepSpecificationImpl<Any>()
         spec.apply {
@@ -108,7 +113,7 @@ internal class LettuceSaveStepSpecificationConverterTest: AbstractStepSpecificat
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(LettuceSaveStep::class).all {
-                prop("id").isNotNull()
+                prop("name").isNotNull()
                 prop("connectionFactory").isNotNull()
                 prop("ioCoroutineContext").isSameAs(ioCoroutineContext)
                 prop("meterRegistry").isNotNull().isEqualTo(meterRegistry)

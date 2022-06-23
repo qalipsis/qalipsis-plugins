@@ -10,24 +10,30 @@ import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType
 import io.qalipsis.plugins.redis.lettuce.redisLettuce
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 
 internal class LettuceStreamsProducerStepSpecificationImplTest {
 
-    @Test
-    internal fun `should add minimal specification to the scenario with default values`() = runBlockingTest {
-        val previousStep = DummyStepSpecification()
-        previousStep.redisLettuce().streamsProduce {
-            name = "my-step"
-            records { _, _ -> listOf(LettuceStreamsProduceRecord("test", mapOf("test" to "test"))) }
-        }
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
-        assertThat(previousStep.nextSteps[0]).isInstanceOf(LettuceStreamsProducerStepSpecificationImpl::class)
-            .all {
-                prop(LettuceStreamsProducerStepSpecificationImpl<*>::name).isEqualTo("my-step")
-                prop(LettuceStreamsProducerStepSpecificationImpl<*>::recordsFactory).isNotNull()
+    @Test
+    internal fun `should add minimal specification to the scenario with default values`() =
+        testDispatcherProvider.runTest {
+            val previousStep = DummyStepSpecification()
+            previousStep.redisLettuce().streamsProduce {
+                name = "my-step"
+                records { _, _ -> listOf(LettuceStreamsProduceRecord("test", mapOf("test" to "test"))) }
+            }
+
+            assertThat(previousStep.nextSteps[0]).isInstanceOf(LettuceStreamsProducerStepSpecificationImpl::class)
+                .all {
+                    prop(LettuceStreamsProducerStepSpecificationImpl<*>::name).isEqualTo("my-step")
+                    prop(LettuceStreamsProducerStepSpecificationImpl<*>::recordsFactory).isNotNull()
                 prop(LettuceStreamsProducerStepSpecificationImpl<*>::connection).all {
                     prop(RedisConnectionConfiguration::nodes).isEqualTo(listOf("localhost:6379"))
                     prop(RedisConnectionConfiguration::database).isEqualTo(0)
@@ -56,7 +62,7 @@ internal class LettuceStreamsProducerStepSpecificationImplTest {
     }
 
     @Test
-    internal fun `should add a complete specification to the scenario as broadcast`() = runBlockingTest {
+    internal fun `should add a complete specification to the scenario as broadcast`() = testDispatcherProvider.runTest {
         val previousStep = DummyStepSpecification()
         previousStep.redisLettuce().streamsProduce {
             name = "my-step-complete"

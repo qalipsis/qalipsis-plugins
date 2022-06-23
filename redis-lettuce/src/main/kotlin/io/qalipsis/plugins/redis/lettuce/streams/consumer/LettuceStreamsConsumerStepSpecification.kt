@@ -124,10 +124,11 @@ internal class LettuceStreamsConsumerStepSpecificationImpl:
         this.concurrency = concurrency
     }
 
-    override fun forwardOnce(bufferSize: Int, idleTimeout: Duration) {
+    override fun unicast(bufferSize: Int, idleTimeout: Duration) {
         singletonConfiguration.bufferSize = bufferSize
         singletonConfiguration.idleTimeout = idleTimeout
     }
+
     override fun flatten(): StepSpecification<Unit, LettuceStreamsConsumedRecord, *> {
         flattenOutput = true
 

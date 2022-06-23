@@ -29,6 +29,7 @@ import kotlin.math.pow
 internal class RedisClusterLettucePollScenarioIntegrationTest {
 
     lateinit var redisClusterClient: RedisClusterClient
+
     lateinit var connection: StatefulRedisClusterConnection<ByteArray, ByteArray>
 
     @BeforeEach

@@ -17,20 +17,25 @@ import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.slot
 import io.mockk.spyk
 import io.qalipsis.api.context.StepContext
-import io.qalipsis.api.context.StepId
+import io.qalipsis.api.context.StepName
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.plugins.redis.lettuce.LettuceMonitoringCollector
 import io.qalipsis.plugins.redis.lettuce.save.records.HashRecord
 import io.qalipsis.test.assertk.prop
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.StepTestHelper
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 
 @WithMockk
 internal class LettuceSaveStepTest {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     private var recordsFactory: (suspend (ctx: StepContext<*, *>, input: String) -> List<LettuceSaveRecord<*>>) =
         relaxedMockk { }
@@ -43,7 +48,7 @@ internal class LettuceSaveStepTest {
 
 
     @Test
-    fun `should save without recording metrics`() = runBlockingTest {
+    fun `should save without recording metrics`() = testDispatcherProvider.runTest {
         coEvery { recordsFactory.invoke(any(), any()) } returns listOf(
             HashRecord(
                 "payload",
@@ -53,7 +58,7 @@ internal class LettuceSaveStepTest {
 
         val lettuceSaveStep = spyk(
             LettuceSaveStep(
-                StepId(), null, this.coroutineContext, relaxedMockk { },
+                StepName(), null, this.coroutineContext, relaxedMockk { },
                 recordsFactory, null, null
             ), recordPrivateCalls = true
         )
@@ -73,7 +78,8 @@ internal class LettuceSaveStepTest {
 
         lettuceSaveStep.execute(context)
 
-        val result = (context.output as Channel<LettuceSaveResult<String>>).receive()
+        val result =
+            (context.output as Channel<StepContext.StepOutputRecord<LettuceSaveResult<String>>>).receive().value
         assertThat(result).all {
             prop(LettuceSaveResult<String>::input).isEqualTo("Any")
             prop(LettuceSaveResult<String>::sendingFailures).isNullOrEmpty()
@@ -93,7 +99,7 @@ internal class LettuceSaveStepTest {
     }
 
     @Test
-    fun `should save recording metrics`() = runBlockingTest {
+    fun `should save recording metrics`() = testDispatcherProvider.runTest {
         val records = listOf(
             HashRecord(
                 "payload",
@@ -105,7 +111,7 @@ internal class LettuceSaveStepTest {
 
         val lettuceSaveStep = spyk(
             LettuceSaveStep(
-                StepId(), null, this.coroutineContext, relaxedMockk { },
+                StepName(), null, this.coroutineContext, relaxedMockk { },
                 recordsFactory, meterRegistry, eventsLogger
             ), recordPrivateCalls = true
         )
@@ -131,7 +137,8 @@ internal class LettuceSaveStepTest {
 
         lettuceSaveStep.execute(context)
 
-        val result = (context.output as Channel<LettuceSaveResult<String>>).receive()
+        val result =
+            (context.output as Channel<StepContext.StepOutputRecord<LettuceSaveResult<String>>>).receive().value
         assertThat(result).all {
             prop(LettuceSaveResult<String>::input).isEqualTo("Any")
             prop(LettuceSaveResult<String>::sendingFailures).isNullOrEmpty()

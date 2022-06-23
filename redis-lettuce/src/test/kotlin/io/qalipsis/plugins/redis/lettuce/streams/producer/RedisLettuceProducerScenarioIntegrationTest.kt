@@ -9,7 +9,6 @@ import io.qalipsis.plugins.redis.lettuce.AbstractRedisIntegrationTest
 import io.qalipsis.plugins.redis.lettuce.Constants.REDIS_IMAGE_NAME
 import io.qalipsis.plugins.redis.lettuce.streams.consumer.ConsumerScenario
 import io.qalipsis.runtime.test.QalipsisTestRunner
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -31,7 +30,7 @@ internal class RedisLettuceProducerScenarioIntegrationTest : AbstractRedisIntegr
     }
 
     @BeforeEach
-    fun beforeEach() = runBlocking {
+    fun beforeEach() = testDispatcherProvider.run {
         super.setUp()
     }
 

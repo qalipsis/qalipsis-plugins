@@ -19,23 +19,30 @@ import io.qalipsis.plugins.redis.lettuce.redisLettuce
 import io.qalipsis.plugins.redis.lettuce.save.records.HashRecord
 import io.qalipsis.plugins.redis.lettuce.save.records.SortedRecord
 import io.qalipsis.plugins.redis.lettuce.streams.producer.LettuceStreamsProduceRecord
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 
-internal class LettuceSaveStepSpecificationImplTest{
+internal class LettuceSaveStepSpecificationImplTest {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
+
     @Test
-    internal fun `should add minimal specification to the scenario with default values`() = runBlockingTest {
-        val previousStep = DummyStepSpecification()
-        previousStep.redisLettuce().save {
-            name = "my-step"
-            records { _, _ -> listOf(HashRecord("test", mapOf("test" to "test"))) }
-        }
+    internal fun `should add minimal specification to the scenario with default values`() =
+        testDispatcherProvider.runTest {
+            val previousStep = DummyStepSpecification()
+            previousStep.redisLettuce().save {
+                name = "my-step"
+                records { _, _ -> listOf(HashRecord("test", mapOf("test" to "test"))) }
+            }
 
-        assertThat(previousStep.nextSteps[0]).isInstanceOf(LettuceSaveStepSpecificationImpl::class)
-            .all {
-                prop(LettuceSaveStepSpecificationImpl<*>::name).isEqualTo("my-step")
-                prop(LettuceSaveStepSpecificationImpl<*>::recordsFactory).isNotNull()
+            assertThat(previousStep.nextSteps[0]).isInstanceOf(LettuceSaveStepSpecificationImpl::class)
+                .all {
+                    prop(LettuceSaveStepSpecificationImpl<*>::name).isEqualTo("my-step")
+                    prop(LettuceSaveStepSpecificationImpl<*>::recordsFactory).isNotNull()
                 prop(LettuceSaveStepSpecificationImpl<*>::connectionConfiguration).all {
                     prop(RedisConnectionConfiguration::nodes).isEqualTo(listOf("localhost:6379"))
                     prop(RedisConnectionConfiguration::database).isEqualTo(0)
@@ -64,7 +71,7 @@ internal class LettuceSaveStepSpecificationImplTest{
     }
 
     @Test
-    internal fun `should add a complete specification to the scenario`() = runBlockingTest {
+    internal fun `should add a complete specification to the scenario`() = testDispatcherProvider.runTest {
         val previousStep = DummyStepSpecification()
         previousStep.redisLettuce().save {
             name = "my-step-complete"

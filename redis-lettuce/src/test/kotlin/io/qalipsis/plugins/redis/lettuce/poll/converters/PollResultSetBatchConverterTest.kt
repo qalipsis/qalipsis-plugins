@@ -14,6 +14,7 @@ import io.micrometer.core.instrument.Tags
 import io.mockk.coJustRun
 import io.mockk.confirmVerified
 import io.mockk.every
+import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.impl.annotations.SpyK
 import io.mockk.slot
 import io.qalipsis.api.context.StepStartStopContext
@@ -22,11 +23,12 @@ import io.qalipsis.plugins.redis.lettuce.RedisRecord
 import io.qalipsis.plugins.redis.lettuce.poll.LettucePollMeters
 import io.qalipsis.plugins.redis.lettuce.poll.LettucePollResult
 import io.qalipsis.plugins.redis.lettuce.poll.PollRawResult
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicLong
@@ -38,17 +40,24 @@ import java.util.concurrent.atomic.AtomicLong
 @WithMockk
 internal class PollResultSetBatchConverterTest {
 
-    private val eventsLogger = relaxedMockk<EventsLogger>()
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
-    private val recordsCounter = relaxedMockk<Counter>()
+    @RelaxedMockK
+    private lateinit var eventsLogger: EventsLogger
 
-    private val recordsBytes = relaxedMockk<Counter>()
+    @RelaxedMockK
+    private lateinit var recordsCounter: Counter
+
+    @RelaxedMockK
+    private lateinit var recordsBytes: Counter
 
     @SpyK
     private var redisToJavaConverter = RedisToJavaConverter()
 
     @Test
-    internal fun `should deserialize and count the records`() = runBlockingTest {
+    internal fun `should deserialize and count the records`() = testDispatcherProvider.runTest {
         //given
         val records = PollRawResult(
             listOf(
@@ -117,7 +126,7 @@ internal class PollResultSetBatchConverterTest {
     }
 
     @Test
-    internal fun `should deserialize scored value and count the records`() = runBlockingTest {
+    internal fun `should deserialize scored value and count the records`() = testDispatcherProvider.runTest {
         //given
         val records = PollRawResult(
             listOf(
@@ -185,7 +194,7 @@ internal class PollResultSetBatchConverterTest {
     }
 
     @Test
-    internal fun `should deserialize map and count the records`() = runBlockingTest {
+    internal fun `should deserialize map and count the records`() = testDispatcherProvider.runTest {
         //given
         val records = PollRawResult(
             mapOf(

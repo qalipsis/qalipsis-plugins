@@ -14,23 +14,35 @@ import io.micrometer.core.instrument.Tags
 import io.mockk.coEvery
 import io.mockk.confirmVerified
 import io.mockk.every
+import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.spyk
 import io.mockk.verify
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
+import io.qalipsis.test.coroutines.TestDispatcherProvider
+import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicLong
 
+@WithMockk
 internal class LettuceStreamsConsumerBatchConverterTest {
-    private val counter: Counter = relaxedMockk {}
-    private val byteCounter: Counter = relaxedMockk {}
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
+
+    @RelaxedMockK
+    private lateinit var counter: Counter
+
+    @RelaxedMockK
+    private lateinit var byteCounter: Counter
 
     @Test
-    internal fun `should deserialize and count the records`() = runBlockingTest {
+    internal fun `should deserialize and count the records`() = testDispatcherProvider.runTest {
         //given
         val metersTags = relaxedMockk<Tags>()
         val meterRegistry = relaxedMockk<MeterRegistry> {

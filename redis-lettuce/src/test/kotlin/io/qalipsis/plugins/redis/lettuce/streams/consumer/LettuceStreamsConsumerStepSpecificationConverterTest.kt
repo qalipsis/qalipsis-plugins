@@ -24,19 +24,24 @@ import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType
 import io.qalipsis.test.assertk.prop
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 
 @Suppress("UNCHECKED_CAST")
 @WithMockk
 internal class LettuceStreamsConsumerStepSpecificationConverterTest :
     AbstractStepSpecificationConverterTest<LettuceStreamsConsumerStepSpecificationConverter>() {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     @RelaxedMockK
     private lateinit var ioCoroutineScope: CoroutineScope
@@ -56,7 +61,7 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should convert spec with name and queue`() = runBlockingTest {
+    internal fun `should convert spec with name and queue`() = testDispatcherProvider.runTest {
         // given
         val spec = LettuceStreamsConsumerStepSpecificationImpl()
         spec.apply {
@@ -91,7 +96,7 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
-                prop("id").isEqualTo("my-step")
+                prop("name").isEqualTo("my-step")
                 prop("reader").isNotNull().isInstanceOf(LettuceStreamsIterativeReader::class).all {
                     prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
                     prop("ioCoroutineDispatcher").isSameAs(ioCoroutineDispatcher)
@@ -108,7 +113,7 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should convert spec without name but with queue`() = runBlockingTest {
+    internal fun `should convert spec without name but with queue`() = testDispatcherProvider.runTest {
         // given
         val spec = LettuceStreamsConsumerStepSpecificationImpl()
         spec.apply {
@@ -143,7 +148,7 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
-                prop("id").isEqualTo("")
+                prop("name").isEqualTo("")
                 prop("reader").isNotNull().isInstanceOf(LettuceStreamsIterativeReader::class).all {
                     prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
                     prop("ioCoroutineDispatcher").isSameAs(ioCoroutineDispatcher)
