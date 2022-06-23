@@ -1,4 +1,4 @@
-package io.qalipsis.plugins.graphite
+package io.qalipsis.plugins.graphite.config
 
 import assertk.assertThat
 import assertk.assertions.hasSize
@@ -33,7 +33,6 @@ internal class GraphiteMeterRegistryFactoryIntegrationTest {
         @Test
         @Timeout(10)
         internal fun `should disables the default graphite meter registry`() {
-            assertThat(applicationContext.getBeansOfType(MeterRegistry::class.java)).isEmpty()
             assertThat(applicationContext.getBeansOfType(GraphiteMeterRegistry::class.java)).isEmpty()
         }
     }
@@ -57,7 +56,6 @@ internal class GraphiteMeterRegistryFactoryIntegrationTest {
         @Test
         @Timeout(10)
         internal fun `should start without graphite meter registry`() {
-            assertThat(applicationContext.getBeansOfType(MeterRegistry::class.java)).isEmpty()
             assertThat(applicationContext.getBeansOfType(GraphiteMeterRegistry::class.java)).isEmpty()
         }
     }

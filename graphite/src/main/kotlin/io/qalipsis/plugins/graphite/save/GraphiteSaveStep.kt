@@ -1,7 +1,7 @@
 package io.qalipsis.plugins.graphite.save
 
 import io.qalipsis.api.context.StepContext
-import io.qalipsis.api.context.StepId
+import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
@@ -15,7 +15,7 @@ import io.qalipsis.api.steps.AbstractStep
  * @author Palina Bril
  */
 internal class GraphiteSaveStep<I>(
-    id: StepId,
+    id: StepName,
     retryPolicy: RetryPolicy?,
     private val graphiteSaveMessageClient: GraphiteSaveMessageClient,
     private val messageFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<String>)

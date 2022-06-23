@@ -81,6 +81,8 @@ dependencies {
     testImplementation("io.aeris-consulting:catadioptre-kotlin:${catadioptreVersion}")
     testImplementation("org.awaitility:awaitility-kotlin:4.+")
     testRuntimeOnly("io.qalipsis:runtime:${project.version}")
+    testRuntimeOnly("io.qalipsis:head:${project.version}")
+    testRuntimeOnly("io.qalipsis:factory:${project.version}")
 
     kaptTest(platform("io.micronaut:micronaut-bom:$micronautVersion"))
     kaptTest("io.micronaut:micronaut-inject-java:$micronautVersion")
