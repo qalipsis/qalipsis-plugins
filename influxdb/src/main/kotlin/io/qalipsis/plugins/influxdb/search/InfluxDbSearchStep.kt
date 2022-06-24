@@ -2,7 +2,7 @@ package io.qalipsis.plugins.influxdb.search
 
 import com.influxdb.query.FluxRecord
 import io.qalipsis.api.context.StepContext
-import io.qalipsis.api.context.StepId
+import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.retry.RetryPolicy
@@ -18,7 +18,7 @@ import io.qalipsis.api.steps.AbstractStep
  * @author Palina Bril
  */
 internal class InfluxDbSearchStep<I>(
-    id: StepId,
+    id: StepName,
     retryPolicy: RetryPolicy?,
     private val influxDbQueryClient: InfluxDbQueryClient,
     private val queryFactory: (suspend (ctx: StepContext<*, *>, input: I) -> String),

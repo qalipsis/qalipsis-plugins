@@ -16,11 +16,12 @@ import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepCreationContextImpl
 import io.qalipsis.test.assertk.prop
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 
 /**
  *
@@ -29,6 +30,10 @@ import org.junit.jupiter.api.Test
 @WithMockk
 internal class InfluxDbSearchStepSpecificationConverterTest :
     AbstractStepSpecificationConverterTest<InfluxDbSearchStepSpecificationConverter>() {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     private val queryFactory: (suspend (ctx: StepContext<*, *>, input: Any) -> String) = { _, _ -> "query" }
 
@@ -45,7 +50,7 @@ internal class InfluxDbSearchStepSpecificationConverterTest :
     }
 
     @Test
-    fun `should convert with name and retry policy`() = runBlockingTest {
+    fun `should convert with name and retry policy`() = testDispatcherProvider.runTest {
         // given
         val spec = InfluxDbSearchStepSpecificationImpl<Any>()
         spec.also {
@@ -80,7 +85,7 @@ internal class InfluxDbSearchStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let { it ->
             assertThat(it).isInstanceOf(InfluxDbSearchStep::class).all {
-                prop("id").isEqualTo("influxdb-search-step")
+                prop("name").isEqualTo("influxdb-search-step")
                 prop("influxDbQueryClient").all {
                     prop("eventsLogger").isNull()
                     prop("meterRegistry").isSameAs(meterRegistry)
@@ -92,7 +97,7 @@ internal class InfluxDbSearchStepSpecificationConverterTest :
     }
 
     @Test
-    fun `should convert without name and retry policy`() = runBlockingTest {
+    fun `should convert without name and retry policy`() = testDispatcherProvider.runTest {
         // given
         val spec = InfluxDbSearchStepSpecificationImpl<Any>()
         spec.also {
@@ -125,7 +130,7 @@ internal class InfluxDbSearchStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(InfluxDbSearchStep::class).all {
-                prop("id").isNotNull()
+                prop("name").isNotNull()
                 prop("retryPolicy").isNull()
                 prop("queryFactory").isEqualTo(queryFactory)
                 prop("influxDbQueryClient").all {

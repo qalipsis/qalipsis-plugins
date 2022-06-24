@@ -9,11 +9,16 @@ import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.influxdb.influxdb
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 
 internal class InfluxDbSaveStepSpecificationImplTest {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     private val bucketName: (suspend (ctx: StepContext<*, *>, input: Any?) -> String) = { _, _ -> "test" }
 
@@ -28,7 +33,7 @@ internal class InfluxDbSaveStepSpecificationImplTest {
     }
 
     @Test
-    fun `should add minimal configuration for the step`() = runBlockingTest {
+    fun `should add minimal configuration for the step`() = testDispatcherProvider.runTest {
         val previousStep = DummyStepSpecification()
         previousStep.influxdb().save {
             name = "my-save-step"
@@ -75,7 +80,7 @@ internal class InfluxDbSaveStepSpecificationImplTest {
     }
 
     @Test
-    fun `should add a complete configuration for the step`() = runBlockingTest {
+    fun `should add a complete configuration for the step`() = testDispatcherProvider.runTest {
         val previousStep = DummyStepSpecification()
         previousStep.influxdb().save {
             name = "my-save-step"

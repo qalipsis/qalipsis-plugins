@@ -24,7 +24,6 @@ import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.RegisterExtension
@@ -146,7 +145,7 @@ internal class InfluxDbIterativeReaderTest {
 
     @Test
     @Timeout(20)
-    fun `should poll at least twice after start`() = runBlocking {
+    fun `should poll at least twice after start`() = testDispatcherProvider.run {
         // given
         val connectionConfig = InfluxDbStepConnectionImpl()
 

@@ -2,7 +2,7 @@ package io.qalipsis.plugins.influxdb.save
 
 import com.influxdb.client.write.Point
 import io.qalipsis.api.context.StepContext
-import io.qalipsis.api.context.StepId
+import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
@@ -18,7 +18,7 @@ import io.qalipsis.api.steps.AbstractStep
  * @author Palina Bril
  */
 internal class InfluxDbSaveStep<I>(
-    id: StepId,
+    id: StepName,
     retryPolicy: RetryPolicy?,
     private val influxDbSavePointClient: InfluxDbSavePointClient,
     private val bucketName: (suspend (ctx: StepContext<*, *>, input: I) -> String),

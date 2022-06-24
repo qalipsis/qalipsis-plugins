@@ -20,15 +20,16 @@ import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
 import io.qalipsis.plugins.mondodb.converters.InfluxDbDocumentPollBatchConverter
 import io.qalipsis.test.assertk.prop
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.time.Duration
 
 /**
@@ -39,22 +40,24 @@ import java.time.Duration
 internal class InfluxDbPollStepSpecificationConverterTest :
     AbstractStepSpecificationConverterTest<InfluxDbPollStepSpecificationConverter>() {
 
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
+
     @Test
     override fun `should support expected spec`() {
-        assertThat(converter.support(relaxedMockk<InfluxDbPollStepSpecificationImpl>()))
-            .isTrue()
+        assertThat(converter.support(relaxedMockk<InfluxDbPollStepSpecificationImpl>())).isTrue()
     }
 
     @Test
     override fun `should not support unexpected spec`() {
-        assertThat(converter.support(relaxedMockk()))
-            .isFalse()
+        assertThat(converter.support(relaxedMockk())).isFalse()
     }
 
     @Test
     @ExperimentalCoroutinesApi
     @Timeout(5)
-    fun `should convert with name and metrics`() = runBlockingTest {
+    fun `should convert with name and metrics`() = testDispatcherProvider.runTest {
         // given
         val spec = InfluxDbPollStepSpecificationImpl()
         spec.apply {
@@ -87,7 +90,7 @@ internal class InfluxDbPollStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
-                prop("id").isEqualTo("my-step")
+                prop("name").isEqualTo("my-step")
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
                 prop("converter").isSameAs(recordsConverter)
                 prop("reader").isNotNull().isInstanceOf(InfluxDbIterativeReader::class).all {
@@ -115,7 +118,7 @@ internal class InfluxDbPollStepSpecificationConverterTest :
     @Test
     @ExperimentalCoroutinesApi
     @Timeout(5)
-    fun `should convert without name and metrics`() = runBlockingTest {
+    fun `should convert without name and metrics`() = testDispatcherProvider.runTest {
         // given
         val spec = InfluxDbPollStepSpecificationImpl()
         spec.apply {
@@ -147,7 +150,7 @@ internal class InfluxDbPollStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
-                prop("id").isEqualTo("my-step")
+                prop("name").isEqualTo("my-step")
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
                 prop("converter").isSameAs(recordsConverter)
                 prop("reader").isNotNull().isInstanceOf(InfluxDbIterativeReader::class).all {

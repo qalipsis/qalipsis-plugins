@@ -56,10 +56,13 @@ dependencies {
     testImplementation("io.micronaut.test:micronaut-test-junit5")
     testImplementation("io.qalipsis:test:${project.version}")
     testImplementation("io.qalipsis:api-dsl:${project.version}")
-    testImplementation("io.qalipsis:runtime:${project.version}")
+    testImplementation(testFixtures("io.qalipsis:runtime:${project.version}"))
     testImplementation(testFixtures("io.qalipsis:api-dsl:${project.version}"))
     testImplementation(testFixtures("io.qalipsis:api-common:${project.version}"))
-    testImplementation(testFixtures("io.qalipsis:runtime:${project.version}"))
+    testRuntimeOnly("io.qalipsis:runtime:${project.version}")
+    testRuntimeOnly("io.qalipsis:head:${project.version}")
+    testRuntimeOnly("io.qalipsis:factory:${project.version}")
+
     testImplementation("javax.annotation:javax.annotation-api")
     testImplementation("io.micronaut:micronaut-runtime")
 

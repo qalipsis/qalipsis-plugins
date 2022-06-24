@@ -73,6 +73,7 @@ internal class InfluxDbIterativeReader(
             failureCounter = counter("$meterPrefix-failures", tags)
         }
         this.context = context
+        running = true
         init()
         pollingJob = coroutineScope.launch {
             log.debug { "Polling job just started for context $context" }
@@ -88,7 +89,6 @@ internal class InfluxDbIterativeReader(
                 resultsChannel.cancel()
             }
         }
-        running = true
     }
 
     override fun stop(context: StepStartStopContext) {

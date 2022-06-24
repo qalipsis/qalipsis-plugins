@@ -6,10 +6,10 @@ import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.rampup.regular
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.filterNotNull
+import io.qalipsis.api.steps.flatten
 import io.qalipsis.api.steps.innerJoin
 import io.qalipsis.api.steps.logErrors
 import io.qalipsis.api.steps.map
-import io.qalipsis.api.steps.onEach
 import io.qalipsis.plugins.influxdb.AbstractInfluxDbIntegrationTest.Companion.BUCKET
 import io.qalipsis.plugins.influxdb.AbstractInfluxDbIntegrationTest.Companion.ORGANIZATION
 import io.qalipsis.plugins.influxdb.influxdb
@@ -30,6 +30,7 @@ object PollScenario {
     private const val minions = 5
 
     val receivedMessages = concurrentSet<String>()
+
     var influxDbUrl = ""
 
     @JvmStatic
@@ -55,9 +56,13 @@ object PollScenario {
                 pollDelay(Duration.ofSeconds(1))
             }
             .map { it.results }
+            .flatten()
             .logErrors()
             .innerJoin(
-                using = { it.value["_value"] },
+                using = {
+                    // The user's name is in the field _value.
+                    it.value.getValueByKey("_value")
+                },
                 on = {
                     it.influxdb().poll {
                         name = "poll.out"
@@ -73,33 +78,20 @@ object PollScenario {
                             log.trace { "Right record: $it" }
                             it.results
                         }
+                        .flatten()
                 },
-                having = { it.value["_value"].also { log.trace { "Right: $it" } } }
+                having = {
+                    it.value.getValueByKey("_value")
+                }
             )
             .filterNotNull()
             .map { (inAction, outAction) ->
+                val user = inAction.values["_value"]
+                val entry = inAction.values["_time"] as Instant
+                val exit = outAction.values["_time"] as Instant
+                val stayDuration = Duration.between(entry, exit).toMinutes()
 
-                val e = mutableMapOf<String, Long>()
-                inAction.stream()
-                    .forEach {
-                        e[it.values["_value"] as String] = (it.values["_time"] as Instant).toEpochMilli()
-                    }
-                outAction.stream().forEach { it ->
-                    receivedMessages.add(
-                        "The user ${it.values["_value"] as String} stayed ${
-                            Duration.ofMillis(
-                                (it.values["_time"] as Instant).toEpochMilli() - e.get(
-                                    it.values["_value"] as String
-                                )!!
-                            ).toMinutes()
-                        } minute(s) in the building"
-                    )
-                }
+                receivedMessages.add("The user $user stayed $stayDuration minute(s) in the building")
             }
-            .onEach { println(receivedMessages) }
     }
 }
-
-private operator fun Any?.get(s: String) {
-}
-

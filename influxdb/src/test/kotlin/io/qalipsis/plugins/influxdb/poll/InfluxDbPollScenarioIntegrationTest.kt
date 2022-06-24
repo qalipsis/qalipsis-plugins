@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.time.Instant
+import java.time.LocalDate
 
 
 /**
@@ -47,20 +48,26 @@ internal class InfluxDbPollScenarioIntegrationTest : AbstractInfluxDbIntegration
         }
     }
 
-    suspend fun populateInfluxFromCsv(client: InfluxDBClientKotlin, name: String) {
+    private suspend fun populateInfluxFromCsv(client: InfluxDBClientKotlin, name: String) {
         val points = dbRecordsFromCsv(name)
         client.getWriteKotlinApi().writePoints(points)
     }
 
-    fun dbRecordsFromCsv(name: String): List<Point> {
+    private fun dbRecordsFromCsv(name: String): List<Point> {
         return this.readResourceLines(name)
             .map {
-                val values = it.split(",")
+                val values = it.replace("{date}", YESTERDAY).split(",")
                 val timestamp = Instant.parse(values[0]).toEpochMilli() * 1000000
                 Point.measurement("moves")
                     .addTag("action", values[1])
                     .time(timestamp, WritePrecision.NS)
                     .addField("username", values[2])
             }
+    }
+
+    private companion object {
+
+        val YESTERDAY = "${LocalDate.now().minusDays(1)}"
+
     }
 }
