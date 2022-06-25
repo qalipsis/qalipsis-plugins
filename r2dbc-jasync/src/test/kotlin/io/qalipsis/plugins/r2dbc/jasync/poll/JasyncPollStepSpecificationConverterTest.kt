@@ -28,6 +28,7 @@ import io.qalipsis.plugins.r2dbc.jasync.dialect.Dialect
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Protocol
 import io.qalipsis.plugins.r2dbc.jasync.poll.catadioptre.buildSqlStatement
 import io.qalipsis.test.assertk.prop
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
@@ -36,9 +37,9 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.time.Duration
 import java.time.LocalDate
 import assertk.assertions.isNull as isNull1
@@ -50,6 +51,10 @@ import assertk.assertions.isNull as isNull1
 @WithMockk
 internal class JasyncPollStepSpecificationConverterTest :
     AbstractStepSpecificationConverterTest<JasyncPollStepSpecificationConverter>() {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     @RelaxedMockK
     lateinit var ioCoroutineScope: CoroutineScope
@@ -75,7 +80,7 @@ internal class JasyncPollStepSpecificationConverterTest :
 
     @Test
     @ExperimentalCoroutinesApi
-    fun `should convert with name`() = runBlockingTest {
+    fun `should convert with name`() = testDispatcherProvider.runTest {
         // given
         val spec = JasyncPollStepSpecificationImpl()
         spec.apply {
@@ -114,7 +119,7 @@ internal class JasyncPollStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
-                prop("id").isEqualTo("my-step")
+                prop("name").isEqualTo("my-step")
                 prop("reader").isNotNull().isInstanceOf(JasyncIterativeReader::class).all {
                     prop("connectionPoolFactory").isNotNull()
                     prop("ioCoroutineScope").isSameAs(ioCoroutineScope)

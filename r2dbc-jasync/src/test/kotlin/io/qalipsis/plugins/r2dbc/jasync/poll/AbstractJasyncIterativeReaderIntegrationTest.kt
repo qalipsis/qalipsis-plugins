@@ -51,7 +51,7 @@ internal abstract class AbstractJasyncIterativeReaderIntegrationTest(
     }
 
     @AfterEach
-    internal fun tearDown(): Unit = runBlocking { connection.sendQuery(dropScript) }
+    internal fun tearDown(): Unit = testDispatcherProvider.run { connection.sendQuery(dropScript) }
 
     /**
      * This tests imports all the data in the table, but filter the values with a WHERE clause in the query

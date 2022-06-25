@@ -61,11 +61,11 @@ internal class JasyncPollScenarioIntegrationTest : AbstractJasyncIntegrationTest
     }
 
     @AfterEach
-    internal fun tearDown(): Unit = runBlocking { connection.sendQuery(dropScript) }
+    internal fun tearDown(): Unit = testDispatcherProvider.run { connection.sendQuery(dropScript) }
 
     @Test
     @Timeout(30)
-    internal fun `should run the poll scenario`() = runBlocking {
+    internal fun `should run the poll scenario`() = testDispatcherProvider.run {
         val populateStatements = readResourceLines("schemas/$scriptFolderBaseName/populate-table-buildingentries.sql")
         execute(populateStatements)
 

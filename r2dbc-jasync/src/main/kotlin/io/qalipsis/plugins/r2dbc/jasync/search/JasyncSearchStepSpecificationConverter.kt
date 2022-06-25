@@ -49,7 +49,7 @@ internal class JasyncSearchStepSpecificationConverter(
             parametersFactory = buildParameterFactory(
                 spec.parametersFactory as (suspend (ctx: StepContext<*, *>, input: I) -> List<*>)
             ),
-            converter = buildConverter<I>(stepId, spec) as JasyncResultSetConverter<ResultSetWrapper, Any?, I>
+            converter = buildConverter<I>(spec) as JasyncResultSetConverter<ResultSetWrapper, Any?, I>
         )
 
         creationContext.createdStep(step)
@@ -61,10 +61,7 @@ internal class JasyncSearchStepSpecificationConverter(
         return { ctx, input -> parametersFactory(ctx, input).map { parametersConverter.process(it) } }
     }
 
-    private fun <I> buildConverter(
-        stepId: String,
-        spec: JasyncSearchStepSpecificationImpl<*>,
-    ): JasyncResultSetConverter<ResultSetWrapper, *, I> {
+    private fun <I> buildConverter(spec: JasyncSearchStepSpecificationImpl<*>): JasyncResultSetConverter<ResultSetWrapper, *, I> {
         return if (spec.flattenOutput) {
             JasyncResultSetSingleConverter(resultValuesConverter,
                 eventsLogger = eventsLogger.takeIf { spec.monitoringConfig.events },
@@ -103,7 +100,10 @@ internal class JasyncSearchStepSpecificationConverter(
         )
     }
 
-    private fun buildConnectionsPoolFactory(dialect: Dialect, config: ConnectionPoolConfiguration): () -> SuspendingConnection {
+    private fun buildConnectionsPoolFactory(
+        dialect: Dialect,
+        config: ConnectionPoolConfiguration
+    ): () -> SuspendingConnection {
         return {
             dialect.connectionBuilder(config).asSuspending
         }

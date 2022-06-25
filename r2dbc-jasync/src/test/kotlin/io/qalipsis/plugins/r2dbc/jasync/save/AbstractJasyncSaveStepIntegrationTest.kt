@@ -40,17 +40,18 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
     connectionPoolFactory: () -> SuspendingConnection
 ) : AbstractJasyncIntegrationTest(connectionPoolFactory) {
 
-    private val eventsLogger = relaxedMockk<EventsLogger>()
+    private val eventsLogger: EventsLogger = relaxedMockk(name = "eventsLogger")
 
-    private val recordsCounter = relaxedMockk<Counter>()
+    private val recordsCounter: Counter = relaxedMockk(name = "recordsCounter")
 
-    private val failureCounter = relaxedMockk<Counter>()
+    private val failureCounter: Counter = relaxedMockk(name = "failureCounter")
 
-    private val successCounter = relaxedMockk<Counter>()
+    private val successCounter: Counter = relaxedMockk(name = "successCounter")
 
-    private val timeToResponse = relaxedMockk<Timer>()
+    private val timeToResponse: Timer = relaxedMockk(name = "timeToResponse")
 
     private val creationScript = readResource("schemas/$scriptFolderBaseName/create-table-buildingentries.sql").trim()
+
     private val dropScript = readResource("schemas/$scriptFolderBaseName/drop-table-buildingentries.sql").trim()
 
     @BeforeEach
@@ -62,13 +63,12 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
     }
 
     @AfterEach
-    internal fun tearDown(): Unit = runBlocking { connection.sendQuery(dropScript) }
+    internal fun tearDown(): Unit = testDispatcherProvider.run { connection.sendQuery(dropScript) }
 
     @Test
     @Timeout(20)
-    internal fun `should run the save`() = runBlocking {
+    internal fun `should run the save`() = testDispatcherProvider.run {
         val id = "step-id"
-        val retryPolicyNull = null
         val recordsList = listOf(JasyncSaveRecord(listOf("2020-10-20T12:34:21", "IN", "alice", true)))
         val columns = listOf("timestamp", "action", "username", "enabled")
         val tableName = "buildingentries"
@@ -84,7 +84,7 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
 
         val step = JasyncSaveStep<String>(
             id = id,
-            retryPolicy = retryPolicyNull,
+            retryPolicy = null,
             connectionPoolBuilder = { connection },
             recordsFactory = { _, _ -> recordsList },
             columnsFactory = { _, _ -> columns },
@@ -104,7 +104,7 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         verify {
             timeToResponse.record(more(0L), TimeUnit.NANOSECONDS)
             successCounter.increment(1.0)
-            recordsCounter.increment()
+            recordsCounter.increment(1.0)
         }
         confirmVerified(timeToResponse, successCounter, recordsCounter)
 
@@ -112,7 +112,7 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         assertTrue(result.rows[0].contains("IN"))
         assertTrue(result.rows[0].contains("alice"))
 
-        val output = (context.output as Channel).receive()
+        val output = (context.output as Channel).receive().value
         assertThat(output.jasyncSaveStepMeters.successSavedDocuments == 1)
         assertThat(output.input == "input data")
 
@@ -120,9 +120,8 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
 
     @Test
     @Timeout(20)
-    internal fun `test save two rows success`() = runBlocking {
+    internal fun `test save two rows success`() = testDispatcherProvider.run {
         val id = "step-id"
-        val retryPolicyNull = null
         val recordsList = listOf(
             JasyncSaveRecord(listOf("2020-10-20T12:34:21", "IN", "alice", true)),
             JasyncSaveRecord(listOf("2020-10-20T12:44:10", "IN", "john", false))
@@ -142,7 +141,7 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
 
         val step = JasyncSaveStep<String>(
             id = id,
-            retryPolicy = retryPolicyNull,
+            retryPolicy = null,
             connectionPoolBuilder = { connection },
             recordsFactory = { _, _ -> recordsList },
             columnsFactory = { _, _ -> columns },
@@ -152,8 +151,7 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
             eventsLogger = eventsLogger
         )
         val input = "input data"
-        val context =
-            StepTestHelper.createStepContext<String, JasyncSaveResult<String>>(input)
+        val context = StepTestHelper.createStepContext<String, JasyncSaveResult<String>>(input)
 
         step.start(startStopContext)
         step.execute(context)
@@ -161,7 +159,7 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         verify {
             timeToResponse.record(more(0L), TimeUnit.NANOSECONDS)
             successCounter.increment(2.0)
-            recordsCounter.increment()
+            recordsCounter.increment(2.0)
         }
         confirmVerified(timeToResponse, successCounter, recordsCounter)
 
@@ -172,16 +170,15 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         assertTrue(toCollection.contains("alice"))
         assertTrue(toCollection.contains("john"))
 
-        val output = (context.output as Channel).receive()
+        val output = (context.output as Channel).receive().value
         assertThat(output.jasyncSaveStepMeters.successSavedDocuments == 2)
         assertThat(output.input == "input data")
     }
 
     @Test
     @Timeout(20)
-    internal fun `should fail on save`() = runBlocking {
+    internal fun `should fail on save`() = testDispatcherProvider.run {
         val id = "step-id"
-        val retryPolicyNull = null
         val recordsList = listOf(JasyncSaveRecord(listOf("2020-10-20T12:34:21", "IN", "alice", "fail")))
         val columns = listOf("timestamp", "action", "username", "enabled")
         val tableName = "buildingentries"
@@ -199,7 +196,7 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
 
         val step = JasyncSaveStep<String>(
             id = id,
-            retryPolicy = retryPolicyNull,
+            retryPolicy = null,
             connectionPoolBuilder = { connection },
             recordsFactory = { _, _ -> recordsList },
             columnsFactory = { _, _ -> columns },
@@ -209,18 +206,17 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
             eventsLogger = eventsLogger
         )
         val input = "input data"
-        val context =
-            StepTestHelper.createStepContext<String, JasyncSaveResult<String>>(input)
+        val context = StepTestHelper.createStepContext<String, JasyncSaveResult<String>>(input)
         step.start(startStopContext)
         step.execute(context)
 
         verify {
-            recordsCounter.increment()
+            recordsCounter.increment(1.0)
             failureCounter.increment(1.0)
         }
         confirmVerified(recordsCounter, successCounter, failureCounter)
 
-        val output = (context.output as Channel).receive()
+        val output = (context.output as Channel).receive().value
         assertThat(output.input == "input data")
     }
 }

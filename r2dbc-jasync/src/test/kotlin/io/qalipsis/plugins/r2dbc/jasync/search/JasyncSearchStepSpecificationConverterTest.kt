@@ -26,15 +26,16 @@ import io.qalipsis.plugins.r2dbc.jasync.dialect.Dialect
 import io.qalipsis.plugins.r2dbc.jasync.dialect.DialectConfigurations
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Protocol
 import io.qalipsis.test.assertk.prop
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.coVerifyOnce
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 
 /**
  * @author Fiodar Hmyza
@@ -43,6 +44,10 @@ import org.junit.jupiter.api.Test
 @Suppress("UNCHECKED_CAST")
 internal class JasyncSearchStepSpecificationConverterTest :
     AbstractStepSpecificationConverterTest<JasyncSearchStepSpecificationConverter>() {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     @RelaxedMockK
     lateinit var protocol: Protocol
@@ -73,7 +78,7 @@ internal class JasyncSearchStepSpecificationConverterTest :
     }
 
     @Test
-    fun `should convert with name and retry policy`() = runBlockingTest {
+    fun `should convert with name and retry policy`() = testDispatcherProvider.runTest {
         // given
         val queryFactory: suspend (ctx: StepContext<*, *>, input: Int) -> String = relaxedMockk()
         val paramsFactory: suspend (ctx: StepContext<*, *>, input: Int) -> List<*> = relaxedMockk()
@@ -106,7 +111,7 @@ internal class JasyncSearchStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(JasyncSearchStep::class).all {
-                prop("id").isEqualTo("my-step")
+                prop("name").isEqualTo("my-step")
                 prop("connectionsPoolFactory").isEqualTo(connectionsPoolFactory)
                 prop("retryPolicy").isEqualTo(mockedRetryPolicy)
                 prop("parametersFactory").isEqualTo(convertedParamsFactory)
@@ -116,7 +121,7 @@ internal class JasyncSearchStepSpecificationConverterTest :
 
         verifyOnce { spiedConverter["buildConnectionConfiguration"](refEq(spec)) }
         verifyOnce { spiedConverter["buildConnectionsPoolFactory"](any<Dialect>(), refEq(connectionPoolConfiguration)) }
-        verifyOnce { spiedConverter["buildConverter"](eq(spec.name.toString()), refEq(spec)) }
+        verifyOnce { spiedConverter["buildConverter"](refEq(spec)) }
         verifyOnce { spiedConverter.buildParameterFactory(refEq(paramsFactory)) }
         coVerifyOnce {
             spiedConverter.convert<Int, Map<String, Any?>>(
@@ -127,7 +132,7 @@ internal class JasyncSearchStepSpecificationConverterTest :
     }
 
     @Test
-    fun `should convert without name and retry policy`() = runBlockingTest {
+    fun `should convert without name and retry policy`() = testDispatcherProvider.runTest {
         // given
         val queryFactory: suspend (ctx: StepContext<*, *>, input: Int) -> String = relaxedMockk()
         val paramsFactory: suspend (ctx: StepContext<*, *>, input: Int) -> List<*> = relaxedMockk()
@@ -157,7 +162,7 @@ internal class JasyncSearchStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(JasyncSearchStep::class).all {
-                prop("id").isNotNull()
+                prop("name").isNotNull()
                 prop("connectionsPoolFactory").isEqualTo(connectionsPoolFactory)
                 prop("retryPolicy").isNull()
                 prop("parametersFactory").isEqualTo(convertedParamsFactory)
@@ -167,7 +172,7 @@ internal class JasyncSearchStepSpecificationConverterTest :
 
         verifyOnce { spiedConverter["buildConnectionConfiguration"](refEq(spec)) }
         verifyOnce { spiedConverter["buildConnectionsPoolFactory"](any<Dialect>(), refEq(connectionPoolConfiguration)) }
-        verifyOnce { spiedConverter["buildConverter"](any<String>(), refEq(spec)) }
+        verifyOnce { spiedConverter["buildConverter"](refEq(spec)) }
         verifyOnce { spiedConverter.buildParameterFactory(refEq(paramsFactory)) }
         coVerifyOnce {
             spiedConverter.convert<Int, Map<String, Any?>>(
@@ -183,7 +188,8 @@ internal class JasyncSearchStepSpecificationConverterTest :
         val spec = JasyncSearchStepSpecificationImpl<Any>()
 
         // when
-        val converter = converter.invokeInvisible<JasyncResultSetConverter<ResultSetWrapper, *, *>>("buildConverter","my-step", spec)
+        val converter =
+            converter.invokeInvisible<JasyncResultSetConverter<ResultSetWrapper, *, *>>("buildConverter", spec)
 
         // then
         assertThat(converter).isInstanceOf(JasyncResultSetBatchConverter::class).all {
@@ -199,7 +205,8 @@ internal class JasyncSearchStepSpecificationConverterTest :
         spec.flatten()
 
         // when
-        val converter = converter.invokeInvisible<JasyncResultSetConverter<ResultSetWrapper, *, *>>("buildConverter","my-step", spec)
+        val converter =
+            converter.invokeInvisible<JasyncResultSetConverter<ResultSetWrapper, *, *>>("buildConverter", spec)
 
         // then
         assertThat(converter).isInstanceOf(JasyncResultSetSingleConverter::class).all {
@@ -208,14 +215,18 @@ internal class JasyncSearchStepSpecificationConverterTest :
     }
 
     @Test
-    fun `should build parameter builder`() = runBlockingTest {
+    fun `should build parameter builder`() = testDispatcherProvider.runTest {
         // given
         val context: StepContext<*, *> = relaxedMockk()
         val input: Any = relaxedMockk()
         val parametersFactory: suspend (ctx: StepContext<*, *>, input: Any) -> List<*> = { _, _ -> listOf(1, 2, 3) }
 
         // when
-        val convertedParameterFactory = converter.invokeInvisible<(suspend (ctx: StepContext<*, *>, input: Any) -> List<*>)>("buildParameterFactory", parametersFactory)
+        val convertedParameterFactory =
+            converter.invokeInvisible<(suspend (ctx: StepContext<*, *>, input: Any) -> List<*>)>(
+                "buildParameterFactory",
+                parametersFactory
+            )
         val parameters = convertedParameterFactory(context, input)
 
         // then
@@ -230,7 +241,8 @@ internal class JasyncSearchStepSpecificationConverterTest :
         val configuration = ConnectionPoolConfiguration()
 
         // when
-        val connectionsPoolFactory = converter.invokeInvisible<() -> SuspendingConnection>("buildConnectionsPoolFactory", dialect, configuration)
+        val connectionsPoolFactory =
+            converter.invokeInvisible<() -> SuspendingConnection>("buildConnectionsPoolFactory", dialect, configuration)
         val connection = connectionsPoolFactory()
 
         // then

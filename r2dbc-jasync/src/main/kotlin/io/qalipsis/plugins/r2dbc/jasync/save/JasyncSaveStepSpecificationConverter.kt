@@ -37,7 +37,6 @@ internal class JasyncSaveStepSpecificationConverter(
     override suspend fun <I, O> convert(creationContext: StepCreationContext<JasyncSaveStepSpecificationImpl<*>>) {
         val spec = creationContext.stepSpecification
         val stepId = spec.name
-        val jasyncMetrics = buildMetrics(spec.metrics, stepId)
         val dialect = spec.protocol!!.dialect
         val connectionsPoolBuilder = buildConnectionsPoolBuilder(dialect, buildConnectionConfiguration(spec))
 

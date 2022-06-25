@@ -3,7 +3,7 @@ package io.qalipsis.plugins.r2dbc.jasync.search
 import com.github.jasync.sql.db.SuspendingConnection
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepError
-import io.qalipsis.api.context.StepId
+import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.retry.RetryPolicy
@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong
  * @author Fiodar Hmyza
  */
 internal class JasyncSearchStep<I>(
-    id: StepId,
+    id: StepName,
     retryPolicy: RetryPolicy?,
     private val connectionsPoolFactory: () -> SuspendingConnection,
     private val queryFactory: (suspend (ctx: StepContext<*, *>, input: I) -> String),

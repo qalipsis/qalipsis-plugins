@@ -18,18 +18,23 @@ import io.qalipsis.api.steps.datasource.DatasourceRecord
 import io.qalipsis.plugins.r2dbc.jasync.poll.JasyncPollMeters
 import io.qalipsis.plugins.r2dbc.jasync.poll.JasyncPollResults
 import io.qalipsis.plugins.r2dbc.jasync.poll.ResultSetBatchConverter
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.util.concurrent.atomic.AtomicLong
 
 @WithMockk
 internal class ResultSetBatchConverterTest {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     @RelaxedMockK
     lateinit var resultValuesConverter: ResultValuesConverter
@@ -41,7 +46,7 @@ internal class ResultSetBatchConverterTest {
     @Test
     @Timeout(5)
     @ExperimentalCoroutinesApi
-    internal fun `should convert without monitoring`() = runBlockingTest {
+    internal fun `should convert without monitoring`() = testDispatcherProvider.runTest {
         // given
         every { resultValuesConverter.process(any()) } answers { "converted_${firstArg<String>()}" }
         val value1FromRecord1 = "1_1"
@@ -105,7 +110,7 @@ internal class ResultSetBatchConverterTest {
 
     @Test
     @ExperimentalCoroutinesApi
-    internal fun `should deserialize and count the records`() = runBlockingTest {
+    internal fun `should deserialize and count the records`() = testDispatcherProvider.runTest {
         // given
         every { resultValuesConverter.process(any()) } answers { "converted_${firstArg<String>()}" }
         val value1FromRecord1 = "1_1"

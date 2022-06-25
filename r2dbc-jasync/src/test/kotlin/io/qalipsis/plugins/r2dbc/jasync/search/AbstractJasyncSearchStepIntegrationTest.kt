@@ -5,14 +5,12 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
-import com.github.jasync.sql.db.ResultSet
 import com.github.jasync.sql.db.SuspendingConnection
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.mockk.coEvery
 import io.mockk.every
-import io.mockk.impl.annotations.RelaxedMockK
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.plugins.r2dbc.jasync.converters.JasyncResultSetConverter
@@ -47,12 +45,11 @@ internal abstract class AbstractJasyncSearchStepIntegrationTest(
     connectionPoolFactory: () -> SuspendingConnection
 ) : AbstractJasyncIntegrationTest(connectionPoolFactory) {
 
-    @RelaxedMockK
-    lateinit var resultValuesConverter: ResultValuesConverter
+    private val resultValuesConverter: ResultValuesConverter = relaxedMockk()
 
-    private val eventsLogger = relaxedMockk<EventsLogger>()
+    private val eventsLogger: EventsLogger = relaxedMockk()
 
-    private val recordsCounter = relaxedMockk<Counter>()
+    private val recordsCounter: Counter = relaxedMockk()
 
     val creationScript = readResource("schemas/$scriptFolderBaseName/create-table-buildingentries.sql").trim()
 
@@ -67,10 +64,10 @@ internal abstract class AbstractJasyncSearchStepIntegrationTest(
     }
 
     @AfterEach
-    internal fun tearDown(): Unit = runBlocking { connection.sendQuery(dropScript) }
+    internal fun tearDown() = testDispatcherProvider.run { connection.sendQuery(dropScript) }
 
     @Test
-    internal fun `should run the search`() = runBlocking {
+    internal fun `should run the search`() = testDispatcherProvider.run {
         val query =
             "select username, timestamp from buildingentries where action = ? and enabled = ? order by timestamp"
         val parameters = listOf("IN", false)
@@ -84,7 +81,8 @@ internal abstract class AbstractJasyncSearchStepIntegrationTest(
         val converter = JasyncResultSetBatchConverter<String>(
             resultValuesConverter,
             meterRegistry = meterRegistry,
-            eventsLogger = eventsLogger)
+            eventsLogger = eventsLogger
+        )
         converter.start(startStopContext)
         val step = JasyncSearchStep<String>(
             id = "step-id",
@@ -96,7 +94,8 @@ internal abstract class AbstractJasyncSearchStepIntegrationTest(
         )
         val input = "input data"
 
-        val context = StepTestHelper.createStepContext<String, JasyncSearchBatchResults<String, Map<String, Any?>>>(input)
+        val context =
+            StepTestHelper.createStepContext<String, JasyncSearchBatchResults<String, Map<String, Any?>>>(input)
 
         val expected = JasyncSearchBatchResults<Any, Any>(
             meters = JasyncSearchMeters(3, Duration.ofNanos(31215484)),
@@ -131,7 +130,7 @@ internal abstract class AbstractJasyncSearchStepIntegrationTest(
         step.start(relaxedMockk())
         step.execute(context)
 
-        val output = (context.output as Channel).receive()
+        val output = (context.output as Channel).receive().value
         assertThat(output).isInstanceOf(JasyncSearchBatchResults::class).all {
             prop("input").isNotNull().isEqualTo(expected.input)
             prop("records").isNotNull().isEqualTo(expected.records)

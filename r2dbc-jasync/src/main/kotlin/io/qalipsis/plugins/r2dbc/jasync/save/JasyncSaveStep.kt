@@ -7,9 +7,10 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepError
-import io.qalipsis.api.context.StepId
+import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Dialect
@@ -28,7 +29,7 @@ import java.util.concurrent.TimeUnit
  * @author Carlos Vieira
  */
 internal class JasyncSaveStep<I>(
-    id: StepId,
+    id: StepName,
     retryPolicy: RetryPolicy?,
     private val connectionPoolBuilder: () -> SuspendingConnection,
     private val dialect: Dialect,
@@ -99,37 +100,38 @@ internal class JasyncSaveStep<I>(
             try {
                 val result =
                     connection.sendPreparedStatement(buildQuery(dialect, tableName, columns), it.parameters, true)
-                // There is only one implementation of QueryResult, called MySQLQueryResult, whether
-                // the DB is MySQL, MariaDB or PgSQL.
-                val queryResult = result as MySQLQueryResult
-                ids.add(queryResult.lastInsertId)
+                // Only the implementation MySQLQueryResult provides the last insert ID.
+                (result as? MySQLQueryResult)?.let {
+                    ids.add(it.lastInsertId)
+                }
                 successSavedDocuments++
             } catch (e: Exception) {
+                log.debug(e) { "${e.message}" }
                 failedSavedDocuments++
                 context.addError(StepError(e))
             }
         }
-        val timeToResponse = System.nanoTime() - requestStart
-        eventsLogger?.info("${eventPrefix}.records.time-to-response", Duration.ofMillis(timeToResponse), tags = eventTags)
-        eventsLogger?.info("${eventPrefix}.records.success", successSavedDocuments, tags = eventTags)
+        val timeToResponse = Duration.ofNanos(System.nanoTime() - requestStart)
+        eventsLogger?.info("${eventPrefix}.records.time-to-response", timeToResponse, tags = eventTags)
+        this.timeToResponse?.record(timeToResponse.toNanos(), TimeUnit.NANOSECONDS)
+        if (successSavedDocuments > 0) {
+            successCounter?.increment(successSavedDocuments.toDouble())
+            eventsLogger?.info("${eventPrefix}.records.success", successSavedDocuments, tags = eventTags)
+        }
         if (failedSavedDocuments > 0) {
             eventsLogger?.info("${eventPrefix}.records.failure", failedSavedDocuments, tags = eventTags)
             failureCounter?.increment(failedSavedDocuments.toDouble())
         }
 
-        val jasyncSaveStepMeters = JasyncQueryMeters(
-            totalDocuments = records.size,
-            timeToResponse = Duration.ofMillis(timeToResponse),
-            successSavedDocuments = successSavedDocuments
-        )
-        successCounter?.increment(jasyncSaveStepMeters.successSavedDocuments.toDouble())
-        this.timeToResponse?.record(timeToResponse,  TimeUnit.NANOSECONDS)
-
         context.send(
             JasyncSaveResult(
                 input,
                 ids,
-                jasyncSaveStepMeters
+                JasyncQueryMeters(
+                    totalDocuments = records.size,
+                    timeToResponse = timeToResponse,
+                    successSavedDocuments = successSavedDocuments
+                )
             )
         )
     }
@@ -142,5 +144,9 @@ internal class JasyncSaveStep<I>(
         val quotedColumns = columns.joinToString { dialect.quote(it) }
         val arguments = columns.joinToString { "?" }
         return "INSERT INTO $quotedTableName ($quotedColumns) VALUES ($arguments)"
+    }
+
+    private companion object {
+        val log = logger()
     }
 }
