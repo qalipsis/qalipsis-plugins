@@ -19,7 +19,8 @@ import java.time.Duration
  *
  * @author Gabriel Moraes
  */
-internal class rabbitmqConsumerStepSpecificationTest {
+internal class RabbitMqConsumerStepSpecificationTest {
+
     @Test
     internal fun `should add minimal specification to the scenario with default values`() {
         val scenario = scenario("my-scenario") as StepSpecificationRegistry
@@ -67,7 +68,7 @@ internal class rabbitmqConsumerStepSpecificationTest {
                 virtualHost = "/guest"
                 clientProperties = mapOf("t" to "test")
             }
-            forwardOnce(6, Duration.ofDays(1))
+            unicast(6, Duration.ofDays(1))
         }
 
         assertThat(scenario.rootSteps.first()).isInstanceOf(RabbitMqConsumerStepSpecificationImpl::class).all {

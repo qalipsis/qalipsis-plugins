@@ -37,7 +37,7 @@ internal class RabbitMqProducerStepSpecificationConverter(
 
         @Suppress("UNCHECKED_CAST")
         val step = RabbitMqProducerStep(
-            stepId = stepId,
+            stepName = stepId,
             retryPolicy = spec.retryPolicy,
             recordFactory = spec.recordsFactory,
             rabbitMqProducer = producer,

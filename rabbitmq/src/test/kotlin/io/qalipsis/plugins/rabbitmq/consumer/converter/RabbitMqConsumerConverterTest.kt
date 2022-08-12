@@ -18,19 +18,23 @@ import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.messaging.deserializer.MessageDeserializer
 import io.qalipsis.plugins.rabbitmq.consumer.RabbitMqConsumerRecord
 import io.qalipsis.test.assertk.prop
-import io.qalipsis.test.mockk.CleanMockkRecordedCalls
+import io.qalipsis.test.coroutines.TestDispatcherProvider
+import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.util.concurrent.atomic.AtomicLong
 
 /**
  * @author Gabriel Moraes
  */
-@CleanMockkRecordedCalls
+@WithMockk
 internal class RabbitMqConsumerConverterTest {
+
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     private val valueSerializer: MessageDeserializer<String> = relaxedMockk {
         every { deserialize(any()) } answers { firstArg<ByteArray>().decodeToString() }
@@ -40,19 +44,7 @@ internal class RabbitMqConsumerConverterTest {
 
     @Test
     @Timeout(2)
-    fun `should deserialize without monitoring`() = runBlockingTest {
-        executeConversion(valueSerializer = valueSerializer)
-
-        confirmVerified(counterBytes, valueSerializer)
-    }
-
-
-    private suspend fun executeConversion(
-        valueSerializer: MessageDeserializer<String>,
-        consumedValueBytesCounter: Counter? = null,
-        consumedRecordsCounter: Counter? = null
-    ) {
-
+    fun `should deserialize without monitoring`() = testDispatcherProvider.runTest {
         val deliveryMessage1 = Delivery(
             Envelope(1L, false, "test", "test"),
             AMQP.BasicProperties(), "message".toByteArray()
@@ -119,6 +111,7 @@ internal class RabbitMqConsumerConverterTest {
             valueSerializer.deserialize(eq(deliveryMessage2.body))
             valueSerializer.deserialize(eq(deliveryMessage3.body))
         }
+        confirmVerified(counterBytes, valueSerializer)
     }
 
 }

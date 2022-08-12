@@ -22,13 +22,13 @@ import io.micrometer.core.instrument.Tag
 import io.mockk.impl.annotations.RelaxedMockK
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.plugins.rabbitmq.Constants.DOCKER_IMAGE
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyExactly
 import io.qalipsis.test.mockk.verifyNever
 import io.qalipsis.test.mockk.verifyOnce
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions
@@ -36,6 +36,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.extension.RegisterExtension
 import org.testcontainers.containers.RabbitMQContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -49,6 +50,9 @@ import kotlin.math.pow
 @Testcontainers
 @WithMockk
 internal class RabbitMqConsumerIterativeReaderIntegrationTest {
+
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     private lateinit var connection: Connection
 
@@ -113,7 +117,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
 
     @Test
     @Timeout(10)
-    internal fun `should always have next at start but not at stop`() = runBlocking {
+    internal fun `should always have next at start but not at stop`() = testDispatcherProvider.run {
         reader = RabbitMqConsumerIterativeReader(
             2,
             20,
@@ -132,7 +136,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
 
     @Test
     @Timeout(10)
-    internal fun `should accept start after stop and consume`() = runBlocking {
+    internal fun `should accept start after stop and consume`() = testDispatcherProvider.run {
 
         val queueName = "test-start-stop"
         val channel = connection.createChannel()
@@ -181,7 +185,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
 
     @Test
     @Timeout(10)
-    internal fun `should work without monitoring`() = runBlocking {
+    internal fun `should work without monitoring`() = testDispatcherProvider.run {
         val queueName = "test"
 
         reader = RabbitMqConsumerIterativeReader(
@@ -245,7 +249,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
 
     @Test
     @Timeout(10)
-    internal fun `should consume all the data from queue in a direct exchange type`() = runBlocking {
+    internal fun `should consume all the data from queue in a direct exchange type`() = testDispatcherProvider.run {
         val queueName = "test"
 
         reader = RabbitMqConsumerIterativeReader(
@@ -303,7 +307,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
 
     @Test
     @Timeout(10)
-    internal fun `should consume all the data from queue in a fanout exchange type`() = runBlocking {
+    internal fun `should consume all the data from queue in a fanout exchange type`() = testDispatcherProvider.run {
         val exchangeName = "test-fanout"
         val queueName = "test-fanout-queue"
         reader = RabbitMqConsumerIterativeReader(
@@ -358,7 +362,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
 
     @Test
     @Timeout(10)
-    internal fun `should consume all the data from queue in a topic exchange type`() = runBlocking {
+    internal fun `should consume all the data from queue in a topic exchange type`() = testDispatcherProvider.run {
         val exchangeName = "test-topic"
         val queueName = "test-topic-queue"
         reader = RabbitMqConsumerIterativeReader(

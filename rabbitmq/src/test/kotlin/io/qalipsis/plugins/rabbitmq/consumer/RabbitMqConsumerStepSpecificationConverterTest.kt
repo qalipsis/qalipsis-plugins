@@ -20,12 +20,13 @@ import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
 import io.qalipsis.test.assertk.prop
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
-import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 
 /**
  * @author Gabriel Moraes
@@ -35,8 +36,11 @@ import org.junit.jupiter.api.Test
 internal class RabbitMqConsumerStepSpecificationConverterTest :
     AbstractStepSpecificationConverterTest<RabbitMqConsumerStepSpecificationConverter>() {
 
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
+
     @RelaxedMockK
-    private lateinit var mockkedConnectionFactory: ConnectionFactory
+    private lateinit var connectionFactory: ConnectionFactory
 
     @Test
     override fun `should not support unexpected spec`() {
@@ -50,7 +54,7 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should convert spec with name and queue`() = runBlockingTest {
+    internal fun `should convert spec with name and queue`() = testDispatcherProvider.runTest {
         // given
         val deserializer = MessageStringDeserializer()
         val spec = RabbitMqConsumerStepSpecificationImpl(deserializer)
@@ -74,7 +78,7 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
             )
         } returns recordsConverter
 
-        every { spiedConverter.buildConnectionFactory(refEq(spec.connectionConfiguration)) } returns mockkedConnectionFactory
+        every { spiedConverter.buildConnectionFactory(refEq(spec.connectionConfiguration)) } returns connectionFactory
 
         // when
         spiedConverter.convert<Unit, Map<String, *>>(
@@ -84,12 +88,12 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
-                prop("id").isEqualTo("my-step")
+                prop("name").isEqualTo("my-step")
                 prop("reader").isNotNull().isInstanceOf(RabbitMqConsumerIterativeReader::class).all {
                     prop("prefetchCount").isEqualTo(10)
                     prop("concurrency").isEqualTo(2)
                     prop("queue").isEqualTo("name1")
-                    prop("connectionFactory").isEqualTo(mockkedConnectionFactory)
+                    prop("connectionFactory").isEqualTo(connectionFactory)
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
                 prop("converter").isNotNull().isSameAs(recordsConverter)
@@ -98,7 +102,7 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should convert spec without name but with queue`() = runBlockingTest {
+    internal fun `should convert spec without name but with queue`() = testDispatcherProvider.runTest {
         // given
         val deserializer = MessageStringDeserializer()
         val spec = RabbitMqConsumerStepSpecificationImpl(deserializer)
@@ -122,7 +126,7 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
             )
         } returns recordsConverter
 
-        every { spiedConverter.buildConnectionFactory(refEq(spec.connectionConfiguration)) } returns mockkedConnectionFactory
+        every { spiedConverter.buildConnectionFactory(refEq(spec.connectionConfiguration)) } returns connectionFactory
 
         // when
         spiedConverter.convert<Unit, Map<String, *>>(
@@ -132,12 +136,12 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
-                prop("id").isNotNull().isEqualTo(stepIdSlot.captured)
+                prop("name").isNotNull().isEqualTo(stepIdSlot.captured)
                 prop("reader").isNotNull().isInstanceOf(RabbitMqConsumerIterativeReader::class).all {
                     prop("prefetchCount").isEqualTo(10)
                     prop("concurrency").isEqualTo(2)
                     prop("queue").isEqualTo("name2")
-                    prop("connectionFactory").isEqualTo(mockkedConnectionFactory)
+                    prop("connectionFactory").isEqualTo(connectionFactory)
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
                 prop("converter").isNotNull().isSameAs(recordsConverter)
@@ -146,7 +150,7 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should log meters`() = runBlockingTest {
+    internal fun `should log meters`() = testDispatcherProvider.runTest {
         // given
         val deserializer = MessageStringDeserializer()
         val spec = RabbitMqConsumerStepSpecificationImpl(deserializer)
@@ -171,7 +175,7 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
             )
         } returns recordsConverter
 
-        every { spiedConverter.buildConnectionFactory(refEq(spec.connectionConfiguration)) } returns mockkedConnectionFactory
+        every { spiedConverter.buildConnectionFactory(refEq(spec.connectionConfiguration)) } returns connectionFactory
 
         // when
         spiedConverter.convert<Unit, Map<String, *>>(
@@ -181,14 +185,14 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
-                prop("id").isNotNull().isEqualTo(stepIdSlot.captured)
+                prop("name").isNotNull().isEqualTo(stepIdSlot.captured)
                 prop("reader").isNotNull().isInstanceOf(RabbitMqConsumerIterativeReader::class).all {
                     prop("meterRegistry").isSameAs(meterRegistry)
                     prop("eventsLogger").isNull()
                     prop("prefetchCount").isEqualTo(10)
                     prop("concurrency").isEqualTo(2)
                     prop("queue").isEqualTo("name2")
-                    prop("connectionFactory").isEqualTo(mockkedConnectionFactory)
+                    prop("connectionFactory").isEqualTo(connectionFactory)
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
                 prop("converter").isNotNull().isSameAs(recordsConverter)
@@ -197,7 +201,7 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
     }
 
     @Test
-    internal fun `should log events`() = runBlockingTest {
+    internal fun `should log events`() = testDispatcherProvider.runTest {
         // given
         val deserializer = MessageStringDeserializer()
         val spec = RabbitMqConsumerStepSpecificationImpl(deserializer)
@@ -222,7 +226,7 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
             )
         } returns recordsConverter
 
-        every { spiedConverter.buildConnectionFactory(refEq(spec.connectionConfiguration)) } returns mockkedConnectionFactory
+        every { spiedConverter.buildConnectionFactory(refEq(spec.connectionConfiguration)) } returns connectionFactory
 
         // when
         spiedConverter.convert<Unit, Map<String, *>>(
@@ -232,14 +236,14 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
-                prop("id").isNotNull().isEqualTo(stepIdSlot.captured)
+                prop("name").isNotNull().isEqualTo(stepIdSlot.captured)
                 prop("reader").isNotNull().isInstanceOf(RabbitMqConsumerIterativeReader::class).all {
                     prop("meterRegistry").isNull()
                     prop("eventsLogger").isSameAs(eventsLogger)
                     prop("prefetchCount").isEqualTo(10)
                     prop("concurrency").isEqualTo(2)
                     prop("queue").isEqualTo("name2")
-                    prop("connectionFactory").isEqualTo(mockkedConnectionFactory)
+                    prop("connectionFactory").isEqualTo(connectionFactory)
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
                 prop("converter").isNotNull().isSameAs(recordsConverter)

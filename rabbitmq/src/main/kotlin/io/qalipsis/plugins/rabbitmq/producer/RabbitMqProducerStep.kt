@@ -4,7 +4,7 @@ import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.qalipsis.api.context.StepContext
-import io.qalipsis.api.context.StepId
+import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.logging.LoggerHelper.logger
@@ -22,16 +22,16 @@ import io.qalipsis.api.steps.AbstractStep
  * @author Alexander Sosnovsky
  */
 internal class RabbitMqProducerStep<I>(
-    stepId: StepId,
+    stepName: StepName,
     retryPolicy: RetryPolicy?,
     private val rabbitMqProducer: RabbitMqProducer,
     private val recordFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<RabbitMqProducerRecord>),
     val rabbitMqProducerResult: RabbitMqProducerResult,
     val meterRegistry: MeterRegistry? = null,
     val eventsLogger: EventsLogger? = null
-) : AbstractStep<I, RabbitMqProducerResult>(stepId, retryPolicy) {
+) : AbstractStep<I, RabbitMqProducerResult>(stepName, retryPolicy) {
 
-    private val eventPrefix = "rabbitmq-produce.${stepId}"
+    private val eventPrefix = "rabbitmq-produce.${stepName}"
 
     private var meterBytesCounter: Counter? = null
 

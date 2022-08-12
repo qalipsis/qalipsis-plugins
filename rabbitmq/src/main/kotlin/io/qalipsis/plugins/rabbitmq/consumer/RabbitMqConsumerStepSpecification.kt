@@ -127,7 +127,7 @@ internal class RabbitMqConsumerStepSpecificationImpl<V : Any> internal construct
         this.concurrency = concurrency
     }
 
-    override fun forwardOnce(bufferSize: Int, idleTimeout: Duration) {
+    override fun unicast(bufferSize: Int, idleTimeout: Duration) {
         singletonConfiguration.bufferSize = bufferSize
         singletonConfiguration.idleTimeout = idleTimeout
     }

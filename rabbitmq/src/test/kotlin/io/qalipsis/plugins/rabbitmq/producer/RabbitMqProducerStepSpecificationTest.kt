@@ -7,12 +7,14 @@ import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.plugins.rabbitmq.configuration.RabbitMqConnectionConfiguration
 import io.qalipsis.plugins.rabbitmq.rabbitmq
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.jupiter.api.Test
 
 /**
  *
  * @author Alexander Sosnovsky
  * */
+@ExperimentalCoroutinesApi
 internal class RabbitMqProducerStepSpecificationTest {
 
     @Test

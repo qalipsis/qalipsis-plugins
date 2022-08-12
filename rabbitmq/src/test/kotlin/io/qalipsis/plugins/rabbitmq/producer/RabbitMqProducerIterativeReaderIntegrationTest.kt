@@ -13,11 +13,12 @@ import io.micrometer.core.instrument.Counter
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.slot
 import io.qalipsis.plugins.rabbitmq.Constants.DOCKER_IMAGE
+import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
-import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.extension.RegisterExtension
 import org.testcontainers.containers.RabbitMQContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -33,6 +34,9 @@ import kotlin.math.pow
 @Testcontainers
 @WithMockk
 internal class RabbitMqProducerIterativeReaderIntegrationTest {
+
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
 
     @RelaxedMockK
     private lateinit var byteCounter: Counter
@@ -61,7 +65,7 @@ internal class RabbitMqProducerIterativeReaderIntegrationTest {
 
     @Test
     @Timeout(50)
-    internal fun `should produce the data to queue`(): Unit = runBlocking {
+    internal fun `should produce the data to queue`(): Unit = testDispatcherProvider.run {
 
         val producerClient = RabbitMqProducer(
             concurrency = 1,

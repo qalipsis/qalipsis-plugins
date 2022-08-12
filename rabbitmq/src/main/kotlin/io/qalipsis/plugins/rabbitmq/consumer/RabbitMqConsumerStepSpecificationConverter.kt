@@ -5,7 +5,7 @@ import com.rabbitmq.client.Delivery
 import io.aerisconsulting.catadioptre.KTestable
 import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.annotations.StepConverter
-import io.qalipsis.api.context.StepId
+import io.qalipsis.api.context.StepName
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.messaging.deserializer.MessageDeserializer
 import io.qalipsis.api.steps.StepCreationContext
@@ -75,7 +75,7 @@ internal class RabbitMqConsumerStepSpecificationConverter(
 
     @KTestable
     fun buildConverter(
-        stepId: StepId,
+        stepName: StepName,
         valueDeserializer: MessageDeserializer<*>
     ): DatasourceObjectConverter<Delivery, out Any?> {
 
