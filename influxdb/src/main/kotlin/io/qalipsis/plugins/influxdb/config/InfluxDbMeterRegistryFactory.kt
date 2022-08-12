@@ -9,7 +9,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.env.Environment
 import io.micronaut.core.naming.conventions.StringConvention
 import io.micronaut.core.util.StringUtils
-import io.qalipsis.api.meters.MetersConfig
+import io.qalipsis.api.config.MetersConfig
 import jakarta.inject.Singleton
 import java.util.Properties
 
@@ -20,7 +20,7 @@ import java.util.Properties
  */
 @Factory
 @Requirements(
-    Requires(property = MetersConfig.ENABLED, notEquals = StringUtils.FALSE),
+    Requires(property = MetersConfig.EXPORT_ENABLED, notEquals = StringUtils.FALSE),
     Requires(property = InfluxDbMeterRegistryFactory.INBLUXDB_ENABLED, notEquals = StringUtils.FALSE)
 )
 internal class InfluxDbMeterRegistryFactory {
@@ -28,11 +28,11 @@ internal class InfluxDbMeterRegistryFactory {
     @Singleton
     fun influxdbRegistry(environment: Environment): InfluxMeterRegistry {
         val properties = Properties()
-        properties.putAll(environment.getProperties(MetersConfig.CONFIGURATION, StringConvention.RAW))
-        properties.putAll(environment.getProperties(MetersConfig.CONFIGURATION, StringConvention.CAMEL_CASE))
+        properties.putAll(environment.getProperties(MetersConfig.EXPORT_CONFIGURATION, StringConvention.RAW))
+        properties.putAll(environment.getProperties(MetersConfig.EXPORT_CONFIGURATION, StringConvention.CAMEL_CASE))
 
         return InfluxMeterRegistry(object : InfluxConfig {
-            override fun get(key: String?): String? {
+            override fun get(key: String): String? {
                 return properties.getProperty(key)
             }
 
@@ -47,8 +47,8 @@ internal class InfluxDbMeterRegistryFactory {
 
     companion object {
 
-        internal const val INFLUXDB_CONFIGURATION = "${MetersConfig.CONFIGURATION}.influxdb"
+        private const val INFLUXDB_CONFIGURATION = "${MetersConfig.EXPORT_CONFIGURATION}.influxdb"
 
-        internal const val INBLUXDB_ENABLED = "$INFLUXDB_CONFIGURATION.enabled"
+        const val INBLUXDB_ENABLED = "$INFLUXDB_CONFIGURATION.enabled"
     }
 }
