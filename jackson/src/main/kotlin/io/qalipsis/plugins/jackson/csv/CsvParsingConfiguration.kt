@@ -1,7 +1,7 @@
 package io.qalipsis.plugins.jackson.csv
 
 import io.qalipsis.api.annotations.Spec
-import javax.validation.constraints.NotBlank
+import javax.validation.constraints.NotEmpty
 
 /**
  * Configuration to parse data from a CSV file.
@@ -9,10 +9,10 @@ import javax.validation.constraints.NotBlank
  * @author Eric Jessé
  */
 @Spec
-data class CsvParsingConfiguration internal constructor(
-        internal var lineSeparator: @NotBlank String = System.lineSeparator(),
-        internal var columnSeparator: Char = ',',
-        internal var escapeChar: Char = '\\',
-        internal var quoteChar: Char = '"',
-        internal var allowComments: Boolean = false
+internal data class CsvParsingConfiguration internal constructor(
+    var lineSeparator: @NotEmpty String = System.lineSeparator(),
+    var columnSeparator: Char = ',',
+    var escapeChar: Char = '\\',
+    var quoteChar: Char = '"',
+    var allowComments: Boolean = false
 )

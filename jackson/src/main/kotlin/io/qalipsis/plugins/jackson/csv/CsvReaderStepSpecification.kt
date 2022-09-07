@@ -29,8 +29,8 @@ data class CsvReaderStepSpecification<O : Any>(internal var targetClass: KClass<
      * @param sep the feed character / line separator to use
      */
     fun lineSeparator(sep: String): CsvReaderStepSpecification<O> {
-        if (sep.isBlank()) {
-            throw InvalidSpecificationException("The line separator should not be blank")
+        if (sep.isEmpty()) {
+            throw InvalidSpecificationException("The line separator should not be empty")
         }
         parsingConfiguration.lineSeparator = sep
         return this
