@@ -3,11 +3,12 @@ package io.qalipsis.plugins.graphite.save
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
-import io.qalipsis.plugins.graphite.GraphiteStepSpecification
 import io.qalipsis.plugins.graphite.GraphiteConnectionSpecification
 import io.qalipsis.plugins.graphite.GraphiteConnectionSpecificationImpl
+import io.qalipsis.plugins.graphite.GraphiteStepSpecification
 
 /**
  * Specification for a [io.qalipsis.plugins.graphite.save.GraphiteSaveStep] to save data to a Graphite.
@@ -16,6 +17,7 @@ import io.qalipsis.plugins.graphite.GraphiteConnectionSpecificationImpl
  */
 interface GraphiteSaveStepSpecification<I> :
     StepSpecification<I, I, GraphiteSaveStepSpecification<I>>,
+    ConfigurableStepSpecification<I, I, GraphiteSaveStepSpecification<I>>,
     GraphiteStepSpecification<I, I, GraphiteSaveStepSpecification<I>> {
 
     /**
