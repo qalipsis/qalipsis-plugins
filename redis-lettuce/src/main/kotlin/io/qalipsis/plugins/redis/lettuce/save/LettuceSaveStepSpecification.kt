@@ -3,6 +3,7 @@ package io.qalipsis.plugins.redis.lettuce.save
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.redis.lettuce.RedisLettuceStepSpecification
@@ -19,7 +20,8 @@ import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.SINGL
  * @author Gabriel Moraes
  */
 @Spec
-interface LettuceSaveStepSpecification<I> : StepSpecification<I, LettuceSaveResult<I>, LettuceSaveStepSpecification<I>> {
+interface LettuceSaveStepSpecification<I> : StepSpecification<I, LettuceSaveResult<I>, LettuceSaveStepSpecification<I>>,
+    ConfigurableStepSpecification<I, LettuceSaveResult<I>, LettuceSaveStepSpecification<I>> {
 
     /**
      * Configures the connection to the database.

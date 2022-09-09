@@ -3,6 +3,7 @@ package io.qalipsis.plugins.redis.lettuce.streams.producer
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.redis.lettuce.RedisLettuceStepSpecification
@@ -20,7 +21,8 @@ import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.SINGL
  */
 @Spec
 interface LettuceStreamsProducerStepSpecification<I> :
-    StepSpecification<I, LettuceStreamsProducerResult<I>, LettuceStreamsProducerStepSpecification<I>>{
+    StepSpecification<I, LettuceStreamsProducerResult<I>, LettuceStreamsProducerStepSpecification<I>>,
+    ConfigurableStepSpecification<I, LettuceStreamsProducerResult<I>, LettuceStreamsProducerStepSpecification<I>> {
 
     /**
      * Configures the connection to the database.
@@ -51,7 +53,7 @@ interface LettuceStreamsProducerStepSpecification<I> :
  * @author Gabriel Moraes
  */
 @Spec
-internal class LettuceStreamsProducerStepSpecificationImpl<I>:
+internal class LettuceStreamsProducerStepSpecificationImpl<I> :
     AbstractStepSpecification<I, LettuceStreamsProducerResult<I>, LettuceStreamsProducerStepSpecification<I>>(),
     LettuceStreamsProducerStepSpecification<I> {
 
@@ -85,7 +87,7 @@ internal class LettuceStreamsProducerStepSpecificationImpl<I>:
  * @author Gabriel Moraes
  */
 fun <I> RedisLettuceStepSpecification<*, I, *>.streamsProduce(
-configurationBlock: LettuceStreamsProducerStepSpecification<I>.() -> Unit
+    configurationBlock: LettuceStreamsProducerStepSpecification<I>.() -> Unit
 ): LettuceStreamsProducerStepSpecification<I> {
     val step = LettuceStreamsProducerStepSpecificationImpl<I>()
     step.configurationBlock()

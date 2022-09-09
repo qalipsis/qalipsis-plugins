@@ -3,13 +3,13 @@ package io.qalipsis.plugins.redis.lettuce.streams.consumer
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.scenario.StepSpecificationRegistry
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonStepSpecification
 import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.UnicastSpecification
-import io.qalipsis.plugins.redis.lettuce.Flattenable
 import io.qalipsis.plugins.redis.lettuce.RedisLettuceScenarioSpecification
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.CLUSTER
@@ -30,7 +30,8 @@ import javax.validation.constraints.Positive
  */
 @Spec
 interface LettuceStreamsConsumerStepSpecification : UnicastSpecification,
-    StepSpecification<Unit, LettuceStreamsConsumerResult, Flattenable<LettuceStreamsConsumedRecord, LettuceStreamsConsumerResult>> {
+    StepSpecification<Unit, LettuceStreamsConsumerResult, LettuceStreamsConsumerStepSpecification>,
+    ConfigurableStepSpecification<Unit, LettuceStreamsConsumerResult, LettuceStreamsConsumerStepSpecification> {
 
     /**
      * Configures the connection to the database.
@@ -68,6 +69,11 @@ interface LettuceStreamsConsumerStepSpecification : UnicastSpecification,
      * Configures the monitoring of the poll step.
      */
     fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit)
+
+    /**
+     * Returns the records individually.
+     */
+    fun flatten(): StepSpecification<Unit, LettuceStreamsConsumedRecord, *>
 }
 
 /**
@@ -76,10 +82,9 @@ interface LettuceStreamsConsumerStepSpecification : UnicastSpecification,
  * @author Gabriel Moraes
  */
 @Spec
-internal class LettuceStreamsConsumerStepSpecificationImpl:
-    AbstractStepSpecification<Unit, LettuceStreamsConsumerResult, Flattenable<LettuceStreamsConsumedRecord, LettuceStreamsConsumerResult>>(),
-    LettuceStreamsConsumerStepSpecification, Flattenable<LettuceStreamsConsumedRecord, LettuceStreamsConsumerResult>,
-    SingletonStepSpecification {
+internal class LettuceStreamsConsumerStepSpecificationImpl :
+    AbstractStepSpecification<Unit, LettuceStreamsConsumerResult, LettuceStreamsConsumerStepSpecification>(),
+    LettuceStreamsConsumerStepSpecification, SingletonStepSpecification {
 
     override val singletonConfiguration: SingletonConfiguration = SingletonConfiguration(SingletonType.UNICAST)
 
@@ -143,7 +148,7 @@ internal class LettuceStreamsConsumerStepSpecificationImpl:
  * @author Gabriel Moraes
  */
 @Spec
-enum class LettuceStreamsConsumerOffset(internal val value: String){
+enum class LettuceStreamsConsumerOffset(internal val value: String) {
     FROM_BEGINNING("0-0"), LAST_CONSUMED(">"), LATEST("$")
 }
 
@@ -159,7 +164,7 @@ enum class LettuceStreamsConsumerOffset(internal val value: String){
  */
 fun RedisLettuceScenarioSpecification.streamsConsume(
     configurationBlock: LettuceStreamsConsumerStepSpecification.() -> Unit
-): Flattenable<LettuceStreamsConsumedRecord, LettuceStreamsConsumerResult> {
+): LettuceStreamsConsumerStepSpecification {
     val step = LettuceStreamsConsumerStepSpecificationImpl()
     step.configurationBlock()
 

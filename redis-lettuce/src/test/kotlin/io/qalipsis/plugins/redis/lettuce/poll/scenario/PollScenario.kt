@@ -10,11 +10,11 @@ import io.qalipsis.api.steps.map
 import io.qalipsis.api.steps.onEach
 import io.qalipsis.plugins.redis.lettuce.AbstractRedisIntegrationTest.Companion.REDIS_PASS
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType
-import io.qalipsis.plugins.redis.lettuce.redisLettuce
 import io.qalipsis.plugins.redis.lettuce.poll.pollHscan
 import io.qalipsis.plugins.redis.lettuce.poll.pollScan
 import io.qalipsis.plugins.redis.lettuce.poll.pollSscan
 import io.qalipsis.plugins.redis.lettuce.poll.pollZscan
+import io.qalipsis.plugins.redis.lettuce.redisLettuce
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
