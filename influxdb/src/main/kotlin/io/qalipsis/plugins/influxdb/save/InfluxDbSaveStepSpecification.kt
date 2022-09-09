@@ -7,6 +7,7 @@ import com.influxdb.client.write.Point
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.influxdb.InfluxDbStepConnectionImpl
@@ -19,6 +20,7 @@ import io.qalipsis.plugins.influxdb.InfluxdbStepSpecification
  */
 interface InfluxDbSaveStepSpecification<I> :
     StepSpecification<I, I, InfluxDbSaveStepSpecification<I>>,
+    ConfigurableStepSpecification<I, I, InfluxDbSaveStepSpecification<I>>,
     InfluxdbStepSpecification<I, I, InfluxDbSaveStepSpecification<I>> {
 
     /**

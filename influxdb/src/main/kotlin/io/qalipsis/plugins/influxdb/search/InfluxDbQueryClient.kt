@@ -13,10 +13,7 @@ interface InfluxDbQueryClient {
     /**
      * Executes a query and returns the list of results.
      */
-    suspend fun execute(
-        query: String,
-        contextEventTags: Map<String, String>
-    ): InfluxDbQueryResult
+    suspend fun execute(query: String, contextEventTags: Map<String, String>): InfluxDbQueryResult
 
     /**
      * Initiate the meters if they are enabled.

@@ -1,9 +1,7 @@
 package io.qalipsis.plugins.influxdb.search
 
-import com.influxdb.query.FluxRecord
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepName
-import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
@@ -22,17 +20,17 @@ internal class InfluxDbSearchStep<I>(
     retryPolicy: RetryPolicy?,
     private val influxDbQueryClient: InfluxDbQueryClient,
     private val queryFactory: (suspend (ctx: StepContext<*, *>, input: I) -> String),
-) : AbstractStep<I, Pair<I, List<FluxRecord>>>(id, retryPolicy) {
+) : AbstractStep<I, InfluxDbSearchResult<I>>(id, retryPolicy) {
 
     override suspend fun start(context: StepStartStopContext) {
         influxDbQueryClient.start(context)
     }
 
-    override suspend fun execute(context: StepContext<I, Pair<I, List<FluxRecord>>>) {
+    override suspend fun execute(context: StepContext<I, InfluxDbSearchResult<I>>) {
         val input = context.receive()
         val query = queryFactory(context, input)
         val results = influxDbQueryClient.execute(query, context.toEventTags())
-        (context as StepOutput<Any?>).send(results)
+        context.send(InfluxDbSearchResult(input, results.results, results.meters))
     }
 
     override suspend fun stop(context: StepStartStopContext) {

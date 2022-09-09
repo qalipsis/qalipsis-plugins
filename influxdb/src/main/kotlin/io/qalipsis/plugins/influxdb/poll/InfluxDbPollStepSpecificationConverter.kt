@@ -14,6 +14,7 @@ import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
 import io.qalipsis.plugins.mondodb.converters.InfluxDbDocumentPollBatchConverter
+import io.qalipsis.plugins.mondodb.converters.InfluxDbDocumentPollSingleConverter
 import jakarta.inject.Named
 import kotlinx.coroutines.CoroutineScope
 
@@ -57,7 +58,7 @@ internal class InfluxDbPollStepSpecificationConverter(
             meterRegistry = supplyIf(spec.monitoringConfiguration.meters) { meterRegistry }
         )
 
-        val converter = buildConverter()
+        val converter = buildConverter(spec)
 
         val step = IterativeDatasourceStep(
             stepId,
@@ -68,7 +69,11 @@ internal class InfluxDbPollStepSpecificationConverter(
         creationContext.createdStep(step)
     }
 
-    private fun buildConverter(): DatasourceObjectConverter<InfluxDbQueryResult, out Any> {
-        return InfluxDbDocumentPollBatchConverter()
+    private fun buildConverter(spec: InfluxDbPollStepSpecificationImpl): DatasourceObjectConverter<InfluxDbQueryResult, out Any> {
+        return if (spec.flattenOutput) {
+            InfluxDbDocumentPollSingleConverter()
+        } else {
+            InfluxDbDocumentPollBatchConverter()
+        }
     }
 }

@@ -19,6 +19,7 @@ import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
 import io.qalipsis.plugins.mondodb.converters.InfluxDbDocumentPollBatchConverter
+import io.qalipsis.plugins.mondodb.converters.InfluxDbDocumentPollSingleConverter
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
@@ -80,7 +81,7 @@ internal class InfluxDbPollStepSpecificationConverterTest :
         val spiedConverter = spyk(converter, recordPrivateCalls = true)
 
         val recordsConverter: DatasourceObjectConverter<InfluxDbQueryResult, out Any> = relaxedMockk()
-        every { spiedConverter["buildConverter"]() } returns recordsConverter
+        every { spiedConverter["buildConverter"](refEq(spec)) } returns recordsConverter
 
         // when
         spiedConverter.convert<Unit, Map<String, *>>(
@@ -102,7 +103,7 @@ internal class InfluxDbPollStepSpecificationConverterTest :
                 }
             }
         }
-        verifyOnce { spiedConverter["buildConverter"]() }
+        verifyOnce { spiedConverter["buildConverter"](refEq(spec)) }
 
         val channelFactory = creationContext.createdStep!!
             .getProperty<InfluxDbIterativeReader>("reader")
@@ -140,7 +141,7 @@ internal class InfluxDbPollStepSpecificationConverterTest :
         val spiedConverter = spyk(converter, recordPrivateCalls = true)
 
         val recordsConverter: DatasourceObjectConverter<InfluxDbQueryResult, out Any> = relaxedMockk()
-        every { spiedConverter["buildConverter"]() } returns recordsConverter
+        every { spiedConverter["buildConverter"](refEq(spec)) } returns recordsConverter
 
         // when
         spiedConverter.convert<Unit, Map<String, *>>(
@@ -162,7 +163,7 @@ internal class InfluxDbPollStepSpecificationConverterTest :
                 }
             }
         }
-        verifyOnce { spiedConverter["buildConverter"]() }
+        verifyOnce { spiedConverter["buildConverter"](refEq(spec)) }
 
         val channelFactory = creationContext.createdStep!!
             .getProperty<InfluxDbIterativeReader>("reader")
@@ -177,13 +178,28 @@ internal class InfluxDbPollStepSpecificationConverterTest :
 
     @Test
     internal fun `should build batch converter`() {
-        // given nothing
+        // given
+        val spec = InfluxDbPollStepSpecificationImpl()
 
         // when
         val converter =
-            converter.invokeInvisible<DatasourceObjectConverter<InfluxDbQueryResult, out Any>>("buildConverter")
+            converter.invokeInvisible<DatasourceObjectConverter<InfluxDbQueryResult, out Any>>("buildConverter", spec)
 
         // then
         assertThat(converter).isInstanceOf(InfluxDbDocumentPollBatchConverter::class)
+    }
+
+    @Test
+    internal fun `should build single converter`() {
+        // given
+        val spec = InfluxDbPollStepSpecificationImpl()
+        spec.flattenOutput = true
+
+        // when
+        val converter =
+            converter.invokeInvisible<DatasourceObjectConverter<InfluxDbQueryResult, out Any>>("buildConverter", spec)
+
+        // then
+        assertThat(converter).isInstanceOf(InfluxDbDocumentPollSingleConverter::class)
     }
 }

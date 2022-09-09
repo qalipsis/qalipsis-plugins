@@ -1,9 +1,9 @@
 package io.qalipsis.plugins.influxdb.search
 
-import com.influxdb.query.FluxRecord
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.influxdb.InfluxDbStepConnectionImpl
@@ -15,8 +15,9 @@ import io.qalipsis.plugins.influxdb.InfluxdbStepSpecification
  * @author Palina Bril
  */
 interface InfluxDbSearchStepSpecification<I> :
-    StepSpecification<I, Pair<I, List<FluxRecord>>, InfluxDbSearchStepSpecification<I>>,
-    InfluxdbStepSpecification<I, Pair<I, List<FluxRecord>>, InfluxDbSearchStepSpecification<I>> {
+    StepSpecification<I, InfluxDbSearchResult<I>, InfluxDbSearchStepSpecification<I>>,
+    ConfigurableStepSpecification<I, InfluxDbSearchResult<I>, InfluxDbSearchStepSpecification<I>>,
+    InfluxdbStepSpecification<I, InfluxDbSearchResult<I>, InfluxDbSearchStepSpecification<I>> {
 
     /**
      * Configures the connection to the InfluxDb server.
@@ -42,7 +43,7 @@ interface InfluxDbSearchStepSpecification<I> :
 @Spec
 internal class InfluxDbSearchStepSpecificationImpl<I> :
     InfluxDbSearchStepSpecification<I>,
-    AbstractStepSpecification<I, Pair<I, List<FluxRecord>>, InfluxDbSearchStepSpecification<I>>() {
+    AbstractStepSpecification<I, InfluxDbSearchResult<I>, InfluxDbSearchStepSpecification<I>>() {
 
     internal var connectionConfig = InfluxDbStepConnectionImpl()
 
