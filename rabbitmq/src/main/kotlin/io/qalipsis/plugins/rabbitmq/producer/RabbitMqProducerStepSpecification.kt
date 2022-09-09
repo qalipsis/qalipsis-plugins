@@ -4,6 +4,7 @@ import com.rabbitmq.client.ConnectionFactory
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.rabbitmq.RabbitMqStepSpecification
@@ -19,7 +20,8 @@ import javax.validation.constraints.Min
 @ExperimentalCoroutinesApi
 interface RabbitMqProducerStepSpecification<I> :
     StepSpecification<I, Pair<I, RabbitMqProducerRecord>, RabbitMqProducerStepSpecification<I>>,
-    RabbitMqStepSpecification<I, Pair<I, RabbitMqProducerRecord>, RabbitMqProducerStepSpecification<I>> {
+    RabbitMqStepSpecification<I, Pair<I, RabbitMqProducerRecord>, RabbitMqProducerStepSpecification<I>>,
+    ConfigurableStepSpecification<I, Pair<I, RabbitMqProducerRecord>, RabbitMqProducerStepSpecification<I>> {
 
     /**
      * Configures the connection of the RabbitMQ broker, defaults to localhost:5672.
