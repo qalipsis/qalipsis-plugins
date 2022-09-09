@@ -3,6 +3,7 @@ package io.qalipsis.plugins.jms.producer
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.jms.JmsStepSpecification
@@ -17,6 +18,7 @@ import javax.jms.Connection
 @ExperimentalCoroutinesApi
 interface JmsProducerStepSpecification<I> :
     StepSpecification<I, Pair<I, JmsProducerRecord>, JmsProducerStepSpecification<I>>,
+    ConfigurableStepSpecification<I, Pair<I, JmsProducerRecord>, JmsProducerStepSpecification<I>>,
     JmsStepSpecification<I, Pair<I, JmsProducerRecord>, JmsProducerStepSpecification<I>> {
 
     /**
@@ -53,7 +55,8 @@ internal class JmsProducerStepSpecificationImpl<I> :
 
     internal lateinit var connectionFactory: () -> Connection
 
-    internal var recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JmsProducerRecord> = { _, _ -> listOf() }
+    internal var recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JmsProducerRecord> =
+        { _, _ -> listOf() }
 
     internal val metrics = JmsProducerMetricsConfiguration()
     internal var monitoringConfig = StepMonitoringConfiguration()
