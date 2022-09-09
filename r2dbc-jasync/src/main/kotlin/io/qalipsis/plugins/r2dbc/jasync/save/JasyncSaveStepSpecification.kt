@@ -3,6 +3,7 @@ package io.qalipsis.plugins.r2dbc.jasync.save
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.r2dbc.jasync.JasyncConnection
@@ -17,6 +18,7 @@ import org.jetbrains.annotations.NotNull
  */
 @Spec
 interface JasyncSaveStepSpecification<I> : StepSpecification<I, JasyncSaveResult<I>, JasyncSaveStepSpecification<I>>,
+    ConfigurableStepSpecification<I, JasyncSaveResult<I>, JasyncSaveStepSpecification<I>>,
     R2dbcJasyncStepSpecification<I, JasyncSaveResult<I>, JasyncSaveStepSpecification<I>> {
 
     /**

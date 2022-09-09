@@ -3,6 +3,7 @@ package io.qalipsis.plugins.r2dbc.jasync.search
 import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
+import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.datasource.DatasourceRecord
@@ -22,7 +23,8 @@ import org.jetbrains.annotations.NotNull
  */
 @Spec
 interface JasyncSearchStepSpecification<I> :
-    StepSpecification<I,  JasyncSearchBatchResults<I, Map<String, Any?>>, JasyncSearchStepSpecification<I>>,
+    StepSpecification<I, JasyncSearchBatchResults<I, Map<String, Any?>>, JasyncSearchStepSpecification<I>>,
+    ConfigurableStepSpecification<I, JasyncSearchBatchResults<I, Map<String, Any?>>, JasyncSearchStepSpecification<I>>,
     R2dbcJasyncStepSpecification<I, JasyncSearchBatchResults<I, Map<String, Any?>>, JasyncSearchStepSpecification<I>> {
 
     /**
@@ -50,10 +52,6 @@ interface JasyncSearchStepSpecification<I> :
      */
     fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit)
 
-    /**
-     * Returns each record of a batch individually to the next steps.
-     */
-    fun flatten(): StepSpecification<I, JasyncSearchSingleResult<I,Map<String, Any?>>, *>
 }
 
 /**
@@ -79,8 +77,6 @@ internal class JasyncSearchStepSpecificationImpl<I> :
 
     internal val monitoringConfig = StepMonitoringConfiguration()
 
-    internal var flattenOutput = false
-
     override fun connection(configBlock: JasyncConnection.() -> Unit) {
         connection.configBlock()
     }
@@ -100,14 +96,6 @@ internal class JasyncSearchStepSpecificationImpl<I> :
     override fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit) {
         this.monitoringConfig.monitoringConfig()
     }
-
-    override fun flatten(): StepSpecification<I, JasyncSearchSingleResult<I,Map<String, Any?>>, *> {
-        flattenOutput = true
-
-        @Suppress("UNCHECKED_CAST")
-        return this as StepSpecification<I, JasyncSearchSingleResult<I,Map<String, Any?>>, *>
-    }
-
 }
 
 

@@ -19,7 +19,6 @@ import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepCreationContextImpl
 import io.qalipsis.plugins.r2dbc.jasync.JasyncConnection
-import io.qalipsis.plugins.r2dbc.jasync.converters.JasyncResultSetConverter
 import io.qalipsis.plugins.r2dbc.jasync.converters.ParametersConverter
 import io.qalipsis.plugins.r2dbc.jasync.converters.ResultValuesConverter
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Dialect
@@ -116,12 +115,12 @@ internal class JasyncSearchStepSpecificationConverterTest :
                 prop("retryPolicy").isEqualTo(mockedRetryPolicy)
                 prop("parametersFactory").isEqualTo(convertedParamsFactory)
                 prop("queryFactory").isEqualTo(queryFactory)
+                prop("converter").isNotNull().isInstanceOf(JasyncResultSetBatchConverter::class)
             }
         }
 
         verifyOnce { spiedConverter["buildConnectionConfiguration"](refEq(spec)) }
         verifyOnce { spiedConverter["buildConnectionsPoolFactory"](any<Dialect>(), refEq(connectionPoolConfiguration)) }
-        verifyOnce { spiedConverter["buildConverter"](refEq(spec)) }
         verifyOnce { spiedConverter.buildParameterFactory(refEq(paramsFactory)) }
         coVerifyOnce {
             spiedConverter.convert<Int, Map<String, Any?>>(
@@ -167,12 +166,12 @@ internal class JasyncSearchStepSpecificationConverterTest :
                 prop("retryPolicy").isNull()
                 prop("parametersFactory").isEqualTo(convertedParamsFactory)
                 prop("queryFactory").isEqualTo(queryFactory)
+                prop("converter").isNotNull().isInstanceOf(JasyncResultSetBatchConverter::class)
             }
         }
 
         verifyOnce { spiedConverter["buildConnectionConfiguration"](refEq(spec)) }
         verifyOnce { spiedConverter["buildConnectionsPoolFactory"](any<Dialect>(), refEq(connectionPoolConfiguration)) }
-        verifyOnce { spiedConverter["buildConverter"](refEq(spec)) }
         verifyOnce { spiedConverter.buildParameterFactory(refEq(paramsFactory)) }
         coVerifyOnce {
             spiedConverter.convert<Int, Map<String, Any?>>(
@@ -180,38 +179,6 @@ internal class JasyncSearchStepSpecificationConverterTest :
             )
         }
         confirmVerified(spiedConverter)
-    }
-
-    @Test
-    fun `should build batch converter`() {
-        // given
-        val spec = JasyncSearchStepSpecificationImpl<Any>()
-
-        // when
-        val converter =
-            converter.invokeInvisible<JasyncResultSetConverter<ResultSetWrapper, *, *>>("buildConverter", spec)
-
-        // then
-        assertThat(converter).isInstanceOf(JasyncResultSetBatchConverter::class).all {
-            prop("resultValuesConverter").isEqualTo(resultValuesConverter)
-        }
-    }
-
-    @Test
-    fun `should build single converter`() {
-        // given
-        val spec = JasyncSearchStepSpecificationImpl<Any>()
-
-        spec.flatten()
-
-        // when
-        val converter =
-            converter.invokeInvisible<JasyncResultSetConverter<ResultSetWrapper, *, *>>("buildConverter", spec)
-
-        // then
-        assertThat(converter).isInstanceOf(JasyncResultSetSingleConverter::class).all {
-            prop("resultValuesConverter").isEqualTo(resultValuesConverter)
-        }
     }
 
     @Test

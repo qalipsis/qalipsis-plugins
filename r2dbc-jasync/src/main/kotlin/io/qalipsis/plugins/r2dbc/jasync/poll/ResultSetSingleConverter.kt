@@ -54,7 +54,7 @@ internal class ResultSetSingleConverter(
         eventsLogger?.info("${eventPrefix}.records", value.size, tags = eventTags)
         recordsCounter?.increment(value.size.toDouble())
 
-        tryAndLogOrNull(log){
+        tryAndLogOrNull(log) {
             value.map { row ->
                 DatasourceRecord(
                     offset.getAndIncrement(),
