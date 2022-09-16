@@ -46,7 +46,7 @@ import javax.validation.constraints.Positive
  * @property maxConnectionTtl duration for an object in this pool should be kept alive.
  */
 @Spec
-data class JasyncConnection(
+data class JasyncConnection internal constructor(
     @field:NotBlank var host: String = "localhost",
     @field:Positive var port: Int = -1,
     @field:NotBlank var database: String? = null,

@@ -47,7 +47,7 @@ interface JasyncSaveStepSpecification<I> : StepSpecification<I, JasyncSaveResult
     fun values(rowsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JasyncSaveRecord>)
 
     /**
-     * Configures the monitoring of the consume step.
+     * Configures the monitoring of the save step.
      */
     fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit)
 }
@@ -73,8 +73,6 @@ internal class JasyncSaveStepSpecificationImpl<I> :
 
     internal var rowsFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<JasyncSaveRecord>) =
         { _, _ -> emptyList() }
-
-    internal val metrics = JasyncSaveMetricsConfiguration()
 
     internal val monitoringConfig = StepMonitoringConfiguration()
 
@@ -102,26 +100,6 @@ internal class JasyncSaveStepSpecificationImpl<I> :
         this.monitoringConfig.monitoringConfig()
     }
 }
-
-/**
- * Configuration of the metrics to record for the Jasync save step.
- *
- * @property recordsCount when true, records the number of saved records.
- * @property timeToSuccess when true, records the time of response of a success save.
- * @property timeToFailure when true, records the time of response of a failure save.
- * @property successCount when true, records the number of successful saves.
- * @property failureCount when true, records the number of failed saves.
- *
- * @author Carlos Vieira
- */
-@Spec
-data class JasyncSaveMetricsConfiguration(
-    var recordsCount: Boolean = false,
-    val timeToSuccess: Boolean = false,
-    val timeToFailure: Boolean = false,
-    var successCount: Boolean = false,
-    var failureCount: Boolean = false
-)
 
 /**
  * Creates a step to save data onto a SQL database and forwards the input to the next step.

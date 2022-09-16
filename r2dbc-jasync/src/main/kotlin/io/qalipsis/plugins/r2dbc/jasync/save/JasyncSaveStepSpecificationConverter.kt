@@ -8,9 +8,7 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.Executors
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.context.StepContext
-import io.qalipsis.api.context.StepName
 import io.qalipsis.api.events.EventsLogger
-import io.qalipsis.api.lang.supplyIf
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
@@ -53,37 +51,6 @@ internal class JasyncSaveStepSpecificationConverter(
             meterRegistry = meterRegistry.takeIf { spec.monitoringConfig.meters }
         )
         creationContext.createdStep(step)
-    }
-
-    @KTestable
-    private fun buildMetrics(metrics: JasyncSaveMetricsConfiguration, stepId: StepName): JasyncQueryMetrics {
-        val recordsCounter = supplyIf(metrics.recordsCount) {
-            meterRegistry.counter("jasync-save-records", "step", stepId)
-        }
-
-        val failureCounter = supplyIf(metrics.failureCount) {
-            meterRegistry.counter("jasync-save-records-failure", "step", stepId)
-        }
-
-        val successCounter = supplyIf(metrics.successCount) {
-            meterRegistry.counter("jasync-save-records-success", "step", stepId)
-        }
-
-        val timeToSuccess = supplyIf(metrics.timeToSuccess) {
-            meterRegistry.timer("jasync-save-records-time-to-success", "step", stepId)
-        }
-
-        val timeToFailure = supplyIf(metrics.timeToFailure) {
-            meterRegistry.timer("jasync-save-records-time-to-failure", "step", stepId)
-        }
-
-        return JasyncQueryMetrics(
-            recordsCount = recordsCounter,
-            failureCounter = failureCounter,
-            successCounter = successCounter,
-            timeToSuccess = timeToSuccess,
-            timeToFailure = timeToFailure
-        )
     }
 
     private fun buildConnectionConfiguration(spec: JasyncSaveStepSpecificationImpl<*>): ConnectionPoolConfiguration {
