@@ -15,7 +15,7 @@ import javax.validation.constraints.Positive
  *
  * @author Gabriel Moraes
  */
-data class RabbitMqConnectionConfiguration(
+data class RabbitMqConnectionConfiguration internal constructor(
     @field:NotBlank var username: String = "guest",
     @field:NotBlank var password: String = "guest",
     @field:NotBlank var virtualHost: String = "/",
