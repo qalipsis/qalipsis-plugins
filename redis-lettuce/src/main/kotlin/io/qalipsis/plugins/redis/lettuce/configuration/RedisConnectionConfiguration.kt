@@ -20,7 +20,7 @@ import javax.validation.constraints.NotEmpty
  *
  * @author Gabriel Moraes
  */
-data class RedisConnectionConfiguration(
+data class RedisConnectionConfiguration internal constructor(
     @field:NotEmpty var nodes: List<String> = listOf("localhost:6379"),
     @field:Min(0) @field:Max(16) var database: Int = 0,
     var redisConnectionType: RedisConnectionType = RedisConnectionType.SINGLE,
