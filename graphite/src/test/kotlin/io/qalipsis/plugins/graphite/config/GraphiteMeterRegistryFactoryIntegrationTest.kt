@@ -1,3 +1,19 @@
+/*
+ * Copyright 2022 AERIS IT Solutions GmbH
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package io.qalipsis.plugins.graphite.config
 
 import assertk.assertThat
@@ -24,7 +40,7 @@ import java.time.Duration
 internal class GraphiteMeterRegistryFactoryIntegrationTest {
 
     @Nested
-    @MicronautTest(startApplication = false, propertySources = ["classpath:application-graphite.yml"])
+    @MicronautTest(startApplication = false, environments = ["graphite"])
     inner class NoMicronautGraphiteMeterRegistry {
 
         @Inject
@@ -32,13 +48,13 @@ internal class GraphiteMeterRegistryFactoryIntegrationTest {
 
         @Test
         @Timeout(10)
-        internal fun `should disables the default graphite meter registry`() {
+        internal fun `should disable the default graphite meter registry`() {
             assertThat(applicationContext.getBeansOfType(GraphiteMeterRegistry::class.java)).isEmpty()
         }
     }
 
     @Nested
-    @MicronautTest(startApplication = false, propertySources = ["classpath:application-graphite.yml"])
+    @MicronautTest(startApplication = false, environments = ["graphite"])
     inner class WithoutMeters : TestPropertyProvider {
 
         @Inject
@@ -46,34 +62,8 @@ internal class GraphiteMeterRegistryFactoryIntegrationTest {
 
         override fun getProperties(): MutableMap<String, String> {
             return mutableMapOf(
-                "meters.enabled" to "false",
-                "meters.graphite.enabled" to "true",
-                "meters.graphite.host" to CONTAINER.host,
-                "meters.graphite.port" to CONTAINER.getMappedPort(HTTP_PORT).toString()
-            )
-        }
-
-        @Test
-        @Timeout(10)
-        internal fun `should start without graphite meter registry`() {
-            assertThat(applicationContext.getBeansOfType(GraphiteMeterRegistry::class.java)).isEmpty()
-        }
-    }
-
-    @Nested
-    @MicronautTest(startApplication = false, propertySources = ["classpath:application-graphite.yml"])
-    inner class WithMetersButWithoutGraphite : TestPropertyProvider {
-
-        @Inject
-        private lateinit var applicationContext: ApplicationContext
-
-        override fun getProperties(): MutableMap<String, String> {
-            return mutableMapOf(
-                "micronaut.metrics.enabled" to "false",
-                "meters.enabled" to "true",
-                "meters.graphite.enabled" to "false",
-                "meters.graphite.host" to CONTAINER.host,
-                "meters.graphite.port" to CONTAINER.getMappedPort(HTTP_PORT).toString()
+                "meters.export.enabled" to "false",
+                "meters.export.graphite.enabled" to "true"
             )
         }
 
@@ -86,7 +76,29 @@ internal class GraphiteMeterRegistryFactoryIntegrationTest {
     }
 
     @Nested
-    @MicronautTest(startApplication = false, propertySources = ["classpath:application-graphite.yml"])
+    @MicronautTest(startApplication = false, environments = ["graphite"])
+    inner class WithMetersButWithoutGraphite : TestPropertyProvider {
+
+        @Inject
+        private lateinit var applicationContext: ApplicationContext
+
+        override fun getProperties(): MutableMap<String, String> {
+            return mutableMapOf(
+                "meters.export.enabled" to "true",
+                "meters.export.graphite.enabled" to "false"
+            )
+        }
+
+        @Test
+        @Timeout(10)
+        internal fun `should start without graphite meter registry`() {
+            assertThat(applicationContext.getBeansOfType(MeterRegistry::class.java)).isNotEmpty()
+            assertThat(applicationContext.getBeansOfType(GraphiteMeterRegistry::class.java)).isEmpty()
+        }
+    }
+
+    @Nested
+    @MicronautTest(startApplication = false, environments = ["graphite"])
     inner class WithGraphiteMeterRegistry : TestPropertyProvider {
 
         @Inject
@@ -95,9 +107,9 @@ internal class GraphiteMeterRegistryFactoryIntegrationTest {
         override fun getProperties(): MutableMap<String, String> {
             return mutableMapOf(
                 "meters.enabled" to "true",
-                "meters.graphite.enabled" to "true",
-                "meters.graphite.host" to CONTAINER.host,
-                "meters.graphite.port" to CONTAINER.getMappedPort(HTTP_PORT).toString()
+                "meters.export.graphite.enabled" to "true",
+                "meters.export.graphite.host" to CONTAINER.host,
+                "meters.export.graphite.port" to CONTAINER.getMappedPort(HTTP_PORT).toString()
             )
         }
 

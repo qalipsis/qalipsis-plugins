@@ -14,9 +14,10 @@ events:
 micronaut.metrics.export.graphite.enabled: false
 
 meters:
-  graphite:
-    host: localhost
-    port: 2004
-    enabled: false
-    step: PT10S
+  export:
+    graphite:
+      host: localhost
+      port: 2004
+      enabled: false
+      step: PT10S
 
