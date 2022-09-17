@@ -1,3 +1,19 @@
+/*
+ * Copyright 2022 AERIS IT Solutions GmbH
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 plugins {
     kotlin("jvm")
     kotlin("kapt")
@@ -5,7 +21,7 @@ plugins {
     `java-test-fixtures`
 }
 
-description = "Qalipsis Plugins - RabbitMQ"
+description = "QALIPSIS plugin for RabbitMQ"
 
 allOpen {
     annotations(
@@ -19,51 +35,45 @@ allOpen {
     )
 }
 
-val micronautVersion: String by project
-val kotlinCoroutinesVersion: String by project
-val testContainersVersion: String by project
-val jacksonVersion: String by project
-val rabbitMQVersion = "5.11.0"
-val catadioptreVersion: String by project
-
 kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catadioptre")
 kapt.useBuildCache = false
 
+val rabbitMQVersion = "5.16.0"
+val coreVersion: String by project
 
 dependencies {
-    compileOnly("io.aeris-consulting:catadioptre-annotations:${catadioptreVersion}")
+    implementation(platform("io.qalipsis:plugin-platform:${coreVersion}"))
+    compileOnly("io.aeris-consulting:catadioptre-annotations")
     compileOnly(kotlin("stdlib"))
-    compileOnly(platform("io.micronaut:micronaut-bom:$micronautVersion"))
     compileOnly("io.micronaut:micronaut-runtime")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     api("com.rabbitmq:amqp-client:$rabbitMQVersion")
 
-    api("io.qalipsis:api-common:${project.version}")
-    api("io.qalipsis:api-dsl:${project.version}")
+    api("io.qalipsis:api-common")
+    api("io.qalipsis:api-dsl")
 
-    kapt(platform("io.micronaut:micronaut-bom:$micronautVersion"))
-    kapt("io.qalipsis:api-processors:${project.version}")
-    kapt("io.qalipsis:api-dsl:${project.version}")
-    kapt("io.qalipsis:api-common:${project.version}")
-    kapt("io.aeris-consulting:catadioptre-annotations:${catadioptreVersion}")
+    kapt(platform("io.qalipsis:plugin-platform:${coreVersion}"))
+    kapt("io.qalipsis:api-processors")
+    kapt("io.qalipsis:api-dsl")
+    kapt("io.qalipsis:api-common")
+    kapt("io.aeris-consulting:catadioptre-annotations")
 
-    testImplementation("org.testcontainers:rabbitmq:$testContainersVersion")
-    testImplementation("io.qalipsis:test:${project.version}")
-    testImplementation("io.qalipsis:api-dsl:${project.version}")
-    testImplementation(testFixtures("io.qalipsis:api-dsl:${project.version}"))
-    testImplementation(testFixtures("io.qalipsis:api-common:${project.version}"))
-    testImplementation(testFixtures("io.qalipsis:runtime:${project.version}"))
+    testImplementation("org.testcontainers:rabbitmq")
+    testImplementation("io.qalipsis:test")
+    testImplementation("io.qalipsis:api-dsl")
+    testImplementation(testFixtures("io.qalipsis:api-dsl"))
+    testImplementation(testFixtures("io.qalipsis:api-common"))
+    testImplementation(testFixtures("io.qalipsis:runtime"))
     testImplementation("javax.annotation:javax.annotation-api")
     testImplementation("io.micronaut:micronaut-runtime")
-    testImplementation("io.aeris-consulting:catadioptre-kotlin:${catadioptreVersion}")
-    testRuntimeOnly("io.qalipsis:runtime:${project.version}")
-    testRuntimeOnly("io.qalipsis:head:${project.version}")
-    testRuntimeOnly("io.qalipsis:factory:${project.version}")
+    testImplementation("io.aeris-consulting:catadioptre-kotlin")
+    testRuntimeOnly("io.qalipsis:runtime")
+    testRuntimeOnly("io.qalipsis:head")
+    testRuntimeOnly("io.qalipsis:factory")
 
-    kaptTest(platform("io.micronaut:micronaut-bom:$micronautVersion"))
+    kaptTest(platform("io.qalipsis:plugin-platform:${coreVersion}"))
     kaptTest("io.micronaut:micronaut-inject-java")
-    kaptTest("io.qalipsis:api-processors:${project.version}")
+    kaptTest("io.qalipsis:api-processors")
 }
 
 
