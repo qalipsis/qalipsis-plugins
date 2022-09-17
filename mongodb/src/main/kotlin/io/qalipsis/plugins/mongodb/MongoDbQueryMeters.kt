@@ -16,11 +16,18 @@
 
 package io.qalipsis.plugins.mongodb
 
-/**
- *
- * @author Alexander Sosnovsky
- */
-internal object Constants {
+import java.time.Duration
 
-    const val DOCKER_IMAGE = "mongo:4.4.2"
-}
+/**
+ * Meters of the performed query.
+ *
+ * @property fetchedRecords count of received records
+ * @property fetchedBytes total count of received bytes
+ * @property timeToResult time to until the complete successful response
+ *
+ * @author Eric Jessé
+ */
+data class MongoDbQueryMeters(
+    val fetchedRecords: Int,
+    val timeToResult: Duration
+)

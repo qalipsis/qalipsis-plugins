@@ -16,11 +16,17 @@
 
 package io.qalipsis.plugins.mongodb
 
-/**
- *
- * @author Alexander Sosnovsky
- */
-internal object Constants {
+import org.bson.Document
 
-    const val DOCKER_IMAGE = "mongo:4.4.2"
-}
+/**
+ * A wrapper for meters and documents.
+ *
+ * @property documents result of search query procedure in MongoDB
+ * @property meters meters of the query
+ *
+ * @author Carlos Vieira
+ */
+class MongoDBQueryResult(
+    val documents: List<Document>,
+    val meters: MongoDbQueryMeters
+)

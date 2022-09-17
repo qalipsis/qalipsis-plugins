@@ -14,13 +14,20 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.mongodb
+package io.qalipsis.plugins.mongodb.save
+
+import io.micronaut.core.annotation.Introspected
 
 /**
+ * Wrapper for the result of save records procedure in MongoDB.
  *
- * @author Alexander Sosnovsky
+ * @property input the data to save in MongoDb
+ * @property meters meters of the save step
+ *
+ * @author Carlos Vieira
  */
-internal object Constants {
-
-    const val DOCKER_IMAGE = "mongo:4.4.2"
-}
+@Introspected
+class MongoDBSaveResult<I>(
+    val input: I,
+    val meters: MongoDbSaveQueryMeters
+)

@@ -17,10 +17,11 @@
 package io.qalipsis.plugins.mongodb
 
 /**
+ *  Sorting order for MongoDB filters to sort fetched documents.
  *
- * @author Alexander Sosnovsky
+ *  @author Alexander Sosnovsky
  */
-internal object Constants {
-
-    const val DOCKER_IMAGE = "mongo:4.4.2"
+enum class Sorting {
+    ASC,
+    DESC,
 }

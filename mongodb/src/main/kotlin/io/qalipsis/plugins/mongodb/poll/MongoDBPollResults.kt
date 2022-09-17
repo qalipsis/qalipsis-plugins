@@ -14,13 +14,26 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.mongodb
+package io.qalipsis.plugins.mongodb.poll
+
+import io.qalipsis.plugins.mongodb.MongoDbQueryMeters
+import io.qalipsis.plugins.mongodb.MongoDbRecord
 
 /**
+ * Wrapper for the result of poll in MongoDB.
  *
- * @author Alexander Sosnovsky
+ *
+ * @property records list of MongoDB records.
+ * @property meters of the poll step.
+ *
+ * @author Carlos Vieira
  */
-internal object Constants {
+class MongoDBPollResults(
+    val records: List<MongoDbRecord>,
+    val meters: MongoDbQueryMeters
+) : Iterable<MongoDbRecord> {
 
-    const val DOCKER_IMAGE = "mongo:4.4.2"
+    override fun iterator(): Iterator<MongoDbRecord> {
+        return records.iterator()
+    }
 }

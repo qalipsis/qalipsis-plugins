@@ -14,13 +14,21 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.mongodb
+package io.qalipsis.plugins.mongodb.save
+
+import java.time.Duration
 
 /**
+ * Meters of the performed query.
  *
- * @author Alexander Sosnovsky
+ * @property savedRecords count of saved records
+ * @property savedBytes total bytes saved
+ * @property timeToResult time to until the confirmation of the successful response
+ *
+ * @author Eric Jessé
  */
-internal object Constants {
-
-    const val DOCKER_IMAGE = "mongo:4.4.2"
-}
+data class MongoDbSaveQueryMeters(
+    val savedRecords: Int,
+    val failedRecords: Int,
+    val timeToResult: Duration
+)
