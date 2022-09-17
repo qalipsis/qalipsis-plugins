@@ -3,9 +3,10 @@ plugins {
 
     id("nebula.contacts") version "5.1.0"
     id("nebula.info") version "9.1.1"
-    id("nebula.maven-publish") version "17.0.0"
-    id("nebula.maven-scm") version "17.0.0"
-    id("nebula.maven-manifest") version "17.0.0"
+    id("nebula.maven-publish") version "17.3.3"
+    id("nebula.maven-scm") version "17.3.3"
+    id("nebula.maven-manifest") version "17.3.3"
+    id("nebula.maven-apache-license") version "17.3.3"
     signing
 }
 
@@ -59,53 +60,42 @@ publishing {
     }
 
     publications {
-        create<MavenPublication>("qalipsis-bom") {
+        create<MavenPublication>("qalipsisPlatform") {
             from(components["javaPlatform"])
         }
     }
 }
 
-val kotlin = "1.6.21"
-val core = "0.4.27-SNAPSHOT"
-val kotlinCoroutines = "1.6.4"
+val coreVersion : String? by project
 
 javaPlatform {
     allowDependencies()
 }
 
 dependencies {
-    // Platform modules.
-    api("org.jetbrains.kotlin:kotlin-stdlib:$kotlin")
-    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:${kotlinCoroutines}")
-
     // Core modules.
-    api("io.qalipsis:api-dsl:$core")
-    api("io.qalipsis:api-processors:$core")
-
-    // Libraries that could be brought by other dependencies and break the compilation or execution.
-    api("ch.qos.logback:logback-classic") { version { strictly("1.2.3") } }
-    api("ch.qos.logback:logback-core") { version { strictly("1.2.3") } }
+    api("io.qalipsis:api-dsl:$coreVersion")
 
     constraints {
         // Core modules.
-        runtime("io.qalipsis:runtime:$core")
-        runtime("io.qalipsis:head:$core")
-        runtime("io.qalipsis:factory:$core")
+        runtime("io.qalipsis:runtime:$coreVersion")
+        runtime("io.qalipsis:head:$coreVersion")
+        runtime("io.qalipsis:factory:$coreVersion")
 
         // Plugins.
-        api("io.qalipsis:plugin-cassandra:0.4.20-SNAPSHOT")
-        api("io.qalipsis:plugin-elasticsearch:0.4.20-SNAPSHOT")
-        api("io.qalipsis:plugin-graphite:0.4.20-SNAPSHOT")
-        api("io.qalipsis:plugin-influxdb:0.4.20-SNAPSHOT")
-        api("io.qalipsis:plugin-jackson:0.4.20-SNAPSHOT")
-        api("io.qalipsis:plugin-jms:0.4.20-SNAPSHOT")
-        api("io.qalipsis:plugin-kafka:0.4.20-SNAPSHOT")
-        api("io.qalipsis:plugin-mongodb:0.4.20-SNAPSHOT")
-        api("io.qalipsis:plugin-netty:0.4.20-SNAPSHOT")
-        api("io.qalipsis:plugin-r2dbc-jasync:0.4.20-SNAPSHOT")
-        api("io.qalipsis:plugin-rabbitmq:0.4.20-SNAPSHOT")
-        api("io.qalipsis:plugin-redis-lettuce:0.4.20-SNAPSHOT")
-        api("io.qalipsis:plugin-timescaledb:0.4.21-SNAPSHOT")
+        api("io.qalipsis.plugin:cassandra:0.4.30-SNAPSHOT")
+        api("io.qalipsis.plugin:elasticsearch:0.4.30-SNAPSHOT")
+        api("io.qalipsis.plugin:graphite:0.4.30-SNAPSHOT")
+        api("io.qalipsis.plugin:influxdb:0.4.30-SNAPSHOT")
+        api("io.qalipsis.plugin:jackson:0.4.30-SNAPSHOT")
+        api("io.qalipsis.plugin:jms:0.4.30-SNAPSHOT")
+        api("io.qalipsis.plugin:kafka:0.4.30-SNAPSHOT")
+        api("io.qalipsis.plugin:mongodb:0.4.30-SNAPSHOT")
+        api("io.qalipsis.plugin:netty:0.4.30-SNAPSHOT")
+        api("io.qalipsis.plugin:r2dbc-jasync:0.4.30-SNAPSHOT")
+        api("io.qalipsis.plugin:rabbitmq:0.4.30-SNAPSHOT")
+        api("io.qalipsis.plugin:redis-lettuce:0.4.30-SNAPSHOT")
+        api("io.qalipsis.plugin:timescaledb:0.4.30-SNAPSHOT")
     }
 }
 
