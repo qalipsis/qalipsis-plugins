@@ -1,3 +1,19 @@
+/*
+ * Copyright 2022 AERIS IT Solutions GmbH
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 package io.qalipsis.plugins.r2dbc.jasync.search
 
 import assertk.all
@@ -25,12 +41,12 @@ import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.StepTestHelper
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
-import org.joda.time.LocalDateTime
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.testcontainers.junit.jupiter.Testcontainers
 import java.time.Duration
+import java.time.LocalDateTime
 
 /**
  * Integration test to demo the usage of the search step
@@ -84,7 +100,7 @@ internal abstract class AbstractJasyncSearchStepIntegrationTest(
             eventsLogger = eventsLogger
         )
         converter.start(startStopContext)
-        val step = JasyncSearchStep<String>(
+        val step = JasyncSearchStep(
             id = "step-id",
             retryPolicy = null,
             connectionsPoolFactory = { connection },
@@ -103,19 +119,19 @@ internal abstract class AbstractJasyncSearchStepIntegrationTest(
                 JasyncSearchRecord(
                     ordinal = 0, value = mapOf(
                         "username" to "bob",
-                        "timestamp" to LocalDateTime(2020, 10, 20, 12, 34, 21)
+                        "timestamp" to LocalDateTime.of(2020, 10, 20, 12, 34, 21)
                     )
                 ),
                 JasyncSearchRecord(
                     ordinal = 1, value = mapOf(
                         "username" to "david",
-                        "timestamp" to LocalDateTime(2020, 10, 20, 12, 56, 8)
+                        "timestamp" to LocalDateTime.of(2020, 10, 20, 12, 56, 8)
                     )
                 ),
                 JasyncSearchRecord(
                     ordinal = 2, value = mapOf(
                         "username" to "erin",
-                        "timestamp" to LocalDateTime(2020, 10, 20, 13, 45, 8)
+                        "timestamp" to LocalDateTime.of(2020, 10, 20, 13, 45, 8)
                     )
                 )
             ),

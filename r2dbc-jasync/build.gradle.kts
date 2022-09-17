@@ -1,10 +1,26 @@
+/*
+ * Copyright 2022 AERIS IT Solutions GmbH
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 plugins {
     kotlin("jvm")
     kotlin("kapt")
     kotlin("plugin.allopen")
 }
 
-description = "Qalipsis Plugins - R2DBC with jasync-SQL"
+description = "QALIPSIS plugin for R2DBC using jasync-SQL"
 
 allOpen {
     annotations(
@@ -22,22 +38,20 @@ val micronautVersion: String by project
 val kotlinCoroutinesVersion: String by project
 val testContainersVersion: String by project
 
-val jasyncVersion = "1.1.4"
-val calciteVersion = "1.26.0"
-val pgsqlClientVersion = "42.2.18"
-val mariadbClientVersion = "2.7.0"
-val mysqlClientVersion = "8.0.22"
-val catadioptreVersion: String by project
-
 kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catadioptre")
 kapt.useBuildCache = false
 
+val jasyncVersion = "2.0.8"
+val calciteVersion = "1.32.0"
+val mariadbClientVersion = "3.0.7"
+val mysqlClientVersion = "8.0.30"
+val coreVersion: String by project
+
 dependencies {
-    compileOnly("io.aeris-consulting:catadioptre-annotations:${catadioptreVersion}")
-    compileOnly(kotlin("stdlib"))
-    compileOnly(platform("io.micronaut:micronaut-bom:$micronautVersion"))
+    implementation(platform("io.qalipsis:plugin-platform:${coreVersion}"))
+    compileOnly("io.aeris-consulting:catadioptre-annotations")
     compileOnly("io.micronaut:micronaut-runtime")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("org.apache.calcite:calcite-core:${calciteVersion}")
     implementation("com.github.jasync-sql:jasync-mysql:${jasyncVersion}") {
         exclude("org.jetbrains.kotlin", "kotlin-stdlib")
@@ -48,36 +62,36 @@ dependencies {
         exclude("org.jetbrains.kotlin", "kotlin-stdlib-jdk8")
     }
 
-    api("io.qalipsis:api-common:${project.version}")
-    api("io.qalipsis:api-dsl:${project.version}")
+    api("io.qalipsis:api-common")
+    api("io.qalipsis:api-dsl")
 
-    kapt(platform("io.micronaut:micronaut-bom:$micronautVersion"))
-    kapt("io.qalipsis:api-processors:${project.version}")
-    kapt("io.qalipsis:api-dsl:${project.version}")
-    kapt("io.qalipsis:api-common:${project.version}")
-    kapt("io.aeris-consulting:catadioptre-annotations:${catadioptreVersion}")
+    kapt(platform("io.qalipsis:plugin-platform:${coreVersion}"))
+    kapt("io.qalipsis:api-processors")
+    kapt("io.qalipsis:api-dsl")
+    kapt("io.qalipsis:api-common")
+    kapt("io.aeris-consulting:catadioptre-annotations")
 
-    testImplementation("org.testcontainers:postgresql:$testContainersVersion")
-    testImplementation("org.postgresql:postgresql:${pgsqlClientVersion}")
-    testImplementation("org.testcontainers:mariadb:$testContainersVersion")
+    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.postgresql:postgresql")
+    testImplementation("org.testcontainers:mariadb")
     testImplementation("org.mariadb.jdbc:mariadb-java-client:${mariadbClientVersion}")
-    testImplementation("org.testcontainers:mysql:$testContainersVersion")
+    testImplementation("org.testcontainers:mysql")
     testImplementation("mysql:mysql-connector-java:${mysqlClientVersion}")
-    testImplementation("io.qalipsis:test:${project.version}")
-    testImplementation("io.qalipsis:api-dsl:${project.version}")
-    testImplementation(testFixtures("io.qalipsis:api-dsl:${project.version}"))
-    testImplementation(testFixtures("io.qalipsis:api-common:${project.version}"))
-    testImplementation(testFixtures("io.qalipsis:runtime:${project.version}"))
+    testImplementation("io.qalipsis:test")
+    testImplementation("io.qalipsis:api-dsl")
+    testImplementation(testFixtures("io.qalipsis:api-dsl"))
+    testImplementation(testFixtures("io.qalipsis:api-common"))
+    testImplementation(testFixtures("io.qalipsis:runtime"))
     testImplementation("javax.annotation:javax.annotation-api")
     testImplementation("io.micronaut:micronaut-runtime")
-    testImplementation("io.aeris-consulting:catadioptre-kotlin:${catadioptreVersion}")
-    testRuntimeOnly("io.qalipsis:runtime:${project.version}")
-    testRuntimeOnly("io.qalipsis:head:${project.version}")
-    testRuntimeOnly("io.qalipsis:factory:${project.version}")
+    testImplementation("io.aeris-consulting:catadioptre-kotlin")
+    testRuntimeOnly("io.qalipsis:runtime")
+    testRuntimeOnly("io.qalipsis:head")
+    testRuntimeOnly("io.qalipsis:factory")
 
-    kaptTest(platform("io.micronaut:micronaut-bom:$micronautVersion"))
+    kaptTest(platform("io.qalipsis:plugin-platform:${coreVersion}"))
     kaptTest("io.micronaut:micronaut-inject-java")
-    kaptTest("io.qalipsis:api-processors:${project.version}")
+    kaptTest("io.qalipsis:api-processors")
 }
 
 
