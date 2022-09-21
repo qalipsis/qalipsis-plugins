@@ -21,6 +21,7 @@ import assertk.all
 import assertk.assertThat
 import assertk.assertions.*
 import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.Step
 import io.qalipsis.api.steps.StepCreationContext
@@ -63,7 +64,7 @@ internal class EndToEndCsvStepTest {
     @Test
     @Timeout(10)
     internal fun `should convert csv to map with comments allowed`() = testDispatcherProvider.runTest {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jackson().csvToMap {
             classpath(file)
             header {
@@ -103,7 +104,7 @@ internal class EndToEndCsvStepTest {
     @Test
     @Timeout(10)
     internal fun `should not convert csv to map without comments allowed`() = testDispatcherProvider.runTest {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jackson().csvToMap {
             classpath(file)
             header {
@@ -128,7 +129,7 @@ internal class EndToEndCsvStepTest {
     @Timeout(10)
     internal fun `should not convert csv to map without comments allowed but no conversion`() =
         testDispatcherProvider.runTest {
-            val scenario = scenario("my-scenario") as StepSpecificationRegistry
+            val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
             scenario.jackson().csvToMap {
                 classpath(file)
                 header {
@@ -148,7 +149,7 @@ internal class EndToEndCsvStepTest {
     @Test
     @Timeout(10)
     internal fun `should convert csv to list with comments allowed`() = testDispatcherProvider.runTest {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jackson().csvToList {
             classpath(file)
             header {
@@ -187,7 +188,7 @@ internal class EndToEndCsvStepTest {
     @Test
     @Timeout(10)
     internal fun `should convert csv to list without comments nor conversion`() = testDispatcherProvider.runTest {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jackson().csvToList {
             classpath(file)
             header {
@@ -212,7 +213,7 @@ internal class EndToEndCsvStepTest {
     @Test
     @Timeout(10)
     internal fun `should convert csv to POJO with comments allowed`() = testDispatcherProvider.runTest {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jackson().csvToObject(PojoForTest::class) {
             classpath(file)
             header {

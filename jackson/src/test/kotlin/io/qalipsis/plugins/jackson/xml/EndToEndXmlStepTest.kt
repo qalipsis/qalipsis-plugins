@@ -21,6 +21,7 @@ import assertk.assertThat
 import assertk.assertions.*
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.Step
 import io.qalipsis.api.steps.StepCreationContext
@@ -62,7 +63,7 @@ internal class EndToEndXmlStepTest {
     @Test
     @Timeout(10)
     internal fun `should convert XML to POJO`() = testDispatcherProvider.runTest {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jackson().xmlToObject(PojoForTest::class) {
             classpath(file)
             broadcast()

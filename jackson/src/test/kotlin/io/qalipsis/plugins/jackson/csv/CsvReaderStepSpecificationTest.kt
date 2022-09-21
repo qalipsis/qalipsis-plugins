@@ -24,6 +24,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.prop
 import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.api.steps.SingletonConfiguration
@@ -44,7 +45,7 @@ internal class CsvReaderStepSpecificationTest {
 
     @Test
     internal fun `should add minimal specification to the scenario that generates an array`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jackson().csvToList {
             file("/path/to/my/file")
         }
@@ -66,7 +67,7 @@ internal class CsvReaderStepSpecificationTest {
 
     @Test
     internal fun `should add minimal specification to the scenario that generates a map`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jackson().csvToMap {
             classpath("/path/to/my/file")
         }
@@ -89,7 +90,7 @@ internal class CsvReaderStepSpecificationTest {
 
     @Test
     internal fun `should add minimal specification to the scenario that generates an object`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jackson().csvToObject(MyPojo::class) {
             url("http://path/to/my/file")
         }

@@ -25,6 +25,7 @@ import assertk.assertions.prop
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
 import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.api.steps.SingletonConfiguration
@@ -44,7 +45,7 @@ internal class JsonReaderStepSpecificationTest {
 
     @Test
     internal fun `should add minimal specification to the scenario that generates an object`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jackson().jsonToObject(MyPojo::class) {
             url("http://path/to/my/file")
         }
@@ -62,7 +63,7 @@ internal class JsonReaderStepSpecificationTest {
 
     @Test
     internal fun `should add minimal specification to the scenario that generates a map`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jackson().jsonToMap {
             classpath("/path/to/my/file")
         }

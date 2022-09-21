@@ -20,6 +20,7 @@ import assertk.all
 import assertk.assertThat
 import assertk.assertions.*
 import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.Step
 import io.qalipsis.api.steps.StepCreationContext
@@ -61,7 +62,7 @@ internal class EndToEndJsonStepTest {
     @Test
     @Timeout(10)
     internal fun `should convert JSON to POJO`() = testDispatcherProvider.runTest {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jackson().jsonToObject(PojoForTest::class) {
             classpath(file)
             broadcast()
@@ -93,7 +94,7 @@ internal class EndToEndJsonStepTest {
     @Test
     @Timeout(10)
     internal fun `should convert JSON to Map`() = testDispatcherProvider.runTest {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jackson().jsonToMap {
             classpath(file)
             broadcast()
