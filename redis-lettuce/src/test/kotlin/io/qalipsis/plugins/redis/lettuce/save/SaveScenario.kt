@@ -34,9 +34,9 @@ object SaveScenario {
     var dbNodes = listOf<String>()
     var dbDatabase = 0
 
-    @Scenario
+    @Scenario("lettuce-save-record")
     fun producerData() {
-        scenario("lettuce-save-record") {
+        scenario {
             minionsCount = minions
             profile {
                 // Starts all at once.

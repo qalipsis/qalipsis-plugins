@@ -36,9 +36,9 @@ object ConsumerScenario {
     var dbNodes = listOf<String>()
     var dbDatabase = 0
 
-    @Scenario
+    @Scenario("lettuce-consumer-cluster")
     fun consumerDataCluster() {
-        scenario("lettuce-consumer-cluster") {
+        scenario {
             minionsCount = minions
             profile {
                 // Starts all at once.
@@ -68,9 +68,9 @@ object ConsumerScenario {
     }
 
 
-    @Scenario
+    @Scenario("lettuce-consumer")
     fun consumerData() {
-        scenario("lettuce-consumer") {
+        scenario {
             minionsCount = minions
             profile {
                 // Starts all at once.

@@ -59,9 +59,9 @@ object PollScenario {
     var dbNodes = listOf<String>()
     var dbDatabase = 0
 
-    @Scenario
+    @Scenario("lettuce-poll-sscan")
     fun pollData() {
-        scenario("lettuce-poll-sscan") {
+        scenario {
             minionsCount = pollSScanMinions
             profile {
                 // Starts all at once.
@@ -116,9 +116,9 @@ object PollScenario {
             .onEach { println(it) }
     }
 
-    @Scenario
+    @Scenario("lettuce-poll-scan")
     fun pollDataScan() {
-        scenario("lettuce-poll-scan") {
+        scenario {
             minionsCount = pollScanMinions
             profile {
                 // Starts all at once.
@@ -149,9 +149,9 @@ object PollScenario {
             .onEach { println(it) }
     }
 
-    @Scenario
+    @Scenario("lettuce-poll-hscan")
     fun pollDataHScan() {
-        scenario("lettuce-poll-hscan") {
+        scenario {
             minionsCount = pollHScanMinions
             profile {
                 // Starts all at once.
@@ -184,9 +184,9 @@ object PollScenario {
     }
 
 
-    @Scenario
+    @Scenario("lettuce-poll-zscan")
     fun pollDataZScan() {
-        scenario("lettuce-poll-zscan") {
+        scenario {
             minionsCount = pollZScanMinions
             profile {
                 // Starts all at once.
@@ -217,10 +217,9 @@ object PollScenario {
             .onEach { println(it) }
     }
 
-
-    @Scenario
+    @Scenario("lettuce-poll-hscan-with-acl")
     fun pollDataHScanAcl() {
-        scenario("lettuce-poll-hscan-with-acl") {
+        scenario {
             minionsCount = pollHScanMinions
             profile {
                 // Starts all at once.
@@ -253,9 +252,9 @@ object PollScenario {
             .onEach { println(it) }
     }
 
-    @Scenario
+    @Scenario("lettuce-poll-scan-cluster")
     fun pollDataScanCluster() {
-        scenario("lettuce-poll-scan-cluster") {
+        scenario {
             minionsCount = pollScanClusterMinions
             profile {
                 // Starts all at once.
@@ -285,9 +284,9 @@ object PollScenario {
             .onEach { println(it) }
     }
 
-    @Scenario
+    @Scenario("lettuce-poll-scan-cluster-batch")
     fun pollDataScanClusterWithoutFlatten() {
-        scenario("lettuce-poll-scan-cluster-batch") {
+        scenario {
             minionsCount = 2
             profile {
                 // Starts all at once.
@@ -318,9 +317,9 @@ object PollScenario {
             .onEach { println(it) }
     }
 
-    @Scenario
+    @Scenario("lettuce-poll-sscan-sentinel")
     fun pollDataScanSentinel() {
-        scenario("lettuce-poll-sscan-sentinel") {
+        scenario {
             minionsCount = 2
             profile {
                 // Starts all at once.
