@@ -39,9 +39,9 @@ internal object JmsScenario {
 
     internal val receivedMessages = LinkedBlockingDeque<String>(10)
 
-    @Scenario
+    @Scenario("consumer-jms")
     fun consumeRecords() {
-        scenario("consumer-jms") {
+        scenario {
             minionsCount = minions
             profile {
                 // Starts all at once.
@@ -71,9 +71,9 @@ internal object JmsScenario {
             .blackHole()
     }
 
-    @Scenario
+    @Scenario("consumer-jms-string-deserializer")
     fun consumeRecordsStringDeserializer() {
-        scenario("consumer-jms-string-deserializer") {
+        scenario {
             minionsCount = minions
             profile {
                 // Starts all at once.

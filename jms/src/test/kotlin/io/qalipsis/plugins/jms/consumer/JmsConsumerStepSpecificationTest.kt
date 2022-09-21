@@ -21,6 +21,7 @@ import assertk.assertThat
 import assertk.assertions.*
 import io.aerisconsulting.catadioptre.getProperty
 import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
@@ -41,7 +42,7 @@ internal class JmsConsumerStepSpecificationTest {
 
     @Test
     internal fun `should apply queue connection`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jms().consume {
             queueConnection { queueConnection }
             queues("queue-1", "queue-2")
@@ -71,7 +72,7 @@ internal class JmsConsumerStepSpecificationTest {
 
     @Test
     internal fun `should apply topic connection`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jms().consume {
             topicConnection { topicConnection }
             topics("topic-1", "topic-2")
@@ -102,7 +103,7 @@ internal class JmsConsumerStepSpecificationTest {
 
     @Test
     internal fun `should apply bytes count`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jms().consume {
             queueConnection { queueConnection }
             queues("queue-1", "queue-2")
@@ -122,7 +123,7 @@ internal class JmsConsumerStepSpecificationTest {
 
     @Test
     internal fun `should apply records count`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.jms().consume {
             queueConnection { queueConnection }
             queues("queue-1", "queue-2")
