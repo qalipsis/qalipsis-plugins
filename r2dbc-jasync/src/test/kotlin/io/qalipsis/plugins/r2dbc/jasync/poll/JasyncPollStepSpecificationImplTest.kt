@@ -29,6 +29,7 @@ import assertk.assertions.isTrue
 import assertk.assertions.prop
 import com.github.jasync.sql.db.SSLConfiguration
 import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
@@ -50,7 +51,7 @@ internal class JasyncPollStepSpecificationImplTest {
 
     @Test
     internal fun `should add minimal specification to the scenario`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.r2dbcJasync().poll {
             name = "my-step"
             protocol(Protocol.POSTGRESQL)
@@ -102,7 +103,7 @@ internal class JasyncPollStepSpecificationImplTest {
 
     @Test
     internal fun `should add a complete specification to the scenario as broadcast`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         val rootCert = File("root-cert")
         scenario.r2dbcJasync().poll {
             name = "my-other-step"

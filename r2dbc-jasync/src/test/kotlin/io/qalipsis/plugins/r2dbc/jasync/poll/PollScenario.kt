@@ -55,9 +55,9 @@ object PollScenario {
 
     lateinit var dbName: String
 
-    @Scenario
+    @Scenario("r2dbc-poll")
     fun pollData() {
-        scenario("r2dbc-poll") {
+        scenario {
             minionsCount = minions
             profile {
                 // Starts all at once.
