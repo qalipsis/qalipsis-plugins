@@ -22,6 +22,7 @@ import assertk.assertions.*
 import io.qalipsis.api.messaging.deserializer.MessageJsonDeserializer
 import io.qalipsis.api.messaging.deserializer.MessageStringDeserializer
 import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
@@ -39,7 +40,7 @@ internal class RabbitMqConsumerStepSpecificationTest {
 
     @Test
     internal fun `should add minimal specification to the scenario with default values`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.rabbitmq().consume {
             name = "my-step"
             queue("test")
@@ -70,7 +71,7 @@ internal class RabbitMqConsumerStepSpecificationTest {
 
     @Test
     internal fun `should add a complete specification to the scenario as broadcast`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.rabbitmq().consume {
             name = "my-complete-step"
             queue("complete-test")
@@ -112,7 +113,7 @@ internal class RabbitMqConsumerStepSpecificationTest {
 
     @Test
     internal fun `should keep default values and use another deserialization`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.rabbitmq().consume {
             name = "my-step"
             queue("test")

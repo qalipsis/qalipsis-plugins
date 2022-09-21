@@ -39,9 +39,9 @@ internal object RabbitMqScenario {
 
     internal val receivedMessages = concurrentSet<String>()
 
-    @Scenario
+    @Scenario("consumer-rabbitmq")
     fun consumeRecordsJsonDeserializer() {
-        scenario("consumer-rabbitmq") {
+        scenario {
             minionsCount = minions
             profile {
                 // Starts all at once.
@@ -81,9 +81,9 @@ internal object RabbitMqScenario {
             .blackHole()
     }
 
-    @Scenario
+    @Scenario("consumer-rabbitmq-string-deserializer")
     fun consumeRecordsStringDeserializer() {
-        scenario("consumer-rabbitmq-string-deserializer") {
+        scenario {
             minionsCount = minions
             profile {
                 // Starts all at once.
