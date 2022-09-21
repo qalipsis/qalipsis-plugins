@@ -24,6 +24,7 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
@@ -37,7 +38,7 @@ internal class InfluxDbSpecificationImplTest {
 
     @Test
     internal fun `should add minimal specification to the scenario with default values`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.influxdb().poll {
             name = "my-step"
         }
@@ -60,7 +61,7 @@ internal class InfluxDbSpecificationImplTest {
 
     @Test
     internal fun `should add a complete specification to the scenario as broadcast whit monitoring`() {
-        val scenario = scenario("my-scenario") as StepSpecificationRegistry
+        val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
         scenario.influxdb().poll {
             name = "my-step"
             connect {

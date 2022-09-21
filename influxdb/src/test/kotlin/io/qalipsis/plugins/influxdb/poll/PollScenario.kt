@@ -52,9 +52,9 @@ object PollScenario {
     @JvmStatic
     private val log = logger()
 
-    @Scenario
+    @Scenario("influxdb-poll")
     fun pollData() {
-        scenario("influxdb-poll") {
+        scenario {
             minionsCount = minions
             profile {
                 // Starts all at once.
