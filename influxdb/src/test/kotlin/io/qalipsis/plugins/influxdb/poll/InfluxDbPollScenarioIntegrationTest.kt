@@ -73,7 +73,7 @@ internal class InfluxDbPollScenarioIntegrationTest : AbstractInfluxDbIntegration
         return this.readResourceLines(name)
             .map {
                 val values = it.replace("{date}", YESTERDAY).split(",")
-                val timestamp = Instant.parse(values[0]).toEpochMilli() * 1000000
+                val timestamp = Instant.parse(values[0])
                 Point.measurement("moves")
                     .addTag("action", values[1])
                     .time(timestamp, WritePrecision.NS)

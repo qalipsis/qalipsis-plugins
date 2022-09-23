@@ -167,18 +167,14 @@ internal class InfluxDbEventsPublisher(
     private fun createPoint(event: Event): Point {
         val point = Point(event.name)
             .time(event.timestamp.toEpochMilli() * 1000000, WritePrecision.NS)
-            .addField("EventLevel", "${event.level}")
+            .addField("level", "${event.level}".lowercase())
         if (event.value != null) {
             when (event.value) {
                 is Collection<*> -> {
-                    (event.value as Collection<*>).forEachIndexed { index, it ->
-                        defineFieldName(point, it)
-                    }
+                    (event.value as Collection<*>).forEach { defineFieldName(point, it) }
                 }
                 is Array<*> -> {
-                    (event.value as Array<*>).forEachIndexed { index, it ->
-                        defineFieldName(point, it)
-                    }
+                    (event.value as Array<*>).forEach { defineFieldName(point, it) }
                 }
                 else -> {
                     defineFieldName(point, event.value)
@@ -198,7 +194,7 @@ internal class InfluxDbEventsPublisher(
             is Throwable -> point.addField("error", "${eventValue.message}")
             is Duration -> point.addField("duration", "$eventValue")
             is EventGeoPoint -> point.addField("latitude", "${eventValue.latitude}")
-                                     .addField("longitude", "${eventValue.longitude}")
+                .addField("longitude", "${eventValue.longitude}")
             is EventRange<*> -> {
                 val leftBorder: String = if (eventValue.includeLower) "[" else "("
                 val rightBorder: String = if (eventValue.includeUpper) "]" else ")"

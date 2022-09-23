@@ -198,7 +198,7 @@ internal class InfluxDbSearchStepIntegrationTest : AbstractInfluxDbIntegrationTe
         return this.readResourceLines(name).map {
             i++
             val values = it.replace("{date}", YESTERDAY).split(";")
-            val timestamp = Instant.parse(values[0]).toEpochMilli() * 1000000
+            val timestamp = Instant.parse(values[0])
             Point.measurement(values[1])
                 .addTag("tag$i", "" + i)
                 .addField("action", values[2])

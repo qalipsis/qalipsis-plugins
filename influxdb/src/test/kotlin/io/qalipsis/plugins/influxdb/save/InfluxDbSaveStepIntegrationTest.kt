@@ -22,7 +22,6 @@ import assertk.assertions.hasSize
 import assertk.assertions.index
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
-import assertk.assertions.isNotNull
 import assertk.assertions.key
 import com.influxdb.client.domain.WritePrecision
 import com.influxdb.client.write.Point
@@ -74,7 +73,7 @@ internal class InfluxDbSaveStepIntegrationTest : AbstractInfluxDbIntegrationTest
             .addTag("tag1", "first")
             .addTag("tag2", "second")
             .addField("key1", "val1")
-            .time(Instant.now().toEpochMilli() * 1000000, WritePrecision.NS)
+            .time(Instant.now(), WritePrecision.NS)
 
         val saveClient = InfluxDbSavePointClientImpl(
             clientBuilder = { client },
@@ -146,10 +145,7 @@ internal class InfluxDbSaveStepIntegrationTest : AbstractInfluxDbIntegrationTest
                     ORGANIZATION,
                     listOf(
                         Point("smth").addTag("tag2", "second").addField("key2", "value2")
-                            .time(
-                                Instant.now().minus(Duration.ofDays(10000)).toEpochMilli() * 1000000,
-                                WritePrecision.NS
-                            )
+                            .time(Instant.now().minus(Duration.ofDays(10000)), WritePrecision.NS)
                     ), // Retention policy is just 2 days
                     tags
                 )

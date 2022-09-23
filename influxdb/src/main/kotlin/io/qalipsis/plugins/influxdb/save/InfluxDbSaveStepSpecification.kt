@@ -35,9 +35,9 @@ import io.qalipsis.plugins.influxdb.InfluxdbStepSpecification
  * @author Palina Bril
  */
 interface InfluxDbSaveStepSpecification<I> :
-    StepSpecification<I, I, InfluxDbSaveStepSpecification<I>>,
-    ConfigurableStepSpecification<I, I, InfluxDbSaveStepSpecification<I>>,
-    InfluxdbStepSpecification<I, I, InfluxDbSaveStepSpecification<I>> {
+    StepSpecification<I, InfluxDBSaveResult<I>, InfluxDbSaveStepSpecification<I>>,
+    ConfigurableStepSpecification<I, InfluxDBSaveResult<I>, InfluxDbSaveStepSpecification<I>>,
+    InfluxdbStepSpecification<I, InfluxDBSaveResult<I>, InfluxDbSaveStepSpecification<I>> {
 
     /**
      * Configures the connection to the InfluxDb server.
@@ -63,7 +63,7 @@ interface InfluxDbSaveStepSpecification<I> :
 @Spec
 internal class InfluxDbSaveStepSpecificationImpl<I> :
     InfluxDbSaveStepSpecification<I>,
-    AbstractStepSpecification<I, I, InfluxDbSaveStepSpecification<I>>() {
+    AbstractStepSpecification<I, InfluxDBSaveResult<I>, InfluxDbSaveStepSpecification<I>>() {
 
     internal var connectionConfig = InfluxDbStepConnectionImpl()
 
@@ -89,8 +89,8 @@ internal class InfluxDbSaveStepSpecificationImpl<I> :
         }
     }
 
-    override fun query(queryConfig: InfluxDbSavePointConfiguration<I>.() -> Unit) {
-        queryConfiguration.queryConfig()
+    override fun query(queryConfiguration: InfluxDbSavePointConfiguration<I>.() -> Unit) {
+        this.queryConfiguration.queryConfiguration()
     }
 
     override fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit) {
