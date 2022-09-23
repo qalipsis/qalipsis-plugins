@@ -59,7 +59,7 @@ object PollScenario {
     var dbNodes = listOf<String>()
     var dbDatabase = 0
 
-    @Scenario("lettuce-poll-sscan")
+    @Scenario("poll-sscan")
     fun pollData() {
         scenario {
             minionsCount = pollSScanMinions
@@ -116,7 +116,7 @@ object PollScenario {
             .onEach { println(it) }
     }
 
-    @Scenario("lettuce-poll-scan")
+    @Scenario("poll-scan")
     fun pollDataScan() {
         scenario {
             minionsCount = pollScanMinions
@@ -149,7 +149,7 @@ object PollScenario {
             .onEach { println(it) }
     }
 
-    @Scenario("lettuce-poll-hscan")
+    @Scenario("poll-hscan")
     fun pollDataHScan() {
         scenario {
             minionsCount = pollHScanMinions
@@ -184,7 +184,7 @@ object PollScenario {
     }
 
 
-    @Scenario("lettuce-poll-zscan")
+    @Scenario("poll-zscan")
     fun pollDataZScan() {
         scenario {
             minionsCount = pollZScanMinions
@@ -217,8 +217,8 @@ object PollScenario {
             .onEach { println(it) }
     }
 
-    @Scenario("lettuce-poll-hscan-with-acl")
-    fun pollDataHScanAcl() {
+    @Scenario("poll-scan-with-acl")
+    fun pollDataScanAcl() {
         scenario {
             minionsCount = pollHScanMinions
             profile {
@@ -228,16 +228,16 @@ object PollScenario {
         }
             .start()
             .redisLettuce()
-            .pollHscan {
-                name = "poll.hscanacl"
+            .pollScan {
+                name = "poll.scanacl"
                 connection {
                     nodes = dbNodes
                     database = dbDatabase
-                    authPassword = "dszcZT"
                     authUser = "alice"
+                    authPassword = "dszcZT"
                 }
 
-                keyOrPattern("hscan-test-acl")
+                keyOrPattern("allowed-keys-*")
 
                 pollDelay(Duration.ofSeconds(1))
 
@@ -247,12 +247,12 @@ object PollScenario {
                 }
             }.flatten()
             .logErrors()
-            .map { "${it.value.first} ${it.value.second}" }
+            .map { it.value }
             .onEach { receivedMessages.add(it) }
             .onEach { println(it) }
     }
 
-    @Scenario("lettuce-poll-scan-cluster")
+    @Scenario("poll-scan-cluster")
     fun pollDataScanCluster() {
         scenario {
             minionsCount = pollScanClusterMinions
@@ -284,7 +284,7 @@ object PollScenario {
             .onEach { println(it) }
     }
 
-    @Scenario("lettuce-poll-scan-cluster-batch")
+    @Scenario("poll-scan-cluster-batch")
     fun pollDataScanClusterWithoutFlatten() {
         scenario {
             minionsCount = 2
@@ -317,7 +317,7 @@ object PollScenario {
             .onEach { println(it) }
     }
 
-    @Scenario("lettuce-poll-sscan-sentinel")
+    @Scenario("poll-sscan-sentinel")
     fun pollDataScanSentinel() {
         scenario {
             minionsCount = 2

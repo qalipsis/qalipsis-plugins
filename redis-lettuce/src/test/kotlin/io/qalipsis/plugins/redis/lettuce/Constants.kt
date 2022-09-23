@@ -22,6 +22,7 @@ internal object Constants {
     const val REDIS_DOCKER_IMAGE = "redis:6.2.7"
     const val REDIS_5_DOCKER_IMAGE = "redis:5.0.14"
     const val REDIS_CLUSTER_DOCKER_IMAGE = "grokzen/redis-cluster:6.0.10"
+    const val REDIS_7_DOCKER_IMAGE = "redis:7.0.4"
 
     @JvmStatic
     val REDIS_IMAGE_NAME: DockerImageName = DockerImageName.parse(REDIS_DOCKER_IMAGE)

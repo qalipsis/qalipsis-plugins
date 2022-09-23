@@ -20,7 +20,7 @@ import assertk.all
 import assertk.assertThat
 import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.hasSize
-import io.qalipsis.plugins.redis.lettuce.Constants.REDIS_IMAGE_NAME
+import io.qalipsis.plugins.redis.lettuce.Constants.REDIS_7_DOCKER_IMAGE
 import io.qalipsis.runtime.test.QalipsisTestRunner
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -29,11 +29,11 @@ import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.junit.jupiter.Container
-import java.time.Duration
+import org.testcontainers.utility.DockerImageName
 import kotlin.math.pow
 
 
-internal class RedisV6PollScenarioIntegrationTest : AbstractRedisLettucePollScenarioIntegrationTest(CONTAINER) {
+internal class RedisV7PollScenarioIntegrationTest : AbstractRedisLettucePollScenarioIntegrationTest(CONTAINER) {
 
     @Test
     @Timeout(20)
@@ -58,6 +58,8 @@ internal class RedisV6PollScenarioIntegrationTest : AbstractRedisLettucePollScen
 
     companion object {
 
+        private val REDIS_IMAGE_NAME: DockerImageName = DockerImageName.parse(REDIS_7_DOCKER_IMAGE)
+
         @JvmStatic
         @Container
         private val CONTAINER = GenericContainer<Nothing>(REDIS_IMAGE_NAME)
@@ -67,7 +69,7 @@ internal class RedisV6PollScenarioIntegrationTest : AbstractRedisLettucePollScen
                 }
                 withExposedPorts(REDIS_PORT)
                 waitingFor(Wait.forListeningPort())
-                withStartupTimeout(Duration.ofSeconds(60))
+                withStartupTimeout(DEFAULT_TIMEOUT)
                 withClasspathResourceMapping("redis-v6+.conf", "/etc/redis.conf", BindMode.READ_ONLY)
                 withCommand("redis-server /etc/redis.conf")
             }

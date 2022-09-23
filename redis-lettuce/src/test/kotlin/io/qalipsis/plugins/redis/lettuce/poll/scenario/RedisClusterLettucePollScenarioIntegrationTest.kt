@@ -72,7 +72,7 @@ internal class RedisClusterLettucePollScenarioIntegrationTest {
         PollScenario.resetReceivedMessages()
         val keys = insertClusterKeys()
 
-        val exitCode = QalipsisTestRunner.withScenarios("lettuce-poll-scan-cluster").execute()
+        val exitCode = QalipsisTestRunner.withScenarios("poll-scan-cluster").execute()
 
         Assertions.assertEquals(0, exitCode)
 
@@ -90,7 +90,7 @@ internal class RedisClusterLettucePollScenarioIntegrationTest {
         PollScenario.resetReceivedMessages()
         val keys = insertClusterKeys()
 
-        val exitCode = QalipsisTestRunner.withScenarios("lettuce-poll-scan-cluster-batch").execute()
+        val exitCode = QalipsisTestRunner.withScenarios("poll-scan-cluster-batch").execute()
 
         Assertions.assertEquals(0, exitCode)
 

@@ -70,7 +70,7 @@ internal class RedisSentinelLettucePollScenarioIntegrationTest {
         PollScenario.resetReceivedMessages()
         val setList = insertSet()
 
-        val exitCode = QalipsisTestRunner.withScenarios("lettuce-poll-sscan-sentinel").execute()
+        val exitCode = QalipsisTestRunner.withScenarios("poll-sscan-sentinel").execute()
 
         Assertions.assertEquals(0, exitCode)
 

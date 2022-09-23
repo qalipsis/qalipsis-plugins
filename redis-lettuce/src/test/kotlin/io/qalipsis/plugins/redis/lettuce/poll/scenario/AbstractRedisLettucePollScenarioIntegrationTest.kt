@@ -25,7 +25,6 @@ import io.qalipsis.plugins.redis.lettuce.AbstractRedisIntegrationTest
 import io.qalipsis.runtime.test.QalipsisTestRunner
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.testcontainers.containers.GenericContainer
@@ -34,6 +33,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @Testcontainers
 internal abstract class AbstractRedisLettucePollScenarioIntegrationTest(private val container: GenericContainer<Nothing>) :
     AbstractRedisIntegrationTest(container) {
+
 
     @BeforeEach
     override fun setUp() {
@@ -50,7 +50,7 @@ internal abstract class AbstractRedisLettucePollScenarioIntegrationTest(private 
         insertKeyValue("scan-test1", "Truck")
         insertKeyValue("scan-test2", "Car")
 
-        val exitCode = QalipsisTestRunner.withScenarios("lettuce-poll-scan").execute()
+        val exitCode = QalipsisTestRunner.withScenarios("poll-scan").execute()
 
         Assertions.assertEquals(0, exitCode)
 
@@ -71,7 +71,7 @@ internal abstract class AbstractRedisLettucePollScenarioIntegrationTest(private 
         insertSet("test", "alice", "bob", "david")
         insertSet("testout", "bob", "alice", "charles", "david")
 
-        val exitCode = QalipsisTestRunner.withScenarios("lettuce-poll-sscan").execute()
+        val exitCode = QalipsisTestRunner.withScenarios("poll-sscan").execute()
 
         Assertions.assertEquals(0, exitCode)
 
@@ -91,7 +91,7 @@ internal abstract class AbstractRedisLettucePollScenarioIntegrationTest(private 
         PollScenario.resetReceivedMessages()
         insertHash("hscan-test", mapOf("alice" to "red", "cris" to "blue"))
 
-        val exitCode = QalipsisTestRunner.withScenarios("lettuce-poll-hscan").execute()
+        val exitCode = QalipsisTestRunner.withScenarios("poll-hscan").execute()
 
         Assertions.assertEquals(0, exitCode)
 
@@ -115,7 +115,7 @@ internal abstract class AbstractRedisLettucePollScenarioIntegrationTest(private 
             ScoredValue.just(3.0, "patrick"),
         )
 
-        val exitCode = QalipsisTestRunner.withScenarios("lettuce-poll-zscan").execute()
+        val exitCode = QalipsisTestRunner.withScenarios("poll-zscan").execute()
 
         Assertions.assertEquals(0, exitCode)
 
