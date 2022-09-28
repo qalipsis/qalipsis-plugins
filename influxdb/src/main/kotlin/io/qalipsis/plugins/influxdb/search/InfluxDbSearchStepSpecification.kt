@@ -41,9 +41,9 @@ interface InfluxDbSearchStepSpecification<I> :
     fun connect(connectionConfiguration: InfluxDbStepConnectionImpl.() -> Unit)
 
     /**
-     * Defines the statement to execute when searching. The query must contain ordering clauses.
+     * Defines the statement to execute when searching.
      */
-    fun search(searchConfiguration: InfluxDbQueryConfiguration<I>.() -> Unit)
+    fun query(queryFactory: suspend (ctx: StepContext<*, *>, input: I) -> String)
 
     /**
      * Configures the monitoring of the search step.
@@ -61,32 +61,24 @@ internal class InfluxDbSearchStepSpecificationImpl<I> :
     InfluxDbSearchStepSpecification<I>,
     AbstractStepSpecification<I, InfluxDbSearchResult<I>, InfluxDbSearchStepSpecification<I>>() {
 
-    internal var connectionConfig = InfluxDbStepConnectionImpl()
+    var connectionConfig = InfluxDbStepConnectionImpl()
 
-    internal var searchConfig = InfluxDbQueryConfiguration<I>()
+    var queryFactory: suspend (ctx: StepContext<*, *>, input: I) -> String = { _, _ -> "" }
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    var monitoringConfig = StepMonitoringConfiguration()
 
     override fun connect(connectionConfiguration: InfluxDbStepConnectionImpl.() -> Unit) {
         connectionConfig.connectionConfiguration()
     }
 
-    override fun search(searchConfiguration: InfluxDbQueryConfiguration<I>.() -> Unit) {
-        searchConfig.searchConfiguration()
+    override fun query(queryFactory: suspend (ctx: StepContext<*, *>, input: I) -> String) {
+        this.queryFactory = queryFactory
     }
 
     override fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit) {
         this.monitoringConfig.monitoringConfig()
     }
 }
-
-/**
- * @property query closure to generate the query
- */
-@Spec
-data class InfluxDbQueryConfiguration<I>(
-    internal var query: suspend (ctx: StepContext<*, *>, input: I) -> String = { _, _ -> "" },
-)
 
 /**
  * Searches data in InfluxDB using a io.qalipsis.plugins.influxdb.search query.

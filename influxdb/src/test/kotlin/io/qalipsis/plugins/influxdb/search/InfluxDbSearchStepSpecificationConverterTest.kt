@@ -27,6 +27,7 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isSameAs
 import assertk.assertions.isTrue
+import assertk.assertions.prop
 import io.mockk.spyk
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.StepCreationContext
@@ -71,9 +72,6 @@ internal class InfluxDbSearchStepSpecificationConverterTest :
         val spec = InfluxDbSearchStepSpecificationImpl<Any>()
         spec.also {
             it.name = "influxdb-search-step"
-            it.searchConfig = InfluxDbQueryConfiguration(
-                query = queryFactory,
-            )
             it.connect {
                 server(
                     url = "http://localhost:8080",
@@ -85,6 +83,7 @@ internal class InfluxDbSearchStepSpecificationConverterTest :
                     user = "user"
                 )
             }
+            it.query(queryFactory)
             it.retryPolicy = mockedRetryPolicy
             it.monitoring {
                 meters = true
@@ -101,13 +100,13 @@ internal class InfluxDbSearchStepSpecificationConverterTest :
         // then
         creationContext.createdStep!!.let { it ->
             assertThat(it).isInstanceOf(InfluxDbSearchStep::class).all {
-                prop("name").isEqualTo("influxdb-search-step")
+                prop(InfluxDbSearchStep<*>::name).isEqualTo("influxdb-search-step")
                 prop("influxDbQueryClient").all {
                     prop("eventsLogger").isNull()
                     prop("meterRegistry").isSameAs(meterRegistry)
                 }
                 prop("retryPolicy").isNotNull()
-                prop("queryFactory").isEqualTo(queryFactory)
+                prop("queryFactory").isSameAs(queryFactory)
             }
         }
     }
@@ -117,9 +116,6 @@ internal class InfluxDbSearchStepSpecificationConverterTest :
         // given
         val spec = InfluxDbSearchStepSpecificationImpl<Any>()
         spec.also {
-            it.searchConfig = InfluxDbQueryConfiguration(
-                query = queryFactory,
-            )
             it.connect {
                 server(
                     url = "http://localhost:8080",
@@ -131,6 +127,7 @@ internal class InfluxDbSearchStepSpecificationConverterTest :
                     user = "user"
                 )
             }
+            it.query(queryFactory)
             it.monitoring {
                 events = true
             }
@@ -148,7 +145,7 @@ internal class InfluxDbSearchStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(InfluxDbSearchStep::class).all {
                 prop("name").isNotNull()
                 prop("retryPolicy").isNull()
-                prop("queryFactory").isEqualTo(queryFactory)
+                prop("queryFactory").isSameAs(queryFactory)
                 prop("influxDbQueryClient").all {
                     prop("meterRegistry").isNull()
                     prop("eventsLogger").isSameAs(eventsLogger)

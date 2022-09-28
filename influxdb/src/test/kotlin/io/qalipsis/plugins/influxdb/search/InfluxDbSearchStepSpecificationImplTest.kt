@@ -19,8 +19,6 @@ package io.qalipsis.plugins.influxdb.search
 import assertk.all
 import assertk.assertThat
 import assertk.assertions.*
-import io.aerisconsulting.catadioptre.getProperty
-import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.influxdb.influxdb
@@ -59,28 +57,21 @@ internal class InfluxDbSearchStepSpecificationImplTest {
                     password = "passpasspass"
                 )
             }
-            search {
-                query = { _, _ -> "query" }
-            }
+            query { _, _ -> "the query" }
         }
 
         // then
         assertThat(previousStep.nextSteps[0]).isInstanceOf(InfluxDbSearchStepSpecificationImpl::class).all {
-            prop("name") { InfluxDbSearchStepSpecificationImpl<*>::name.call(it) }.isEqualTo("my-search-step")
-            prop(InfluxDbSearchStepSpecificationImpl<*>::searchConfig).isNotNull().all {
-                prop(InfluxDbQueryConfiguration<*>::query).isNotNull()
-            }
+            prop("name") { InfluxDbSearchStepSpecificationImpl<Int>::name.call(it) }.isEqualTo("my-search-step")
+            prop(InfluxDbSearchStepSpecificationImpl<*>::queryFactory).isNotNull()
             prop(InfluxDbSearchStepSpecificationImpl<*>::monitoringConfig).isNotNull().all {
                 prop(StepMonitoringConfiguration::events).isFalse()
                 prop(StepMonitoringConfiguration::meters).isFalse()
             }
         }
 
-        val step: InfluxDbSearchStepSpecificationImpl<*> =
-            previousStep.nextSteps[0] as InfluxDbSearchStepSpecificationImpl<*>
-
-        val query = step.searchConfig.getProperty<suspend (ctx: StepContext<*, *>, input: Int) -> String>("query")
-        assertThat(query(relaxedMockk(), relaxedMockk())).isEqualTo("query")
+        @Suppress("UNCHECKED_CAST") val step = previousStep.nextSteps[0] as InfluxDbSearchStepSpecificationImpl<Int>
+        assertThat(step.queryFactory(relaxedMockk(), relaxedMockk())).isEqualTo("the query")
     }
 
 
@@ -103,9 +94,7 @@ internal class InfluxDbSearchStepSpecificationImplTest {
                     password = "passpasspass"
                 )
             }
-            search {
-                query = { _, _ -> "query" }
-            }
+            query { _, _ -> "the query" }
 
             monitoring {
                 events = true
@@ -117,19 +106,14 @@ internal class InfluxDbSearchStepSpecificationImplTest {
         // then
         assertThat(previousStep.nextSteps[0]).isInstanceOf(InfluxDbSearchStepSpecificationImpl::class).all {
             prop("name") { InfluxDbSearchStepSpecificationImpl<*>::name.call(it) }.isEqualTo("my-search-step")
-            prop(InfluxDbSearchStepSpecificationImpl<*>::searchConfig).isNotNull().all {
-                prop(InfluxDbQueryConfiguration<*>::query).isNotNull()
-            }
+            prop(InfluxDbSearchStepSpecificationImpl<*>::queryFactory).isNotNull()
             prop(InfluxDbSearchStepSpecificationImpl<*>::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
                 prop(StepMonitoringConfiguration::meters).isFalse()
             }
         }
 
-        val step: InfluxDbSearchStepSpecificationImpl<*> =
-            previousStep.nextSteps[0] as InfluxDbSearchStepSpecificationImpl<*>
-
-        val query = step.searchConfig.getProperty<suspend (ctx: StepContext<*, *>, input: Int) -> String>("query")
-        assertThat(query(relaxedMockk(), relaxedMockk())).isEqualTo("query")
+        @Suppress("UNCHECKED_CAST") val step = previousStep.nextSteps[0] as InfluxDbSearchStepSpecificationImpl<Int>
+        assertThat(step.queryFactory(relaxedMockk(), relaxedMockk())).isEqualTo("the query")
     }
 }

@@ -67,7 +67,7 @@ internal class InfluxDbSearchStepSpecificationConverter(
                 eventsLogger = supplyIf(spec.monitoringConfig.events) { eventsLogger },
                 meterRegistry = supplyIf(spec.monitoringConfig.meters) { meterRegistry }
             ),
-            queryFactory = spec.searchConfig.query as suspend (ctx: StepContext<*, *>, input: Any?) -> String
+            queryFactory = spec.queryFactory as suspend (ctx: StepContext<*, *>, input: Any?) -> String
         )
         creationContext.createdStep(step)
     }
