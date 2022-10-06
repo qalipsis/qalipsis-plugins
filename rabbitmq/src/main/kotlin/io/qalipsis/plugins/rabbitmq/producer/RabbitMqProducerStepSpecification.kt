@@ -35,9 +35,9 @@ import javax.validation.constraints.Min
  */
 @ExperimentalCoroutinesApi
 interface RabbitMqProducerStepSpecification<I> :
-    StepSpecification<I, Pair<I, RabbitMqProducerRecord>, RabbitMqProducerStepSpecification<I>>,
-    RabbitMqStepSpecification<I, Pair<I, RabbitMqProducerRecord>, RabbitMqProducerStepSpecification<I>>,
-    ConfigurableStepSpecification<I, Pair<I, RabbitMqProducerRecord>, RabbitMqProducerStepSpecification<I>> {
+    StepSpecification<I, RabbitMqProducerResult<I>, RabbitMqProducerStepSpecification<I>>,
+    RabbitMqStepSpecification<I, RabbitMqProducerResult<I>, RabbitMqProducerStepSpecification<I>>,
+    ConfigurableStepSpecification<I, RabbitMqProducerResult<I>, RabbitMqProducerStepSpecification<I>> {
 
     /**
      * Configures the connection of the RabbitMQ broker, defaults to localhost:5672.
@@ -69,7 +69,7 @@ interface RabbitMqProducerStepSpecification<I> :
 @Spec
 internal class RabbitMqProducerStepSpecificationImpl<I> :
     RabbitMqProducerStepSpecification<I>,
-    AbstractStepSpecification<I, Pair<I, RabbitMqProducerRecord>, RabbitMqProducerStepSpecification<I>>() {
+    AbstractStepSpecification<I, RabbitMqProducerResult<I>, RabbitMqProducerStepSpecification<I>>() {
 
     internal lateinit var connectionFactory: ConnectionFactory
 

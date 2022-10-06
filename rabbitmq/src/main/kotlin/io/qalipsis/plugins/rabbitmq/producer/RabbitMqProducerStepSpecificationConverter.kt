@@ -49,7 +49,6 @@ internal class RabbitMqProducerStepSpecificationConverter(
         val spec = creationContext.stepSpecification
         val stepId = spec.name
         val producer = RabbitMqProducer(4, buildConnectionFactory(spec.connectionConfiguration))
-        val rabbitMqProducerResult = RabbitMqProducerResult()
 
         @Suppress("UNCHECKED_CAST")
         val step = RabbitMqProducerStep(
@@ -57,7 +56,6 @@ internal class RabbitMqProducerStepSpecificationConverter(
             retryPolicy = spec.retryPolicy,
             recordFactory = spec.recordsFactory,
             rabbitMqProducer = producer,
-            rabbitMqProducerResult = rabbitMqProducerResult,
             eventsLogger = eventsLogger.takeIf { spec.monitoring.events },
             meterRegistry = meterRegistry.takeIf { spec.monitoring.meters }
         )
@@ -67,7 +65,6 @@ internal class RabbitMqProducerStepSpecificationConverter(
     @KTestable
     private fun buildConnectionFactory(connectionConfiguration: RabbitMqConnectionConfiguration): ConnectionFactory {
         val connectionFactory = ConnectionFactory()
-
         connectionFactory.host = connectionConfiguration.host
         connectionFactory.port = connectionConfiguration.port
         connectionFactory.username = connectionConfiguration.username

@@ -26,6 +26,7 @@ package io.qalipsis.plugins.rabbitmq.producer
  * @property monitoring to collect statistics.
  *
  */
-data class RabbitMqProducerResult(
+data class RabbitMqProducerResult<I>(
+    val input: I,
     var records: List<Any>? = null
 )

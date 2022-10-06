@@ -42,10 +42,9 @@ internal class RabbitMqProducerStep<I>(
     retryPolicy: RetryPolicy?,
     private val rabbitMqProducer: RabbitMqProducer,
     private val recordFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<RabbitMqProducerRecord>),
-    val rabbitMqProducerResult: RabbitMqProducerResult,
     val meterRegistry: MeterRegistry? = null,
     val eventsLogger: EventsLogger? = null
-) : AbstractStep<I, RabbitMqProducerResult>(stepName, retryPolicy) {
+) : AbstractStep<I, RabbitMqProducerResult<I>>(stepName, retryPolicy) {
 
     private val eventPrefix = "rabbitmq-produce.${stepName}"
 
@@ -63,7 +62,6 @@ internal class RabbitMqProducerStep<I>(
 
 
     override suspend fun start(context: StepStartStopContext) {
-
         meterTags = context.toMetersTags()
         eventTags = context.toEventTags()
 
@@ -82,13 +80,10 @@ internal class RabbitMqProducerStep<I>(
 
     }
 
-    override suspend fun execute(context: StepContext<I, RabbitMqProducerResult>) {
+    override suspend fun execute(context: StepContext<I, RabbitMqProducerResult<I>>) {
         val input = context.receive()
 
         val messages = recordFactory(context, input)
-
-        rabbitMqProducerResult.records = messages
-
         val executionStart = System.nanoTime()
 
         try {
@@ -116,9 +111,10 @@ internal class RabbitMqProducerStep<I>(
                 meterFailedBytesCounter?.increment(it.value.size.toDouble())
                 meterFailedRecordsCounter?.increment()
             }
-            throw RuntimeException(e)
+            throw e
         }
-        context.send(rabbitMqProducerResult)
+        val result = RabbitMqProducerResult(input, messages)
+        context.send(result)
     }
 
     override suspend fun stop(context: StepStartStopContext) {
