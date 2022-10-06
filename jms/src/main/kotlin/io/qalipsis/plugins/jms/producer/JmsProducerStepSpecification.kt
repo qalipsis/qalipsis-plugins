@@ -33,9 +33,9 @@ import javax.jms.Connection
  */
 @ExperimentalCoroutinesApi
 interface JmsProducerStepSpecification<I> :
-    StepSpecification<I, Pair<I, JmsProducerRecord>, JmsProducerStepSpecification<I>>,
-    ConfigurableStepSpecification<I, Pair<I, JmsProducerRecord>, JmsProducerStepSpecification<I>>,
-    JmsStepSpecification<I, Pair<I, JmsProducerRecord>, JmsProducerStepSpecification<I>> {
+    StepSpecification<I, JmsProducerResult<I>, JmsProducerStepSpecification<I>>,
+    ConfigurableStepSpecification<I, JmsProducerResult<I>, JmsProducerStepSpecification<I>>,
+    JmsStepSpecification<I, JmsProducerResult<I>, JmsProducerStepSpecification<I>> {
 
     /**
      * Configures the connection to the Jms server.
@@ -67,7 +67,7 @@ interface JmsProducerStepSpecification<I> :
 @Spec
 internal class JmsProducerStepSpecificationImpl<I> :
     JmsProducerStepSpecification<I>,
-    AbstractStepSpecification<I, Pair<I, JmsProducerRecord>, JmsProducerStepSpecification<I>>() {
+    AbstractStepSpecification<I, JmsProducerResult<I>, JmsProducerStepSpecification<I>>() {
 
     internal lateinit var connectionFactory: () -> Connection
 
