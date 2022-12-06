@@ -27,7 +27,10 @@ import io.micronaut.context.env.Environment
 import io.micronaut.core.naming.conventions.StringConvention
 import io.micronaut.core.util.StringUtils
 import io.qalipsis.api.config.MetersConfig
+import io.qalipsis.api.meters.MeterRegistryConfiguration
+import io.qalipsis.api.meters.MeterRegistryFactory
 import jakarta.inject.Singleton
+import java.time.Duration
 import java.util.Properties
 
 /**
@@ -40,21 +43,40 @@ import java.util.Properties
     Requires(property = MetersConfig.EXPORT_ENABLED, notEquals = StringUtils.FALSE),
     Requires(property = GraphiteMeterRegistryFactory.GRAPHITE_ENABLED, notEquals = StringUtils.FALSE)
 )
-internal class GraphiteMeterRegistryFactory {
+internal class GraphiteMeterRegistryFactory(environment: Environment) : MeterRegistryFactory {
 
-    @Singleton
-    fun graphiteRegistry(environment: Environment): GraphiteMeterRegistry {
-        val properties = Properties()
+    private val properties = Properties()
+
+    init {
         properties.putAll(environment.getProperties(MetersConfig.EXPORT_CONFIGURATION, StringConvention.RAW))
         properties.putAll(environment.getProperties(MetersConfig.EXPORT_CONFIGURATION, StringConvention.CAMEL_CASE))
+    }
 
-        return GraphiteMeterRegistry(object : GraphiteConfig {
-            override fun get(key: String?): String? {
-                return properties.getProperty(key)
-            }
+    @Singleton
+    fun graphiteRegistry(): GraphiteMeterRegistry {
 
-            override fun prefix() = "graphite"
-        }, Clock.SYSTEM, HierarchicalNameMapper.DEFAULT)
+        return GraphiteMeterRegistry(
+            object : GraphiteConfig {
+                override fun prefix() = "graphite"
+                override fun get(key: String): String? {
+                    return properties.getProperty(key)
+                }
+            },
+            Clock.SYSTEM, HierarchicalNameMapper.DEFAULT
+        )
+    }
+
+    override fun getRegistry(configuration: MeterRegistryConfiguration): GraphiteMeterRegistry {
+        return GraphiteMeterRegistry(
+            object : GraphiteConfig {
+                override fun prefix() = "graphite"
+                override fun step(): Duration = configuration.step ?: super.step()
+                override fun get(key: String): String? {
+                    return properties.getProperty(key)
+                }
+            },
+            Clock.SYSTEM, HierarchicalNameMapper.DEFAULT
+        )
     }
 
     companion object {

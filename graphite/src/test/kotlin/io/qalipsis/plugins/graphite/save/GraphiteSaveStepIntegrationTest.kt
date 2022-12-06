@@ -25,7 +25,6 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.startsWith
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.micrometer.core.instrument.Timer
 import io.micronaut.http.HttpStatus
@@ -36,6 +35,7 @@ import io.mockk.verify
 import io.netty.channel.nio.NioEventLoopGroup
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
@@ -102,7 +102,7 @@ internal class GraphiteSaveStepIntegrationTest {
     fun `should succeed when sending query with results`() = testDispatcherProvider.run {
         //given
         val metersTags = relaxedMockk<Tags>()
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("graphite-save-saving-messages", refEq(metersTags)) } returns recordsCount
             every { timer("graphite-save-time-to-response", refEq(metersTags)) } returns timeToResponse
         }
@@ -185,7 +185,7 @@ internal class GraphiteSaveStepIntegrationTest {
     fun `should fail when sending wrong format message`() = testDispatcherProvider.run {
         //given
         val metersTags = relaxedMockk<Tags>()
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("graphite-save-saving-messages", refEq(metersTags)) } returns recordsCount
             every { timer("graphite-save-time-to-response", refEq(metersTags)) } returns timeToResponse
         }

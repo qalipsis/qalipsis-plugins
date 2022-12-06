@@ -18,7 +18,12 @@ package io.qalipsis.plugins.graphite.save
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNotNull
+import assertk.assertions.isTrue
+import assertk.assertions.prop
 import io.aerisconsulting.catadioptre.getProperty
 import io.netty.channel.nio.NioEventLoopGroup
 import io.qalipsis.api.context.StepContext

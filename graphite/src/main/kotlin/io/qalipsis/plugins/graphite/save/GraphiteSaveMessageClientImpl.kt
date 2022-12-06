@@ -17,12 +17,12 @@
 package io.qalipsis.plugins.graphite.save
 
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLog
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit
 internal class GraphiteSaveMessageClientImpl(
     private val clientBuilder: () -> GraphiteSaveClient,
     private val eventsLogger: EventsLogger?,
-    private val meterRegistry: MeterRegistry?
+    private val meterRegistry: CampaignMeterRegistry?
 ) : GraphiteSaveMessageClient {
 
     private lateinit var client: GraphiteSaveClient
