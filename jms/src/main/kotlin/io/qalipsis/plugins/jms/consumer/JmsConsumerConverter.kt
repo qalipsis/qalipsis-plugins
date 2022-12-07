@@ -17,10 +17,10 @@
 package io.qalipsis.plugins.jms.consumer
 
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.plugins.jms.JmsDeserializer
 import java.util.concurrent.atomic.AtomicLong
@@ -36,7 +36,7 @@ import javax.jms.TextMessage
  */
 internal class JmsConsumerConverter<O : Any?>(
     private val valueDeserializer: JmsDeserializer<O>,
-    private val meterRegistry: MeterRegistry?,
+    private val meterRegistry: CampaignMeterRegistry?,
     private val eventsLogger: EventsLogger?
 ) : DatasourceObjectConverter<Message, JmsConsumerResult<O>> {
 
@@ -53,7 +53,7 @@ internal class JmsConsumerConverter<O : Any?>(
             consumedBytesCounter = counter("$meterPrefix-value-bytes", tags)
             consumedRecordsCounter = counter("$meterPrefix-records", tags)
         }
-        eventTags = context.toEventTags();
+        eventTags = context.toEventTags()
     }
 
     override fun stop(context: StepStartStopContext) {

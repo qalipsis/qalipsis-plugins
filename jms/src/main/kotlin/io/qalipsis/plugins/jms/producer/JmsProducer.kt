@@ -17,9 +17,9 @@
 package io.qalipsis.plugins.jms.producer
 
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import java.util.concurrent.ConcurrentHashMap
 import javax.jms.Connection
 import javax.jms.Destination
@@ -40,7 +40,7 @@ internal class JmsProducer(
     private val connectionFactory: () -> Connection,
     private val converter: JmsProducerConverter,
     private val eventsLogger: EventsLogger?,
-    private val meterRegistry: MeterRegistry?
+    private val meterRegistry: CampaignMeterRegistry?
 ) {
 
     private lateinit var connection: Connection

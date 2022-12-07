@@ -22,13 +22,13 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.prop
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.verify
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.plugins.jms.Constants
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
@@ -100,7 +100,7 @@ internal class JmsProducerIntegrationTest {
         val tags: Map<String, String> = emptyMap()
         val eventsLogger = relaxedMockk<EventsLogger>()
         val metersTags = relaxedMockk<Tags>()
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("jms-produce-producing-records", refEq(metersTags)) } returns recordsToProduceCounter
             every { counter("jms-produce-produced-value-bytes", refEq(metersTags)) } returns bytesCounter
             every { counter("jms-produce-produced-records", refEq(metersTags)) } returns producedRecordsCounter
