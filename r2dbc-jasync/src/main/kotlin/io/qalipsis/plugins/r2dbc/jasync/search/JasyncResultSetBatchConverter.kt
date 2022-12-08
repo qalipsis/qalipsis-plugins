@@ -16,17 +16,15 @@
 
 package io.qalipsis.plugins.r2dbc.jasync.search
 
-import com.github.jasync.sql.db.ResultSet
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLogOrNull
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.plugins.r2dbc.jasync.converters.JasyncResultSetConverter
 import io.qalipsis.plugins.r2dbc.jasync.converters.ResultValuesConverter
-import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -36,7 +34,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 internal class JasyncResultSetBatchConverter<I>(
     private val resultValuesConverter: ResultValuesConverter,
-    private val meterRegistry: MeterRegistry?,
+    private val meterRegistry: CampaignMeterRegistry?,
     private val eventsLogger: EventsLogger?
 ) : JasyncResultSetConverter<ResultSetWrapper, JasyncSearchBatchResults<I, *>, I> {
 
@@ -53,7 +51,7 @@ internal class JasyncResultSetBatchConverter<I>(
             val tags = context.toMetersTags()
             recordsCounter = counter("$meterPrefix-records", tags)
         }
-        eventTags = context.toEventTags();
+        eventTags = context.toEventTags()
     }
 
     override fun stop(context: StepStartStopContext) {

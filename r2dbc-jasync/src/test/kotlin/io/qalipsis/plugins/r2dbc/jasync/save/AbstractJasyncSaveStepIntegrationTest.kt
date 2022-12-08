@@ -19,7 +19,6 @@ package io.qalipsis.plugins.r2dbc.jasync.save
 import assertk.assertThat
 import com.github.jasync.sql.db.SuspendingConnection
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.micrometer.core.instrument.Timer
 import io.mockk.confirmVerified
@@ -27,6 +26,7 @@ import io.mockk.every
 import io.mockk.verify
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Dialect
 import io.qalipsis.plugins.r2dbc.jasync.poll.AbstractJasyncIntegrationTest
 import io.qalipsis.test.io.readResource
@@ -89,7 +89,7 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         val columns = listOf("timestamp", "action", "username", "enabled")
         val tableName = "buildingentries"
         val metersTags = relaxedMockk<Tags>()
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("jasync-save-records", refEq(metersTags)) } returns recordsCounter
             every { counter("jasync-save-records-success", refEq(metersTags)) } returns successCounter
             every { timer("jasync-save-records-time-to-response", refEq(metersTags)) } returns timeToResponse
@@ -146,7 +146,7 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         val tableName = "buildingentries"
 
         val metersTags = relaxedMockk<Tags>()
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("jasync-save-records", refEq(metersTags)) } returns recordsCounter
             every { counter("jasync-save-records-success", refEq(metersTags)) } returns successCounter
             every { timer("jasync-save-records-time-to-response", refEq(metersTags)) } returns timeToResponse
@@ -200,7 +200,7 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         val tableName = "buildingentries"
 
         val metersTags = relaxedMockk<Tags>()
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("jasync-save-records", refEq(metersTags)) } returns recordsCounter
             every { counter("jasync-save-records-success", refEq(metersTags)) } returns successCounter
             every { counter("jasync-save-records-failure", refEq(metersTags)) } returns failureCounter

@@ -19,7 +19,6 @@ package io.qalipsis.plugins.r2dbc.jasync.save
 import com.github.jasync.sql.db.SuspendingConnection
 import com.github.jasync.sql.db.mysql.MySQLQueryResult
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepError
@@ -27,6 +26,7 @@ import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Dialect
@@ -52,7 +52,7 @@ internal class JasyncSaveStep<I>(
     private val tableNameFactory: suspend (ctx: StepContext<*, *>, input: I) -> String,
     private val columnsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<String>,
     private val recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JasyncSaveRecord>,
-    private val meterRegistry: MeterRegistry?,
+    private val meterRegistry: CampaignMeterRegistry?,
     private val eventsLogger: EventsLogger?
 ) : AbstractStep<I, JasyncSaveResult<I>>(id, retryPolicy) {
 

@@ -18,12 +18,12 @@ package io.qalipsis.plugins.r2dbc.jasync.poll
 
 import com.github.jasync.sql.db.ResultSet
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLogOrNull
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.api.steps.datasource.DatasourceRecord
 import io.qalipsis.plugins.r2dbc.jasync.converters.ResultValuesConverter
@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 internal class ResultSetBatchConverter(
     private val resultValuesConverter: ResultValuesConverter,
-    private val meterRegistry: MeterRegistry?,
+    private val meterRegistry: CampaignMeterRegistry?,
     private val eventsLogger: EventsLogger?
 ) : DatasourceObjectConverter<ResultSet, JasyncPollResults<*>> {
 
@@ -53,7 +53,7 @@ internal class ResultSetBatchConverter(
             val tags = context.toMetersTags()
             recordsCounter = counter("$meterPrefix-records", tags)
         }
-        eventTags = context.toEventTags();
+        eventTags = context.toEventTags()
     }
 
     override fun stop(context: StepStartStopContext) {

@@ -22,7 +22,6 @@ import assertk.assertions.*
 import com.github.jasync.sql.db.general.ArrayRowData
 import com.github.jasync.sql.db.general.MutableResultSet
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.mockk.coEvery
 import io.mockk.confirmVerified
@@ -30,6 +29,7 @@ import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.datasource.DatasourceRecord
 import io.qalipsis.plugins.r2dbc.jasync.poll.JasyncPollMeters
 import io.qalipsis.plugins.r2dbc.jasync.poll.JasyncPollResults
@@ -149,7 +149,7 @@ internal class ResultSetBatchConverterTest {
         val tags: Map<String, String> = emptyMap()
 
         val metersTags = relaxedMockk<Tags>()
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("r2dbc-jasync-poll-records", refEq(metersTags)) } returns counter
         }
 

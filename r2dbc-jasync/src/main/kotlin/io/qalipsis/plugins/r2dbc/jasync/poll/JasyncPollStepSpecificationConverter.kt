@@ -21,10 +21,10 @@ import com.github.jasync.sql.db.ResultSet
 import com.github.jasync.sql.db.SuspendingConnection
 import com.github.jasync.sql.db.asSuspending
 import io.aerisconsulting.catadioptre.KTestable
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.Executors
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
@@ -47,7 +47,7 @@ import kotlinx.coroutines.channels.Channel
  */
 @StepConverter
 internal class JasyncPollStepSpecificationConverter(
-    private val meterRegistry: MeterRegistry,
+    private val meterRegistry: CampaignMeterRegistry,
     private val eventsLogger: EventsLogger,
     private val parametersConverter: ParametersConverter,
     private val resultValuesConverter: ResultValuesConverter,

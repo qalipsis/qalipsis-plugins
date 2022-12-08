@@ -23,12 +23,12 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import com.github.jasync.sql.db.SuspendingConnection
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.mockk.coEvery
 import io.mockk.every
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.plugins.r2dbc.jasync.converters.JasyncResultSetConverter
 import io.qalipsis.plugins.r2dbc.jasync.converters.ResultValuesConverter
 import io.qalipsis.plugins.r2dbc.jasync.poll.AbstractJasyncIntegrationTest
@@ -88,7 +88,7 @@ internal abstract class AbstractJasyncSearchStepIntegrationTest(
             "select username, timestamp from buildingentries where action = ? and enabled = ? order by timestamp"
         val parameters = listOf("IN", false)
         val metersTags = relaxedMockk<Tags>()
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("r2dbc-jasync-search-records", refEq(metersTags)) } returns recordsCounter
         }
         val startStopContext = relaxedMockk<StepStartStopContext> {
