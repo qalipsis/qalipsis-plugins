@@ -18,9 +18,9 @@ package io.qalipsis.plugins.rabbitmq.producer
 
 import com.rabbitmq.client.ConnectionFactory
 import io.aerisconsulting.catadioptre.KTestable
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
@@ -37,7 +37,7 @@ import java.time.Duration
 @ExperimentalCoroutinesApi
 @StepConverter
 internal class RabbitMqProducerStepSpecificationConverter(
-    private val meterRegistry: MeterRegistry,
+    private val meterRegistry: CampaignMeterRegistry,
     private val eventsLogger: EventsLogger
 ) : StepSpecificationConverter<RabbitMqProducerStepSpecificationImpl<*>> {
 

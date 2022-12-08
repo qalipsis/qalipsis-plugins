@@ -33,10 +33,10 @@ import com.rabbitmq.client.Envelope
 import com.rabbitmq.client.MessageProperties
 import io.aerisconsulting.catadioptre.getProperty
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tag
 import io.mockk.impl.annotations.RelaxedMockK
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.plugins.rabbitmq.Constants.DOCKER_IMAGE
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
@@ -79,7 +79,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     private val factory = ConnectionFactory()
 
     @RelaxedMockK
-    private lateinit var meterRegistry: MeterRegistry
+    private lateinit var meterRegistry: CampaignMeterRegistry
 
     @RelaxedMockK
     private lateinit var eventsLogger: EventsLogger

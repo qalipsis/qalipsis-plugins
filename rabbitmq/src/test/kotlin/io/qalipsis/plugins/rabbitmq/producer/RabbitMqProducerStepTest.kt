@@ -22,7 +22,6 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
 import assertk.assertions.prop
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tag
 import io.mockk.coEvery
 import io.mockk.coJustRun
@@ -32,6 +31,7 @@ import io.mockk.slot
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
@@ -67,7 +67,7 @@ internal class RabbitMqProducerStepTest {
     private lateinit var rabbitMqProducerStep: RabbitMqProducerStep<Any>
 
     @RelaxedMockK
-    private lateinit var meterRegistry: MeterRegistry
+    private lateinit var meterRegistry: CampaignMeterRegistry
 
     private val data = listOf(
         RabbitMqProducerRecord(

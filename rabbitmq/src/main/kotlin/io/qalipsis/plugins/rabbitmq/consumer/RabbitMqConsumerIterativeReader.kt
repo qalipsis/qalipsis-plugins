@@ -22,12 +22,12 @@ import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.DeliverCallback
 import com.rabbitmq.client.Delivery
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLog
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.datasource.DatasourceIterativeReader
 import kotlinx.coroutines.channels.Channel
 import java.time.Duration
@@ -53,7 +53,7 @@ internal class RabbitMqConsumerIterativeReader(
     private val prefetchCount: Int,
     private val queue: String,
     private val connectionFactory: ConnectionFactory,
-    private val meterRegistry: MeterRegistry?,
+    private val meterRegistry: CampaignMeterRegistry?,
     private val eventsLogger: EventsLogger?
 ) : DatasourceIterativeReader<Delivery> {
 
@@ -104,8 +104,8 @@ internal class RabbitMqConsumerIterativeReader(
 
     private fun initMonitoringMetrics() {
         meterRegistry?.apply {
-            meterBytesCounter = meterRegistry.counter("${meterPrefix}-bytes", meterTags)
-            meterRecordsCounter = meterRegistry.counter("${meterPrefix}-records", meterTags)
+            meterBytesCounter = meterRegistry.counter("${meterPrefix}-bytes", meterTags!!)
+            meterRecordsCounter = meterRegistry.counter("${meterPrefix}-records", meterTags!!)
         }
     }
 
@@ -159,8 +159,8 @@ internal class RabbitMqConsumerIterativeReader(
 
     private fun stopMonitoringMetrics() {
         meterRegistry?.apply {
-            remove(meterBytesCounter)
-            remove(meterRecordsCounter)
+            meterBytesCounter?.let { remove(it) }
+            meterRecordsCounter?.let { remove(it) }
             meterBytesCounter = null
             meterRecordsCounter = null
         }

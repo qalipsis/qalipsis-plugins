@@ -19,11 +19,11 @@ package io.qalipsis.plugins.rabbitmq.consumer
 import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.Delivery
 import io.aerisconsulting.catadioptre.KTestable
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.context.StepName
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.messaging.deserializer.MessageDeserializer
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
@@ -43,7 +43,7 @@ import java.time.Duration
 @StepConverter
 internal class RabbitMqConsumerStepSpecificationConverter(
     private val eventsLogger: EventsLogger,
-    private val meterRegistry: MeterRegistry
+    private val meterRegistry: CampaignMeterRegistry
 ) : StepSpecificationConverter<RabbitMqConsumerStepSpecificationImpl<*>> {
 
     override fun support(stepSpecification: StepSpecification<*, *, *>): Boolean {

@@ -17,13 +17,13 @@
 package io.qalipsis.plugins.rabbitmq.producer
 
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
 
@@ -42,7 +42,7 @@ internal class RabbitMqProducerStep<I>(
     retryPolicy: RetryPolicy?,
     private val rabbitMqProducer: RabbitMqProducer,
     private val recordFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<RabbitMqProducerRecord>),
-    val meterRegistry: MeterRegistry? = null,
+    val meterRegistry: CampaignMeterRegistry? = null,
     val eventsLogger: EventsLogger? = null
 ) : AbstractStep<I, RabbitMqProducerResult<I>>(stepName, retryPolicy) {
 
@@ -72,10 +72,10 @@ internal class RabbitMqProducerStep<I>(
 
     private fun initMonitoringMetrics() {
         meterRegistry?.apply {
-            meterBytesCounter = counter("${eventPrefix}-bytes", meterTags)
-            meterRecordsCounter = counter("${eventPrefix}-records", meterTags)
-            meterFailedBytesCounter = counter("${eventPrefix}-failed-bytes", meterTags)
-            meterFailedRecordsCounter = counter("${eventPrefix}-failed-records", meterTags)
+            meterBytesCounter = counter("${eventPrefix}-bytes", meterTags!!)
+            meterRecordsCounter = counter("${eventPrefix}-records", meterTags!!)
+            meterFailedBytesCounter = counter("${eventPrefix}-failed-bytes", meterTags!!)
+            meterFailedRecordsCounter = counter("${eventPrefix}-failed-records", meterTags!!)
         }
 
     }
@@ -126,10 +126,10 @@ internal class RabbitMqProducerStep<I>(
 
     private fun stopMonitoringMetrics() {
         meterRegistry?.apply {
-            remove(meterBytesCounter)
-            remove(meterRecordsCounter)
-            remove(meterFailedBytesCounter)
-            remove(meterFailedRecordsCounter)
+            meterBytesCounter?.let { remove(it) }
+            meterRecordsCounter?.let { remove(it) }
+            meterFailedBytesCounter?.let { remove(it) }
+            meterFailedRecordsCounter?.let { remove(it) }
             meterBytesCounter = null
             meterRecordsCounter = null
             meterFailedBytesCounter = null
