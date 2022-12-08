@@ -25,7 +25,6 @@ import assertk.assertions.isLessThanOrEqualTo
 import assertk.assertions.prop
 import io.lettuce.core.ScoredValue
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.mockk.coJustRun
 import io.mockk.confirmVerified
@@ -34,6 +33,7 @@ import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.impl.annotations.SpyK
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.plugins.redis.lettuce.RedisRecord
 import io.qalipsis.plugins.redis.lettuce.poll.PollRawResult
 import io.qalipsis.test.coroutines.TestDispatcherProvider
@@ -82,7 +82,7 @@ internal class PollResultSetSingleConverterTest {
             1
         )
         val metersTags = relaxedMockk<Tags>()
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("redis-lettuce-poll-method-records", refEq(metersTags)) } returns recordsCounter
             every { counter("redis-lettuce-poll-method-records-bytes", refEq(metersTags)) } returns recordsBytes
         }
@@ -143,7 +143,7 @@ internal class PollResultSetSingleConverterTest {
             1
         )
         val metersTags = relaxedMockk<Tags>()
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("redis-lettuce-poll-method-records", refEq(metersTags)) } returns recordsCounter
             every { counter("redis-lettuce-poll-method-records-bytes", refEq(metersTags)) } returns recordsBytes
         }
@@ -206,7 +206,7 @@ internal class PollResultSetSingleConverterTest {
             1
         )
         val metersTags = relaxedMockk<Tags>()
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("redis-lettuce-poll-method-records", refEq(metersTags)) } returns recordsCounter
             every { counter("redis-lettuce-poll-method-records-bytes", refEq(metersTags)) } returns recordsBytes
         }

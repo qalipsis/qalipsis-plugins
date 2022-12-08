@@ -17,10 +17,10 @@
 package io.qalipsis.plugins.redis.lettuce.streams.consumer
 
 import io.lettuce.core.StreamMessage
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.Executors
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
@@ -41,7 +41,7 @@ import kotlinx.coroutines.CoroutineScope
  */
 @StepConverter
 internal class LettuceStreamsConsumerStepSpecificationConverter(
-    private val meterRegistry: MeterRegistry,
+    private val meterRegistry: CampaignMeterRegistry,
     private val eventsLogger: EventsLogger,
     @Named(Executors.IO_EXECUTOR_NAME) private val ioCoroutineScope: CoroutineScope,
     @Named(Executors.IO_EXECUTOR_NAME) private val ioCoroutineDispatcher: CoroutineDispatcher

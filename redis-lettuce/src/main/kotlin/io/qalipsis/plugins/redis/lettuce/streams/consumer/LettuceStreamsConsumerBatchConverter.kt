@@ -18,11 +18,11 @@ package io.qalipsis.plugins.redis.lettuce.streams.consumer
 
 import io.lettuce.core.StreamMessage
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.lang.tryAndLogOrNull
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import java.util.concurrent.atomic.AtomicLong
 
@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicLong
  * @author Gabriel Moraes
  */
 internal class LettuceStreamsConsumerBatchConverter(
-    private val meterRegistry: MeterRegistry?
+    private val meterRegistry: CampaignMeterRegistry?
 ) : DatasourceObjectConverter<List<StreamMessage<ByteArray, ByteArray>>, LettuceStreamsConsumerResult> {
 
     private val meterPrefix = "redis-lettuce-streams-consumer"

@@ -17,12 +17,12 @@
 package io.qalipsis.plugins.redis.lettuce.poll.converters
 
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLogOrNull
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.plugins.redis.lettuce.RedisRecord
 import io.qalipsis.plugins.redis.lettuce.poll.PollRawResult
@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicLong
 internal class PollResultSetSingleConverter(
     private val redisToJavaConverter: RedisToJavaConverter,
     private val eventsLogger: EventsLogger?,
-    private val meterRegistry: MeterRegistry?,
+    private val meterRegistry: CampaignMeterRegistry?,
     redisMethod: String
 ) : DatasourceObjectConverter<PollRawResult<*>, RedisRecord<*>> {
 
@@ -59,7 +59,7 @@ internal class PollResultSetSingleConverter(
             recordsBytes = counter("$meterPrefix-records-bytes", tags)
         }
         this.context = context
-        eventTags = context.toEventTags();
+        eventTags = context.toEventTags()
     }
 
     override fun stop(context: StepStartStopContext) {

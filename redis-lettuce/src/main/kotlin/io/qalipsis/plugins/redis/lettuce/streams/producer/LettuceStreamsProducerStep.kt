@@ -21,13 +21,13 @@ import io.lettuce.core.api.StatefulRedisConnection
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection
 import io.lettuce.core.cluster.api.async.RedisClusterAsyncCommands
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLog
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
 import io.qalipsis.api.sync.asSuspended
@@ -54,7 +54,7 @@ internal class LettuceStreamsProducerStep<I>(
     private val ioCoroutineContext: CoroutineContext,
     private val connectionFactory: suspend () -> StatefulConnection<ByteArray, ByteArray>,
     private val recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<LettuceStreamsProduceRecord>,
-    private val meterRegistry: MeterRegistry?,
+    private val meterRegistry: CampaignMeterRegistry?,
     private val eventsLogger: EventsLogger?,
 ) : AbstractStep<I, LettuceStreamsProducerResult<I>>(id, retryPolicy) {
 

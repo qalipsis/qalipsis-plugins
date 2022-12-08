@@ -25,7 +25,6 @@ import assertk.assertions.isLessThanOrEqualTo
 import assertk.assertions.prop
 import io.lettuce.core.StreamMessage
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.mockk.coEvery
 import io.mockk.confirmVerified
@@ -35,6 +34,7 @@ import io.mockk.spyk
 import io.mockk.verify
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
@@ -61,7 +61,7 @@ internal class LettuceStreamsConsumerBatchConverterTest {
     internal fun `should deserialize and count the records`() = testDispatcherProvider.runTest {
         //given
         val metersTags = relaxedMockk<Tags>()
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("redis-lettuce-streams-consumer-records", refEq(metersTags)) } returns counter
             every { counter("redis-lettuce-streams-consumer-records-bytes", refEq(metersTags)) } returns byteCounter
         }

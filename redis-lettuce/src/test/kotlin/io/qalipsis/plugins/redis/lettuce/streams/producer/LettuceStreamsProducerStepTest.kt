@@ -25,7 +25,6 @@ import assertk.assertions.isSameAs
 import assertk.assertions.prop
 import io.aerisconsulting.catadioptre.setProperty
 import io.lettuce.core.api.StatefulRedisConnection
-import io.micrometer.core.instrument.MeterRegistry
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.confirmVerified
@@ -35,6 +34,7 @@ import io.mockk.spyk
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepName
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.plugins.redis.lettuce.LettuceMonitoringCollector
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.coroutines.TestDispatcherProvider
@@ -59,7 +59,7 @@ internal class LettuceStreamsProducerStepTest {
     private lateinit var eventsLogger: EventsLogger
 
     @RelaxedMockK
-    private lateinit var meterRegistry: MeterRegistry
+    private lateinit var meterRegistry: CampaignMeterRegistry
 
     @Test
     fun `should publish without recording metrics`() = testDispatcherProvider.runTest {
