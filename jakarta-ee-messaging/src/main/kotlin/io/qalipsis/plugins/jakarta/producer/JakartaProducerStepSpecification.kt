@@ -29,7 +29,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 /**
  * Specification for a [JakartaProducerStep] to produce native Jakarta [jakarta.jms.Message]s.
  *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 @ExperimentalCoroutinesApi
 interface JakartaProducerStepSpecification<I> :

@@ -21,11 +21,11 @@ import jakarta.jms.Destination
 /**
  * Qalipsis representation of a Jakarta message to be produced.
  *
- * @author Alexander Sosnovsky
- *
  * @property destination name of the topic or queue where message should be produced
  * @property messageType it is a type used for creating native JMS [jakarta.jms.Message]
  * @property value the payload of the [jakarta.jms.Message]
+ *
+ * @author Krawist Ngoben
  */
 data class JakartaProducerRecord(
     val destination: Destination,

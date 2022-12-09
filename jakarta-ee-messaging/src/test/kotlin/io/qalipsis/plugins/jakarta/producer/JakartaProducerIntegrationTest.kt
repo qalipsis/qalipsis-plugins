@@ -33,7 +33,11 @@ import io.qalipsis.plugins.jakarta.Constants
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
-import jakarta.jms.*
+import jakarta.jms.BytesMessage
+import jakarta.jms.Connection
+import jakarta.jms.MessageConsumer
+import jakarta.jms.Session
+import jakarta.jms.TextMessage
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory
 import org.apache.activemq.artemis.jms.client.ActiveMQDestination
 import org.apache.activemq.artemis.jms.client.ActiveMQQueue
@@ -47,8 +51,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import kotlin.math.pow
 
 /**
- *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 @Testcontainers
 @WithMockk
@@ -69,26 +72,30 @@ internal class JakartaProducerIntegrationTest {
 
     private lateinit var connectionFactory: ActiveMQConnectionFactory
 
-    private lateinit var producerConnection: Connection
+    private lateinit var consumerConnection: Connection
 
-    private lateinit var producerSession: Session
+    private lateinit var consumerSession: Session
 
 
     @BeforeEach
     fun initGlobal() {
-        connectionFactory = ActiveMQConnectionFactory("tcp://localhost:${container.getMappedPort(61616)}", Constants.CONTAINER_USER_NAME, Constants.CONTAINER_PASSWORD)
+        connectionFactory = ActiveMQConnectionFactory(
+            "tcp://localhost:${container.getMappedPort(61616)}",
+            Constants.CONTAINER_USER_NAME,
+            Constants.CONTAINER_PASSWORD
+        )
     }
 
     @BeforeEach
     fun setUp() {
-        producerConnection = connectionFactory.createConnection()
-        producerConnection.start()
+        consumerConnection = connectionFactory.createConnection()
+        consumerConnection.start()
 
-        producerSession = producerConnection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+        consumerSession = consumerConnection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     }
 
     private fun prepareQueueConsumer(queueName: String): MessageConsumer {
-        return producerSession.createConsumer(producerSession.createQueue(queueName))
+        return consumerSession.createConsumer(consumerSession.createQueue(queueName))
     }
 
     @Timeout(10)
@@ -116,12 +123,12 @@ internal class JakartaProducerIntegrationTest {
         val result = produceClient.execute(
             listOf(
                 JakartaProducerRecord(
-                    destination = ActiveMQQueue.createDestination("queue-1", ActiveMQDestination.TYPE.DESTINATION),
+                    destination = ActiveMQQueue.createDestination("queue-1", ActiveMQDestination.TYPE.QUEUE),
                     messageType = JakartaMessageType.TEXT,
                     value = "hello-queue"
                 ),
                 JakartaProducerRecord(
-                    destination = ActiveMQQueue.createDestination("queue-1", ActiveMQDestination.TYPE.DESTINATION),
+                    destination = ActiveMQQueue.createDestination("queue-1", ActiveMQDestination.TYPE.QUEUE),
                     messageType = JakartaMessageType.BYTES,
                     value = "another message".toByteArray()
                 )
@@ -176,8 +183,8 @@ internal class JakartaProducerIntegrationTest {
             withCreateContainerCmdModifier {
                 it.hostConfig!!.withMemory(256 * 1024.0.pow(2).toLong()).withCpuCount(1)
             }
-            withEnv(Constants.CONTAINER_USER_NAME_ENV_KEY,Constants.CONTAINER_USER_NAME)
-            withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY,Constants.CONTAINER_PASSWORD)
+            withEnv(Constants.CONTAINER_USER_NAME_ENV_KEY, Constants.CONTAINER_USER_NAME)
+            withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY, Constants.CONTAINER_PASSWORD)
         }
 
     }

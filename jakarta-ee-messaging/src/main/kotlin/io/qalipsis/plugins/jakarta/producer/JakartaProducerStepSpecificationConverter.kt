@@ -28,7 +28,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
  * [StepSpecificationConverter] from [JakartaProducerStepSpecificationImpl] to [JakartaProducerStep]
  * to use the Produce API.
  *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 @ExperimentalCoroutinesApi
 @StepConverter

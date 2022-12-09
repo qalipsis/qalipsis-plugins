@@ -16,7 +16,6 @@
 
 package io.qalipsis.plugins.jakarta.producer
 
-import assertk.assertions.*
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.verify
 import io.qalipsis.test.mockk.CleanMockkRecordedCalls
@@ -30,8 +29,7 @@ import java.beans.ConstructorProperties
 import java.io.Serializable
 
 /**
- *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 @CleanMockkRecordedCalls
 @WithMockk
@@ -66,7 +64,7 @@ internal class JakartaProducerConverterTest {
     internal fun `should create object message`() {
 
         val userObj = User("id", "name")
-        
+
         val producerRecord = JakartaProducerRecord(
             destination = ActiveMQDestination.createDestination("dest-1", ActiveMQDestination.TYPE.DESTINATION),
             messageType = JakartaMessageType.OBJECT,

@@ -32,7 +32,7 @@ import jakarta.jms.Message
 /**
  * [StepSpecificationConverter] from [JakartaConsumerStepSpecification] to [JakartaConsumerIterativeReader] for a data source.
  *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 @StepConverter
 internal class JakartaConsumerStepSpecificationConverter(

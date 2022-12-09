@@ -22,7 +22,7 @@ package io.qalipsis.plugins.jakarta.producer
  *
  * @property input from the previous steps output.
  *
- * @author Alex Averyanov
+ * @author Krawist Ngoben
  */
 data class JakartaProducerResult<I>(
     val input: I,

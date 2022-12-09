@@ -25,7 +25,7 @@ import io.qalipsis.api.steps.StepSpecification
 /**
  * Interface of a JMS step to define it in the appropriate step specifications namespace.
  *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 interface JakartaStepSpecification<INPUT, OUTPUT, SELF : StepSpecification<INPUT, OUTPUT, SELF>> :
     StepSpecification<INPUT, OUTPUT, SELF>

@@ -38,8 +38,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 
 /**
- *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 @Suppress("UNCHECKED_CAST")
 internal class JakartaProducerStepSpecificationConverterTest :

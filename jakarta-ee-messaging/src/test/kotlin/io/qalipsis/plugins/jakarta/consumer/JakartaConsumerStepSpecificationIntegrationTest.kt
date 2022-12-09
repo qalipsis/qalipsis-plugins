@@ -18,7 +18,13 @@ package io.qalipsis.plugins.jakarta.consumer
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.hasSize
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
+import assertk.assertions.prop
 import io.aerisconsulting.catadioptre.getProperty
 import io.qalipsis.api.scenario.StepSpecificationRegistry
 import io.qalipsis.api.scenario.TestScenarioFactory
@@ -38,19 +44,22 @@ import java.time.Duration
 import kotlin.math.pow
 
 /**
- *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 @Testcontainers
 internal class JakartaConsumerStepSpecificationIntegrationTest {
 
-    private lateinit var queueConnection : QueueConnection
+    private lateinit var queueConnection: QueueConnection
 
-    private lateinit var topicConnection : TopicConnection
+    private lateinit var topicConnection: TopicConnection
 
     @BeforeAll
-    fun initGlobal(){
-        val connectionFactory = ActiveMQConnectionFactory("tcp://localhost:${container.getMappedPort(61616)}", Constants.CONTAINER_USER_NAME, Constants.CONTAINER_PASSWORD)
+    fun initGlobal() {
+        val connectionFactory = ActiveMQConnectionFactory(
+            "tcp://localhost:${container.getMappedPort(61616)}",
+            Constants.CONTAINER_USER_NAME,
+            Constants.CONTAINER_PASSWORD
+        )
         queueConnection = connectionFactory.createQueueConnection()
         topicConnection = connectionFactory.createTopicConnection()
     }
@@ -165,8 +174,8 @@ internal class JakartaConsumerStepSpecificationIntegrationTest {
             withCreateContainerCmdModifier {
                 it.hostConfig!!.withMemory(256 * 1024.0.pow(2).toLong()).withCpuCount(1)
             }
-            withEnv(Constants.CONTAINER_USER_NAME_ENV_KEY,Constants.CONTAINER_USER_NAME)
-            withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY,Constants.CONTAINER_PASSWORD)
+            withEnv(Constants.CONTAINER_USER_NAME_ENV_KEY, Constants.CONTAINER_USER_NAME)
+            withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY, Constants.CONTAINER_PASSWORD)
         }
     }
 

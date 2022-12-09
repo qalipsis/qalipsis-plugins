@@ -18,11 +18,18 @@ package io.qalipsis.plugins.jakarta.consumer
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.hasSize
+import assertk.assertions.index
+import assertk.assertions.isEqualTo
+import assertk.assertions.prop
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
-import io.mockk.*
+import io.mockk.coEvery
+import io.mockk.confirmVerified
+import io.mockk.every
+import io.mockk.verify
+import io.mockk.verifyOrder
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
@@ -34,7 +41,9 @@ import io.qalipsis.test.mockk.relaxedMockk
 import jakarta.jms.Message
 import jakarta.jms.TextMessage
 import kotlinx.coroutines.channels.Channel
-import org.apache.activemq.artemis.jms.client.*
+import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory
+import org.apache.activemq.artemis.jms.client.ActiveMQDestination
+import org.apache.activemq.artemis.jms.client.ActiveMQSession
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
@@ -47,8 +56,7 @@ import kotlin.math.pow
 
 
 /**
- *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 @CleanMockkRecordedCalls
 @Testcontainers
@@ -81,11 +89,15 @@ internal class JakartaConsumerConverterIntegrationTest {
 
     private val tags: Map<String, String> = startStopContext.toEventTags()
 
-    private lateinit var connectionFactory : ActiveMQConnectionFactory
+    private lateinit var connectionFactory: ActiveMQConnectionFactory
 
     @BeforeAll
-    fun initGlobal(){
-        connectionFactory = ActiveMQConnectionFactory("tcp://localhost:${container.getMappedPort(61616)}", Constants.CONTAINER_USER_NAME, Constants.CONTAINER_PASSWORD)
+    fun initGlobal() {
+        connectionFactory = ActiveMQConnectionFactory(
+            "tcp://localhost:${container.getMappedPort(61616)}",
+            Constants.CONTAINER_USER_NAME,
+            Constants.CONTAINER_PASSWORD
+        )
     }
 
     @Timeout(50)
@@ -164,13 +176,16 @@ internal class JakartaConsumerConverterIntegrationTest {
 
         val offset = AtomicLong(1)
 
-        val destination1 = ActiveMQDestination.createDestination("dest-1",ActiveMQDestination.TYPE.QUEUE)
-        val destination2 = ActiveMQDestination.createDestination("dest-2",ActiveMQDestination.TYPE.QUEUE)
-        val destination3 = ActiveMQDestination.createDestination("dest-3",ActiveMQDestination.TYPE.QUEUE)
+        val destination1 = ActiveMQDestination.createDestination("dest-1", ActiveMQDestination.TYPE.QUEUE)
+        val destination2 = ActiveMQDestination.createDestination("dest-2", ActiveMQDestination.TYPE.QUEUE)
+        val destination3 = ActiveMQDestination.createDestination("dest-3", ActiveMQDestination.TYPE.QUEUE)
 
-        val message1 = generateMessage(text = "test-message-1", destination = destination1, offset = 1, session = session)
-        val message2 = generateMessage(text = "test-message-2", destination = destination2, offset = 2, session = session)
-        val message3 = generateMessage(text = "test-message-3", destination = destination3, offset = 3, session = session)
+        val message1 =
+            generateMessage(text = "test-message-1", destination = destination1, offset = 1, session = session)
+        val message2 =
+            generateMessage(text = "test-message-2", destination = destination2, offset = 2, session = session)
+        val message3 =
+            generateMessage(text = "test-message-3", destination = destination3, offset = 3, session = session)
         message3.jmsPriority = 9
         val channel = Channel<JakartaConsumerResult<String>>(3)
         val output = relaxedMockk<StepOutput<JakartaConsumerResult<String>>> {
@@ -251,7 +266,12 @@ internal class JakartaConsumerConverterIntegrationTest {
 
     }
 
-    private fun generateMessage(text: String, session : ActiveMQSession, offset : Long, destination: ActiveMQDestination): Message {
+    private fun generateMessage(
+        text: String,
+        session: ActiveMQSession,
+        offset: Long,
+        destination: ActiveMQDestination
+    ): Message {
         return session.createTextMessage(text).apply {
             jmsCorrelationID = "correlation-id-$offset"
             jmsMessageID = "ID:$offset"
@@ -271,8 +291,8 @@ internal class JakartaConsumerConverterIntegrationTest {
             withCreateContainerCmdModifier {
                 it.hostConfig!!.withMemory(256 * 1024.0.pow(2).toLong()).withCpuCount(1)
             }
-            withEnv(Constants.CONTAINER_USER_NAME_ENV_KEY,Constants.CONTAINER_USER_NAME)
-            withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY,Constants.CONTAINER_PASSWORD)
+            withEnv(Constants.CONTAINER_USER_NAME_ENV_KEY, Constants.CONTAINER_USER_NAME)
+            withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY, Constants.CONTAINER_PASSWORD)
         }
     }
 }

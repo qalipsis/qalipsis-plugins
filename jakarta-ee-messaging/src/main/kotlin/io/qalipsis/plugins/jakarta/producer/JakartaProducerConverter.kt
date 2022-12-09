@@ -25,11 +25,11 @@ import java.io.Serializable
 /**
  * Converter from a [JakartaProducerRecord] to a native JMS [jakarta.jms.Message].
  *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 internal class JakartaProducerConverter {
 
-    fun convert(message: JakartaProducerRecord, session: Session) : Message {
+    fun convert(message: JakartaProducerRecord, session: Session): Message {
         return when (message.messageType) {
             JakartaMessageType.TEXT -> session.createTextMessage(message.value as String?)
             JakartaMessageType.BYTES -> createByteMessage(message, session)
@@ -38,20 +38,20 @@ internal class JakartaProducerConverter {
         }
     }
 
-    private fun createByteMessage(message: JakartaProducerRecord, session: Session) : BytesMessage {
+    private fun createByteMessage(message: JakartaProducerRecord, session: Session): BytesMessage {
         val byteMessage = session.createBytesMessage()
         byteMessage.writeBytes(message.value as ByteArray)
         return byteMessage
     }
 
-    private fun createObjectMessage(message: JakartaProducerRecord, session: Session) : ObjectMessage {
+    private fun createObjectMessage(message: JakartaProducerRecord, session: Session): ObjectMessage {
         if (message.value !is Serializable) {
             throw IllegalArgumentException("Only serializable types are supported, but ${message.value::class.simpleName} is not")
         }
         return session.createObjectMessage(message.value)
     }
 
-    private fun createAutoMessage(message: JakartaProducerRecord, session: Session) : Message {
+    private fun createAutoMessage(message: JakartaProducerRecord, session: Session): Message {
         return when (message.value) {
             is String -> session.createTextMessage(message.value as String?)
             is ByteArray -> createByteMessage(message, session)

@@ -21,7 +21,7 @@ import io.micrometer.core.instrument.Counter
 /**
  * Wrapper for the meters of the Jakarta producer operations.
  *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 internal data class JakartaProducerMetrics(
     private val producedBytesCounter: Counter? = null,

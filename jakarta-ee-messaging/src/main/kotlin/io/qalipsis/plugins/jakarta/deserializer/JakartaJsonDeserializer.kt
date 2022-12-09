@@ -31,7 +31,7 @@ import kotlin.reflect.KClass
 /**
  * Implementation of [JakartaDeserializer] used to deserialize the Jakarta Message to [JSON].
  *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 class JakartaJsonDeserializer<V : Any>(
     private val targetClass: KClass<V>,

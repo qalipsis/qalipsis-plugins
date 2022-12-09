@@ -25,7 +25,7 @@ import java.nio.charset.Charset
 /**
  * Implementation of [JakartaDeserializer] used to deserialize the Jakarta Message to [String].
  *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 class JakartaStringDeserializer(private val defaultCharset: Charset = Charsets.UTF_8) : JakartaDeserializer<String> {
 

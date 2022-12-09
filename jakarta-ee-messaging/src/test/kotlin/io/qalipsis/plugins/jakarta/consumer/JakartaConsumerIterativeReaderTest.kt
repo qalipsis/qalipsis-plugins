@@ -14,7 +14,7 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.jakarta.consumer;
+package io.qalipsis.plugins.jakarta.consumer
 
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
@@ -29,8 +29,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.RegisterExtension
 
 /**
- *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 @WithMockk
 internal class JakartaConsumerIterativeReaderTest {

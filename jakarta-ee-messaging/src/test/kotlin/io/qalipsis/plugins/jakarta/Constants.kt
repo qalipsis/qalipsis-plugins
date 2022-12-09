@@ -17,13 +17,10 @@
 package io.qalipsis.plugins.jakarta
 
 
-
 /**
- *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 object Constants {
-    //const val DOCKER_IMAGE = "rmohr/activemq:5.15.9"
     const val DOCKER_IMAGE = "vromero/activemq-artemis"
     const val CONTAINER_USER_NAME = "qalipsis_user"
     const val CONTAINER_USER_NAME_ENV_KEY = "ARTEMIS_USERNAME"

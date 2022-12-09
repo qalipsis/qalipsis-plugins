@@ -18,7 +18,12 @@ package io.qalipsis.plugins.jakarta.producer
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNotNull
+import assertk.assertions.isTrue
+import assertk.assertions.prop
 import io.aerisconsulting.catadioptre.getProperty
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.DummyStepSpecification
@@ -35,17 +40,20 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import kotlin.math.pow
 
 /**
- *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  * */
 @Testcontainers
 internal class JakartaProducerStepSpecificationIntegrationTest {
 
-    private lateinit var connectionFactory : Connection
+    private lateinit var connectionFactory: Connection
 
     @BeforeAll
-    fun initGlobal(){
-        connectionFactory = ActiveMQConnectionFactory("tcp://localhost:${container.getMappedPort(61616)}", Constants.CONTAINER_USER_NAME, Constants.CONTAINER_PASSWORD).createConnection()
+    fun initGlobal() {
+        connectionFactory = ActiveMQConnectionFactory(
+            "tcp://localhost:${container.getMappedPort(61616)}",
+            Constants.CONTAINER_USER_NAME,
+            Constants.CONTAINER_PASSWORD
+        ).createConnection()
     }
 
     @Test
@@ -59,7 +67,8 @@ internal class JakartaProducerStepSpecificationIntegrationTest {
             value = "text-2"
         )
 
-        val recordSupplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<JakartaProducerRecord>) = { _, _ -> listOf(rec1, rec2) }
+        val recordSupplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<JakartaProducerRecord>) =
+            { _, _ -> listOf(rec1, rec2) }
 
         val previousStep = DummyStepSpecification()
         previousStep.jakarta().produce {
@@ -87,7 +96,8 @@ internal class JakartaProducerStepSpecificationIntegrationTest {
 
     @Test
     internal fun `should apply bytes count`() {
-        val recordSuplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<JakartaProducerRecord>) = { _, _ -> listOf() }
+        val recordSuplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<JakartaProducerRecord>) =
+            { _, _ -> listOf() }
 
         val scenario = DummyStepSpecification()
         scenario.jakarta().produce {
@@ -109,7 +119,8 @@ internal class JakartaProducerStepSpecificationIntegrationTest {
 
     @Test
     internal fun `should apply records count`() {
-        val recordSuplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<JakartaProducerRecord>) = { _, _ -> listOf() }
+        val recordSuplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<JakartaProducerRecord>) =
+            { _, _ -> listOf() }
 
         val scenario = DummyStepSpecification()
         scenario.jakarta().produce {

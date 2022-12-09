@@ -18,7 +18,13 @@ package io.qalipsis.plugins.jakarta.consumer
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.containsOnly
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
+import assertk.assertions.isSameAs
 import io.aerisconsulting.catadioptre.invokeInvisible
 import io.mockk.every
 import io.mockk.spyk
@@ -41,8 +47,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
 /**
- *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 @Suppress("UNCHECKED_CAST")
 internal class JakartaConsumerStepSpecificationConverterTest :
@@ -158,7 +163,11 @@ internal class JakartaConsumerStepSpecificationConverterTest :
         val deserializer = JakartaStringDeserializer()
 
         // when
-        val recordsConverter = converter.invokeInvisible<DatasourceObjectConverter<Message, out Any?>>("buildConverter", deserializer, monitoringConfiguration)
+        val recordsConverter = converter.invokeInvisible<DatasourceObjectConverter<Message, out Any?>>(
+            "buildConverter",
+            deserializer,
+            monitoringConfiguration
+        )
 
         // then
         assertThat(recordsConverter).isNotNull().isInstanceOf(JakartaConsumerConverter::class).all {

@@ -23,7 +23,7 @@ package io.qalipsis.plugins.jakarta.producer
  * @property producedBytes records the number of bytes sent.
  * @property producedRecords counts the number of records actually sent.
  *
- * @author Alex Averyanov
+ * @author Krawist Ngoben
  */
 data class JakartaProducerMeters(
     var recordsToProduce: Int = 0,

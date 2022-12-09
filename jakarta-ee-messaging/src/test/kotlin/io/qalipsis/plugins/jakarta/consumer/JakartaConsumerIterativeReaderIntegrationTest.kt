@@ -18,15 +18,30 @@ package io.qalipsis.plugins.jakarta.consumer
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.hasSize
+import assertk.assertions.index
+import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
+import assertk.assertions.prop
 import io.qalipsis.plugins.jakarta.Constants
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
-import jakarta.jms.*
+import jakarta.jms.Connection
+import jakarta.jms.DeliveryMode
+import jakarta.jms.Destination
+import jakarta.jms.MessageProducer
+import jakarta.jms.Session
+import jakarta.jms.TextMessage
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.junit.jupiter.Container
@@ -34,8 +49,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import kotlin.math.pow
 
 /**
- *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 @Testcontainers
 internal class JakartaConsumerIterativeReaderIntegrationTest {
@@ -54,7 +68,11 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
 
     @BeforeAll
     fun initGlobal() {
-        connectionFactory = ActiveMQConnectionFactory("tcp://localhost:${container.getMappedPort(61616)}", Constants.CONTAINER_USER_NAME, Constants.CONTAINER_PASSWORD)
+        connectionFactory = ActiveMQConnectionFactory(
+            "tcp://localhost:${container.getMappedPort(61616)}",
+            Constants.CONTAINER_USER_NAME,
+            Constants.CONTAINER_PASSWORD
+        )
     }
 
     @BeforeEach
@@ -214,10 +232,10 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
         )
 
         reader.start(relaxedMockk())
-        Assertions.assertTrue(reader.hasNext())
+        assertTrue(reader.hasNext())
 
         reader.stop(relaxedMockk())
-        Assertions.assertFalse(reader.hasNext())
+        assertFalse(reader.hasNext())
     }
 
     @Test
@@ -275,8 +293,8 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
             withCreateContainerCmdModifier {
                 it.hostConfig!!.withMemory(256 * 1024.0.pow(2).toLong()).withCpuCount(1)
             }
-            withEnv(Constants.CONTAINER_USER_NAME_ENV_KEY,Constants.CONTAINER_USER_NAME)
-            withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY,Constants.CONTAINER_PASSWORD)
+            withEnv(Constants.CONTAINER_USER_NAME_ENV_KEY, Constants.CONTAINER_USER_NAME)
+            withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY, Constants.CONTAINER_PASSWORD)
         }
     }
 

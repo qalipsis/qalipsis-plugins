@@ -19,12 +19,13 @@ package io.qalipsis.plugins.jakarta.producer
 /**
  *  Type of [JakartaProducerRecord], needed for creation native Jakarta [jakarta.jms.Message].
  *
- *  @author Alexander Sosnovsky
+ *  @author Krawist Ngoben
  */
 enum class JakartaMessageType {
     BYTES,
     TEXT,
     OBJECT,
+
     /**
      * Default value, using for "auto-casting" to native Jakarta [jakarta.jms.Message] by [JakartaProducerConverter].
      */

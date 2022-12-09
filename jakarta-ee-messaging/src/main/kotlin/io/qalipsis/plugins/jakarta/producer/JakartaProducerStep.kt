@@ -29,7 +29,7 @@ import io.qalipsis.api.steps.AbstractStep
  * @property jakartaProducer producer to use to execute the producing for the current step
  * @property recordFactory closure to generate list of [JakartaProducerRecord]
  *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 internal class JakartaProducerStep<I>(
     stepId: StepName,
@@ -46,9 +46,9 @@ internal class JakartaProducerStep<I>(
         val input = context.receive()
         val messages = recordFactory(context, input)
 
-        val jmsProducerMeters = jakartaProducer.execute(messages, context.toEventTags())
+        val jakartaProducerMeters = jakartaProducer.execute(messages, context.toEventTags())
 
-        context.send(JakartaProducerResult(input, jmsProducerMeters))
+        context.send(JakartaProducerResult(input, jakartaProducerMeters))
     }
 
     override suspend fun stop(context: StepStartStopContext) {

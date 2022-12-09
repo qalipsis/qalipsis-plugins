@@ -21,9 +21,17 @@ import assertk.assertions.containsOnly
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.qalipsis.plugins.jakarta.Constants
 import io.qalipsis.runtime.test.QalipsisTestRunner
-import jakarta.jms.*
+import jakarta.jms.Connection
+import jakarta.jms.DeliveryMode
+import jakarta.jms.Destination
+import jakarta.jms.MessageProducer
+import jakarta.jms.Session
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -31,7 +39,7 @@ import kotlin.math.pow
 
 
 /**
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 @Testcontainers
 internal class JakartaScenarioIntegrationTest {
@@ -39,7 +47,7 @@ internal class JakartaScenarioIntegrationTest {
 
     private lateinit var producerSession: Session
 
-    private lateinit var connectionFactory : ActiveMQConnectionFactory
+    private lateinit var connectionFactory: ActiveMQConnectionFactory
 
     private var initialized = false
 
@@ -47,7 +55,11 @@ internal class JakartaScenarioIntegrationTest {
     internal fun setUp() {
         if (!initialized) {
 
-            connectionFactory = ActiveMQConnectionFactory("tcp://localhost:${container.getMappedPort(61616)}", Constants.CONTAINER_USER_NAME, Constants.CONTAINER_PASSWORD)
+            connectionFactory = ActiveMQConnectionFactory(
+                "tcp://localhost:${container.getMappedPort(61616)}",
+                Constants.CONTAINER_USER_NAME,
+                Constants.CONTAINER_PASSWORD
+            )
 
             producerConnection = connectionFactory.createConnection()
 
@@ -80,7 +92,7 @@ internal class JakartaScenarioIntegrationTest {
 
         JakartaScenario.receivedMessages.clear()
         val exitCode = QalipsisTestRunner.withScenarios("consumer-jakarta").execute()
-        Assertions.assertEquals(0, exitCode)
+        assertEquals(0, exitCode)
 
         // FIXME, on some cases, receivedMessages is empty here when the scenario is completed,
         // and the expected values are actually visible in the next test.
@@ -102,7 +114,7 @@ internal class JakartaScenarioIntegrationTest {
         JakartaScenario.receivedMessages.clear()
         val exitCode = QalipsisTestRunner.withScenarios("consumer-jakarta-string-deserializer").execute()
 
-        Assertions.assertEquals(0, exitCode)
+        assertEquals(0, exitCode)
         assertThat(
             listOf(
                 JakartaScenario.receivedMessages.poll(),
@@ -138,8 +150,8 @@ internal class JakartaScenarioIntegrationTest {
             withCreateContainerCmdModifier {
                 it.hostConfig!!.withMemory(256 * 1024.0.pow(2).toLong()).withCpuCount(1)
             }
-            withEnv(Constants.CONTAINER_USER_NAME_ENV_KEY,Constants.CONTAINER_USER_NAME)
-            withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY,Constants.CONTAINER_PASSWORD)
+            withEnv(Constants.CONTAINER_USER_NAME_ENV_KEY, Constants.CONTAINER_USER_NAME)
+            withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY, Constants.CONTAINER_PASSWORD)
         }
     }
 }

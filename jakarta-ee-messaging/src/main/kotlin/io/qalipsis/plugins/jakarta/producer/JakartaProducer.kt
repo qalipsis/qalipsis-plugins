@@ -20,20 +20,25 @@ import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.sync.ImmutableSlot
+import jakarta.jms.CompletionListener
 import jakarta.jms.Connection
 import jakarta.jms.Destination
+import jakarta.jms.Message
 import jakarta.jms.MessageProducer
 import jakarta.jms.Session
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.runBlocking
 
 /**
  * Jakarta producer client to produce native Jakarta [jakarta.jms.Message]s to a Jakarta server.
  *
  * @property connectionFactory supplier for the JMS [jakarta.jms.Connection]
- * @property metrics the metrics for the produce operation
+ * @property meterRegistry the metrics for the produce operation
  * @property converter from a [JakartaProducerRecord] to a native JMS [jakarta.jms.Message]
  *
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 internal class JakartaProducer(
     private val connectionFactory: () -> Connection,
@@ -81,7 +86,7 @@ internal class JakartaProducer(
     /**
      * Executes producing [jakarta.jms.Message]s to Jakarta server.
      */
-    fun execute(
+    suspend fun execute(
         messages: List<JakartaProducerRecord>,
         contextEventTags: Map<String, String>
     ): JakartaProducerMeters {
@@ -96,14 +101,28 @@ internal class JakartaProducer(
                     session.createProducer(destination)
                 }.run {
                     val message = converter.convert(m, session)
-                    send(message)
+                    val slot = ImmutableSlot<Result<Unit>>()
+                    send(message, object : CompletionListener {
+                        override fun onCompletion(message: Message) {
+                            runBlocking {
+                                slot.set(Result.success(Unit))
+                                sentRecords++
+                                metersForCall.producedBytes += when (m.messageType) {
+                                    JakartaMessageType.TEXT -> "${m.value}".toByteArray().size
+                                    JakartaMessageType.BYTES -> (m.value as? ByteArray)?.size ?: 0
+                                    else -> 0
+                                }
+                            }
+                        }
 
-                    sentRecords++
-                    metersForCall.producedBytes += when (m.messageType) {
-                        JakartaMessageType.TEXT -> "${m.value}".toByteArray().size
-                        JakartaMessageType.BYTES -> (m.value as? ByteArray)?.size ?: 0
-                        else -> 0
-                    }
+                        override fun onException(message: Message, exception: Exception) {
+                            log.debug { exception.message }
+                            runBlocking {
+                                slot.set(Result.failure(exception))
+                            }
+                        }
+                    })
+                    slot.get().getOrThrow()
                 }
             }
         }
@@ -133,6 +152,11 @@ internal class JakartaProducer(
         producers.forEach { it.value.close() }
         producers.clear()
         connection.stop()
+    }
+
+    companion object {
+
+        val log = logger()
     }
 
 }

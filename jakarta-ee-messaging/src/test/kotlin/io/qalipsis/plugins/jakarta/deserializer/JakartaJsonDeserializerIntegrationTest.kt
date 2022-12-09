@@ -38,7 +38,7 @@ import java.time.Instant
 import kotlin.math.pow
 
 /**
- * @author Alexander Sosnovsky
+ * @author Krawist Ngoben
  */
 @Testcontainers
 internal class JakartaJsonDeserializerIntegrationTest {
@@ -48,8 +48,12 @@ internal class JakartaJsonDeserializerIntegrationTest {
     private lateinit var connectionFactory: ActiveMQConnectionFactory
 
     @BeforeAll
-    fun setupConnection(){
-        connectionFactory = ActiveMQConnectionFactory("tcp://localhost:${container.getMappedPort(61616)}", Constants.CONTAINER_USER_NAME, Constants.CONTAINER_PASSWORD)
+    fun setupConnection() {
+        connectionFactory = ActiveMQConnectionFactory(
+            "tcp://localhost:${container.getMappedPort(61616)}",
+            Constants.CONTAINER_USER_NAME,
+            Constants.CONTAINER_PASSWORD
+        )
     }
 
     @Test
@@ -107,6 +111,7 @@ internal class JakartaJsonDeserializerIntegrationTest {
 
     companion object {
         private val mapper = JsonMapper().registerModule(JavaTimeModule()).registerModule(KotlinModule())
+
         @Container
         @JvmStatic
         val container = GenericContainer<Nothing>(Constants.DOCKER_IMAGE).apply {
@@ -114,8 +119,8 @@ internal class JakartaJsonDeserializerIntegrationTest {
             withCreateContainerCmdModifier {
                 it.hostConfig!!.withMemory(256 * 1024.0.pow(2).toLong()).withCpuCount(1)
             }
-            withEnv(Constants.CONTAINER_USER_NAME_ENV_KEY,Constants.CONTAINER_USER_NAME)
-            withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY,Constants.CONTAINER_PASSWORD)
+            withEnv(Constants.CONTAINER_USER_NAME_ENV_KEY, Constants.CONTAINER_USER_NAME)
+            withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY, Constants.CONTAINER_PASSWORD)
         }
     }
 
