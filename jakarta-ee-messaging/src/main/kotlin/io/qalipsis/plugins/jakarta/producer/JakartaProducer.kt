@@ -17,10 +17,10 @@
 package io.qalipsis.plugins.jakarta.producer
 
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.sync.ImmutableSlot
 import jakarta.jms.CompletionListener
 import jakarta.jms.Connection
@@ -44,7 +44,7 @@ internal class JakartaProducer(
     private val connectionFactory: () -> Connection,
     private val converter: JakartaProducerConverter,
     private val eventsLogger: EventsLogger?,
-    private val meterRegistry: MeterRegistry?
+    private val meterRegistry: CampaignMeterRegistry?
 ) {
 
     private lateinit var connection: Connection

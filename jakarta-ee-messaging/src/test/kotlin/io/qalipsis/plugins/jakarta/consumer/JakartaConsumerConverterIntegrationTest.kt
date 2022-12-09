@@ -23,7 +23,6 @@ import assertk.assertions.index
 import assertk.assertions.isEqualTo
 import assertk.assertions.prop
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.mockk.coEvery
 import io.mockk.confirmVerified
@@ -33,6 +32,7 @@ import io.mockk.verifyOrder
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.plugins.jakarta.Constants
 import io.qalipsis.plugins.jakarta.JakartaDeserializer
 import io.qalipsis.test.coroutines.TestDispatcherProvider
@@ -80,7 +80,7 @@ internal class JakartaConsumerConverterIntegrationTest {
 
     private val consumedRecordsCounter = relaxedMockk<Counter>()
 
-    private val meterRegistry = relaxedMockk<MeterRegistry> {
+    private val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
         every { counter("jakarta-consume-value-bytes", refEq(metersTags)) } returns consumedBytesCounter
         every { counter("jakarta-consume-records", refEq(metersTags)) } returns consumedRecordsCounter
     }
@@ -166,7 +166,7 @@ internal class JakartaConsumerConverterIntegrationTest {
     }
 
     private suspend fun executeConversion(
-        meterRegistry: MeterRegistry? = null,
+        meterRegistry: CampaignMeterRegistry? = null,
         eventsLogger: EventsLogger? = null
     ) {
 

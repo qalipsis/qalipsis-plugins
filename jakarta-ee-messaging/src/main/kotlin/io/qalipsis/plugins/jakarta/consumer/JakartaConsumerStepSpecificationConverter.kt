@@ -16,9 +16,9 @@
 
 package io.qalipsis.plugins.jakarta.consumer
 
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
@@ -36,7 +36,7 @@ import jakarta.jms.Message
  */
 @StepConverter
 internal class JakartaConsumerStepSpecificationConverter(
-    private val meterRegistry: MeterRegistry,
+    private val meterRegistry: CampaignMeterRegistry,
     private val eventsLogger: EventsLogger
 ) : StepSpecificationConverter<JakartaConsumerStepSpecification<*>> {
 

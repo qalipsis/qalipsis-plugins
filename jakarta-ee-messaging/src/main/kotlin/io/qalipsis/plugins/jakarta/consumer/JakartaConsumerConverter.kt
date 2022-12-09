@@ -17,10 +17,10 @@
 package io.qalipsis.plugins.jakarta.consumer
 
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.plugins.jakarta.JakartaDeserializer
 import jakarta.jms.BytesMessage
@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 internal class JakartaConsumerConverter<O : Any?>(
     private val valueDeserializer: JakartaDeserializer<O>,
-    private val meterRegistry: MeterRegistry?,
+    private val meterRegistry: CampaignMeterRegistry?,
     private val eventsLogger: EventsLogger?
 ) : DatasourceObjectConverter<Message, JakartaConsumerResult<O>> {
 
