@@ -26,7 +26,10 @@ import io.micronaut.context.env.Environment
 import io.micronaut.core.naming.conventions.StringConvention
 import io.micronaut.core.util.StringUtils
 import io.qalipsis.api.config.MetersConfig
+import io.qalipsis.api.meters.MeterRegistryConfiguration
+import io.qalipsis.api.meters.MeterRegistryFactory
 import jakarta.inject.Singleton
+import java.time.Duration
 import java.util.Properties
 
 /**
@@ -39,26 +42,49 @@ import java.util.Properties
     Requires(property = MetersConfig.EXPORT_ENABLED, notEquals = StringUtils.FALSE),
     Requires(property = InfluxDbMeterRegistryFactory.INBLUXDB_ENABLED, notEquals = StringUtils.FALSE)
 )
-internal class InfluxDbMeterRegistryFactory {
+internal class InfluxDbMeterRegistryFactory(environment: Environment) : MeterRegistryFactory {
 
-    @Singleton
-    fun influxdbRegistry(environment: Environment): InfluxMeterRegistry {
-        val properties = Properties()
+    private val properties = Properties()
+
+    init {
         properties.putAll(environment.getProperties(MetersConfig.EXPORT_CONFIGURATION, StringConvention.RAW))
         properties.putAll(environment.getProperties(MetersConfig.EXPORT_CONFIGURATION, StringConvention.CAMEL_CASE))
+    }
 
-        return InfluxMeterRegistry(object : InfluxConfig {
-            override fun get(key: String): String? {
-                return properties.getProperty(key)
-            }
+    @Singleton
+    fun influxdbRegistry(): InfluxMeterRegistry {
+        return InfluxMeterRegistry(
+            object : InfluxConfig {
+                override fun prefix() = "influxdb"
+                override fun org(): String = "qalipsis"
+                override fun bucket(): String = "qalipsis-event"
+                override fun userName(): String = ""
+                override fun password(): String = ""
+                override fun token(): String = "any"
+                override fun get(key: String): String? {
+                    return properties.getProperty(key)
+                }
+            },
+            Clock.SYSTEM
+        )
+    }
 
-            override fun prefix() = "influxdb"
-            override fun org(): String = "qalipsis"
-            override fun bucket(): String = "qalipsis-event"
-            override fun userName(): String = ""
-            override fun password(): String = ""
-            override fun token(): String = "any"
-        }, Clock.SYSTEM)
+    override fun getRegistry(configuration: MeterRegistryConfiguration): InfluxMeterRegistry {
+        return InfluxMeterRegistry(
+            object : InfluxConfig {
+                override fun prefix() = "influxdb"
+                override fun step(): Duration = configuration.step ?: super.step()
+                override fun org(): String = "qalipsis"
+                override fun bucket(): String = "qalipsis-event"
+                override fun userName(): String = ""
+                override fun password(): String = ""
+                override fun token(): String = "any"
+                override fun get(key: String): String? {
+                    return properties.getProperty(key)
+                }
+            },
+            Clock.SYSTEM
+        )
     }
 
     companion object {

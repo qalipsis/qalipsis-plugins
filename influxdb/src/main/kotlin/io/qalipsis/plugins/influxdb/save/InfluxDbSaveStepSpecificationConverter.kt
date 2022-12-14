@@ -17,11 +17,11 @@
 package io.qalipsis.plugins.influxdb.save
 
 import com.influxdb.client.write.Point
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.supplyIf
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
@@ -34,7 +34,7 @@ import io.qalipsis.api.steps.StepSpecificationConverter
  */
 @StepConverter
 internal class InfluxDbSaveStepSpecificationConverter(
-    private val meterRegistry: MeterRegistry,
+    private val meterRegistry: CampaignMeterRegistry,
     private val eventsLogger: EventsLogger
 ) : StepSpecificationConverter<InfluxDbSaveStepSpecificationImpl<*>> {
 

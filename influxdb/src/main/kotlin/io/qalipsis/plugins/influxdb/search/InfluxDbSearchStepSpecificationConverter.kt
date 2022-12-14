@@ -18,11 +18,11 @@ package io.qalipsis.plugins.influxdb.search
 
 import com.influxdb.client.InfluxDBClientOptions
 import com.influxdb.client.kotlin.InfluxDBClientKotlinFactory
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.supplyIf
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
@@ -35,7 +35,7 @@ import io.qalipsis.api.steps.StepSpecificationConverter
  */
 @StepConverter
 internal class InfluxDbSearchStepSpecificationConverter(
-    private val meterRegistry: MeterRegistry,
+    private val meterRegistry: CampaignMeterRegistry,
     private val eventsLogger: EventsLogger
 ) : StepSpecificationConverter<InfluxDbSearchStepSpecificationImpl<*>> {
 

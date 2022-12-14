@@ -27,7 +27,6 @@ import com.influxdb.client.domain.WritePrecision
 import com.influxdb.client.write.Point
 import com.influxdb.exceptions.UnprocessableEntityException
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.micrometer.core.instrument.Timer
 import io.mockk.confirmVerified
@@ -35,6 +34,7 @@ import io.mockk.every
 import io.mockk.verify
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.plugins.influxdb.AbstractInfluxDbIntegrationTest
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.mockk.relaxedMockk
@@ -61,7 +61,7 @@ internal class InfluxDbSaveStepIntegrationTest : AbstractInfluxDbIntegrationTest
     fun `should successfully save a unique point`() = testDispatcherProvider.run {
         // given
         val metersTags = relaxedMockk<Tags>()
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("influxdb-save-saving-points", refEq(metersTags)) } returns recordsCount
             every { timer("influxdb-save-time-to-response", refEq(metersTags)) } returns timeToResponse
         }
@@ -123,7 +123,7 @@ internal class InfluxDbSaveStepIntegrationTest : AbstractInfluxDbIntegrationTest
         testDispatcherProvider.run {
             // given
             val metersTags = relaxedMockk<Tags>()
-            val meterRegistry = relaxedMockk<MeterRegistry> {
+            val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
                 every { counter("influxdb-save-successes", refEq(metersTags)) } returns successCounter
             }
             val startStopContext = relaxedMockk<StepStartStopContext> {

@@ -30,7 +30,6 @@ import com.influxdb.client.write.Point
 import com.influxdb.exceptions.NotFoundException
 import com.influxdb.query.FluxRecord
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.micrometer.core.instrument.Timer
 import io.mockk.confirmVerified
@@ -40,6 +39,7 @@ import io.mockk.verify
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.plugins.influxdb.AbstractInfluxDbIntegrationTest
 import io.qalipsis.plugins.influxdb.InfluxDbStepConnectionImpl
 import io.qalipsis.plugins.influxdb.poll.InfluxDbQueryMeters
@@ -85,7 +85,7 @@ internal class InfluxDbSearchStepIntegrationTest : AbstractInfluxDbIntegrationTe
         val metersTags = relaxedMockk<Tags>()
         val tags: Map<String, String> = emptyMap()
 
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("influxdb-search-received-records", refEq(metersTags)) } returns recordsCount
             every { counter("influxdb-search-success", refEq(metersTags)) } returns successCounter
             every { timer("influxdb-search-time-to-response", refEq(metersTags)) } returns timeToResponse
@@ -154,7 +154,7 @@ internal class InfluxDbSearchStepIntegrationTest : AbstractInfluxDbIntegrationTe
 
         val metersTags = relaxedMockk<Tags>()
 
-        val meterRegistry = relaxedMockk<MeterRegistry> {
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every { counter("influxdb-search-received-records", refEq(metersTags)) } returns recordsCount
             every { counter("influxdb-search-success", refEq(metersTags)) } returns successCounter
             every { timer("influxdb-search-time-to-response", refEq(metersTags)) } returns timeToResponse

@@ -18,11 +18,11 @@ package io.qalipsis.plugins.influxdb.poll
 
 import com.influxdb.client.InfluxDBClientOptions
 import com.influxdb.client.kotlin.InfluxDBClientKotlinFactory
-import io.micrometer.core.instrument.MeterRegistry
 import io.qalipsis.api.Executors
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.supplyIf
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
@@ -41,7 +41,7 @@ import kotlinx.coroutines.CoroutineScope
  */
 @StepConverter
 internal class InfluxDbPollStepSpecificationConverter(
-    private val meterRegistry: MeterRegistry,
+    private val meterRegistry: CampaignMeterRegistry,
     private val eventsLogger: EventsLogger,
     @Named(Executors.IO_EXECUTOR_NAME) private val coroutineScope: CoroutineScope
 ) : StepSpecificationConverter<InfluxDbPollStepSpecificationImpl> {

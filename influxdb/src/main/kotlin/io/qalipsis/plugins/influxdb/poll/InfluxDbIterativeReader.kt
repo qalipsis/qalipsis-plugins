@@ -20,12 +20,12 @@ import com.influxdb.client.kotlin.InfluxDBClientKotlin
 import com.influxdb.query.FluxRecord
 import io.aerisconsulting.catadioptre.KTestable
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.concurrentList
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.datasource.DatasourceIterativeReader
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -57,7 +57,7 @@ internal class InfluxDbIterativeReader(
     private val pollDelay: Duration,
     private val resultsChannelFactory: () -> Channel<InfluxDbQueryResult> = { Channel(Channel.UNLIMITED) },
     private val eventsLogger: EventsLogger?,
-    private val meterRegistry: MeterRegistry?
+    private val meterRegistry: CampaignMeterRegistry?
 ) : DatasourceIterativeReader<InfluxDbQueryResult> {
 
     private val eventPrefix = "influxdb.poll"

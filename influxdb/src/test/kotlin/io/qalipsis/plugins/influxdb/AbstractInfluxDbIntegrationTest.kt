@@ -95,11 +95,11 @@ internal abstract class AbstractInfluxDbIntegrationTest {
                     cmd.hostConfig!!.withMemory(512 * 1024.0.pow(2).toLong()).withCpuCount(2)
                 }
                 withEnv("DOCKER_INFLUXDB_INIT_MODE", "setup")
-                withEnv("DOCKER_INFLUXDB_INIT_USERNAME", "user")
-                withEnv("DOCKER_INFLUXDB_INIT_PASSWORD", "passpasspass")
-                withEnv("DOCKER_INFLUXDB_INIT_ORG", ORGANIZATION)
-                withEnv("DOCKER_INFLUXDB_INIT_BUCKET", BUCKET)
-                withEnv("DOCKER_INFLUXDB_INIT_RETENTION", "200d")
+                withUsername("user")
+                withPassword("passpasspass")
+                withOrganization(ORGANIZATION)
+                withBucket(BUCKET)
+                withRetention("200d")
             }
 
         @JvmStatic

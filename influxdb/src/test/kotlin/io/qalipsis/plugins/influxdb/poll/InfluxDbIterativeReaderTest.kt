@@ -25,7 +25,6 @@ import assertk.assertions.isSameAs
 import assertk.assertions.isTrue
 import com.influxdb.client.kotlin.InfluxDBClientKotlin
 import io.aerisconsulting.catadioptre.getProperty
-import io.micrometer.core.instrument.MeterRegistry
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.impl.annotations.RelaxedMockK
@@ -33,6 +32,7 @@ import io.mockk.impl.annotations.SpyK
 import io.mockk.spyk
 import io.mockk.verify
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.sync.SuspendedCountLatch
 import io.qalipsis.plugins.influxdb.InfluxDbStepConnectionImpl
 import io.qalipsis.test.coroutines.TestDispatcherProvider
@@ -65,7 +65,7 @@ internal class InfluxDbIterativeReaderTest {
     private lateinit var eventsLogger: EventsLogger
 
     @RelaxedMockK
-    private lateinit var meterRegistry: MeterRegistry
+    private lateinit var meterRegistry: CampaignMeterRegistry
 
     @RelaxedMockK
     private lateinit var client: InfluxDBClientKotlin

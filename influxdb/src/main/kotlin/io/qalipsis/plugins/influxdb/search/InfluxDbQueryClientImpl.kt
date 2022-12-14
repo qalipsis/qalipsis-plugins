@@ -20,12 +20,12 @@ import com.influxdb.client.kotlin.InfluxDBClientKotlin
 import com.influxdb.client.kotlin.QueryKotlinApi
 import com.influxdb.query.FluxRecord
 import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLog
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.plugins.influxdb.poll.InfluxDbQueryMeters
 import io.qalipsis.plugins.influxdb.poll.InfluxDbQueryResult
 import kotlinx.coroutines.CancellationException
@@ -46,7 +46,7 @@ import java.util.concurrent.TimeUnit
 internal class InfluxDbQueryClientImpl(
     private val clientFactory: () -> InfluxDBClientKotlin,
     private var eventsLogger: EventsLogger?,
-    private val meterRegistry: MeterRegistry?
+    private val meterRegistry: CampaignMeterRegistry?
 ) : InfluxDbQueryClient {
 
     private lateinit var client: InfluxDBClientKotlin
