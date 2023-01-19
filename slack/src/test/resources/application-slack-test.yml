@@ -1,0 +1,4 @@
+report:
+  export:
+    slack:
+      token: xoxb-764324368114-4345424060674-7jtvhmCI534pqrcpvdZNCnH6
