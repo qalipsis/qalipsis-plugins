@@ -91,14 +91,15 @@ dependencies {
         api("io.qalipsis.plugin:graphite:0.5.0-SNAPSHOT")
         api("io.qalipsis.plugin:influxdb:0.5.0-SNAPSHOT")
         api("io.qalipsis.plugin:jackson:0.5.0-SNAPSHOT")
+        api("io.qalipsis.plugin:jakarta-ee-messaging:0.5.0-SNAPSHOT")
         api("io.qalipsis.plugin:jms:0.5.0-SNAPSHOT")
         api("io.qalipsis.plugin:kafka:0.5.0-SNAPSHOT")
         api("io.qalipsis.plugin:mongodb:0.5.0-SNAPSHOT")
-        api("io.qalipsis.plugin:netty:0.5.0-SNAPSHOT")
+        api("io.qalipsis.plugin:netty:0.5.4-SNAPSHOT")
         api("io.qalipsis.plugin:r2dbc-jasync:0.5.0-SNAPSHOT")
         api("io.qalipsis.plugin:rabbitmq:0.5.0-SNAPSHOT")
         api("io.qalipsis.plugin:redis-lettuce:0.5.0-SNAPSHOT")
-        api("io.qalipsis.plugin:timescaledb:0.5.0-SNAPSHOT")
+        api("io.qalipsis.plugin:timescaledb:0.5.5-SNAPSHOT")
     }
 }
 
