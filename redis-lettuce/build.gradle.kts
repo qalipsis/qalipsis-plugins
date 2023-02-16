@@ -49,17 +49,17 @@ kapt.useBuildCache = false
 
 
 val redisLettuceVersion = "6.2.0.RELEASE"
-val coreVersion: String by project
+val pluginPlatformVersion: String by project
 
 dependencies {
-    implementation(platform("io.qalipsis:plugin-platform:${coreVersion}"))
+    implementation(platform("io.qalipsis:plugin-platform:${pluginPlatformVersion}"))
     compileOnly("io.micronaut:micronaut-runtime")
     api("io.lettuce:lettuce-core:${redisLettuceVersion}")
 
     api("io.qalipsis:api-common")
     api("io.qalipsis:api-dsl")
 
-    kapt(platform("io.qalipsis:plugin-platform:${coreVersion}"))
+    kapt(platform("io.qalipsis:plugin-platform:${pluginPlatformVersion}"))
     kapt("io.qalipsis:api-processors")
     kapt("io.qalipsis:api-dsl")
     kapt("io.qalipsis:api-common")
@@ -77,7 +77,7 @@ dependencies {
     testRuntimeOnly("io.qalipsis:head")
     testRuntimeOnly("io.qalipsis:factory")
 
-    kaptTest(platform("io.qalipsis:plugin-platform:${coreVersion}"))
+    kaptTest(platform("io.qalipsis:plugin-platform:${pluginPlatformVersion}"))
     kaptTest("io.micronaut:micronaut-inject-java")
     kaptTest("io.qalipsis:api-processors")
 }
