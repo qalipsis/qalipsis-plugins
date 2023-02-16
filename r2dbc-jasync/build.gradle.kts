@@ -45,10 +45,10 @@ val jasyncVersion = "2.0.8"
 val calciteVersion = "1.32.0"
 val mariadbClientVersion = "3.0.7"
 val mysqlClientVersion = "8.0.30"
-val coreVersion: String by project
+val pluginPlatformVersion: String by project
 
 dependencies {
-    implementation(platform("io.qalipsis:plugin-platform:${coreVersion}"))
+    implementation(platform("io.qalipsis:plugin-platform:${pluginPlatformVersion}"))
     compileOnly("io.aeris-consulting:catadioptre-annotations")
     compileOnly("io.micronaut:micronaut-runtime")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core")
@@ -65,7 +65,7 @@ dependencies {
     api("io.qalipsis:api-common")
     api("io.qalipsis:api-dsl")
 
-    kapt(platform("io.qalipsis:plugin-platform:${coreVersion}"))
+    kapt(platform("io.qalipsis:plugin-platform:${pluginPlatformVersion}"))
     kapt("io.qalipsis:api-processors")
     kapt("io.qalipsis:api-dsl")
     kapt("io.qalipsis:api-common")
@@ -89,7 +89,7 @@ dependencies {
     testRuntimeOnly("io.qalipsis:head")
     testRuntimeOnly("io.qalipsis:factory")
 
-    kaptTest(platform("io.qalipsis:plugin-platform:${coreVersion}"))
+    kaptTest(platform("io.qalipsis:plugin-platform:${pluginPlatformVersion}"))
     kaptTest("io.micronaut:micronaut-inject-java")
     kaptTest("io.qalipsis:api-processors")
 }
