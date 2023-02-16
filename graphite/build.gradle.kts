@@ -52,10 +52,10 @@ allOpen {
 kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catadioptre")
 kapt.useBuildCache = false
 
-val coreVersion: String by project
+val pluginPlatformVersion: String by project
 
 dependencies {
-    implementation(platform("io.qalipsis:plugin-platform:${coreVersion}"))
+    implementation(platform("io.qalipsis:plugin-platform:${pluginPlatformVersion}"))
     compileOnly("io.aeris-consulting:catadioptre-annotations")
     compileOnly("io.micronaut:micronaut-runtime")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core")
@@ -67,14 +67,14 @@ dependencies {
     implementation("io.netty:netty-buffer")
     implementation("io.micronaut.micrometer:micronaut-micrometer-registry-graphite")
 
-    kapt(platform("io.qalipsis:plugin-platform:${coreVersion}"))
+    kapt(platform("io.qalipsis:plugin-platform:${pluginPlatformVersion}"))
     kapt("io.qalipsis:api-processors")
     kapt("io.qalipsis:api-dsl")
     kapt("io.qalipsis:api-common")
     kapt("io.aeris-consulting:catadioptre-annotations")
     kapt("io.micronaut:micronaut-inject-java")
 
-    testImplementation(platform("io.qalipsis:plugin-platform:${coreVersion}"))
+    testImplementation(platform("io.qalipsis:plugin-platform:${pluginPlatformVersion}"))
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
     testImplementation("io.micronaut:micronaut-runtime")
     testImplementation("io.micronaut.test:micronaut-test-junit5")
@@ -94,7 +94,7 @@ dependencies {
     testRuntimeOnly("io.qalipsis:head")
     testRuntimeOnly("io.qalipsis:factory")
 
-    kaptTest(platform("io.qalipsis:plugin-platform:${coreVersion}"))
+    kaptTest(platform("io.qalipsis:plugin-platform:${pluginPlatformVersion}"))
     kaptTest("io.micronaut:micronaut-inject-java")
     kaptTest("io.qalipsis:api-processors")
 }
