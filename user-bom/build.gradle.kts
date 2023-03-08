@@ -107,7 +107,7 @@ dependencies {
         api("io.qalipsis.plugin:rabbitmq:0.5.5-SNAPSHOT")
         api("io.qalipsis.plugin:redis-lettuce:0.5.5-SNAPSHOT")
         api("io.qalipsis.plugin:slack:0.5.5-SNAPSHOT")
-        api("io.qalipsis.plugin:timescaledb:0.5.7-SNAPSHOT")
+        api("io.qalipsis.plugin:timescaledb:0.5.10-SNAPSHOT")
     }
 }
 
