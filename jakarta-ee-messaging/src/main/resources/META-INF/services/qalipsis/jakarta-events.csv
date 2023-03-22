@@ -1,0 +1,5 @@
+jakarta.consume.received.records;Int
+jakarta.consume.received.value-bytes;Int
+jakarta.produce.produced.bytes;Int
+jakarta.produce.produced.records;Int
+jakarta.produce.producing.records;Int
