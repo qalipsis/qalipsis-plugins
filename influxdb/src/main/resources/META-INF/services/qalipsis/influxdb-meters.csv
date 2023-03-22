@@ -1,0 +1,10 @@
+influxdb-poll-failures;counter
+influxdb-poll-received-records;counter
+influxdb-poll-time-to-response;timer
+influxdb-save-saving-points;counter
+influxdb-save-successes;counter
+influxdb-save-time-to-response;timer
+influxdb-search-failures;counter
+influxdb-search-received-records;counter
+influxdb-search-success;counter
+influxdb-search-time-to-response;timer

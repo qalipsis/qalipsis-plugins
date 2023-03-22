@@ -1,0 +1,9 @@
+influxdb.poll.failure;Throwable,Duration
+influxdb.poll.polling;null
+influxdb.poll.successful-response;Duration,Int
+influxdb.save.saving-points;Int
+influxdb.save.successes;Int
+influxdb.save.time-to-response;Duration
+influxdb.search.failure;Throwable,Duration
+influxdb.search.searching;null
+influxdb.search.success;Duration,Int
