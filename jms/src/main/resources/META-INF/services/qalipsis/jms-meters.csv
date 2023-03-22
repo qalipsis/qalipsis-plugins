@@ -1,0 +1,5 @@
+jms-consume-records;counter
+jms-consume-value-bytes;counter
+jms-produce-produced-records;counter
+jms-produce-produced-value-bytes;counter
+jms-produce-producing-records;counter

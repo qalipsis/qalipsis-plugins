@@ -1,0 +1,5 @@
+jms.consume.received.records;Int
+jms.consume.received.value-bytes;Int
+jms.produce.produced.bytes;Int
+jms.produce.produced.records;Int
+jms.produce.producing.records;Int
