@@ -46,7 +46,9 @@ internal class RabbitMqProducerStep<I>(
     val eventsLogger: EventsLogger? = null
 ) : AbstractStep<I, RabbitMqProducerResult<I>>(stepName, retryPolicy) {
 
-    private val eventPrefix = "rabbitmq-produce.${stepName}"
+    private val eventPrefix = "rabbitmq.produce.${stepName}"
+
+    private val meterPrefix = "rabbitmq-produce-${stepName}"
 
     private var meterBytesCounter: Counter? = null
 
@@ -72,10 +74,10 @@ internal class RabbitMqProducerStep<I>(
 
     private fun initMonitoringMetrics() {
         meterRegistry?.apply {
-            meterBytesCounter = counter("${eventPrefix}-bytes", meterTags!!)
-            meterRecordsCounter = counter("${eventPrefix}-records", meterTags!!)
-            meterFailedBytesCounter = counter("${eventPrefix}-failed-bytes", meterTags!!)
-            meterFailedRecordsCounter = counter("${eventPrefix}-failed-records", meterTags!!)
+            meterBytesCounter = counter("${meterPrefix}-bytes", meterTags!!)
+            meterRecordsCounter = counter("${meterPrefix}-records", meterTags!!)
+            meterFailedBytesCounter = counter("${meterPrefix}-failed-bytes", meterTags!!)
+            meterFailedRecordsCounter = counter("${meterPrefix}-failed-records", meterTags!!)
         }
 
     }
