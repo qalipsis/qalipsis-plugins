@@ -1,0 +1,3 @@
+graphite-save-saving-messages;counter
+graphite-save-successes;counter
+graphite-save-time-to-response;timer
