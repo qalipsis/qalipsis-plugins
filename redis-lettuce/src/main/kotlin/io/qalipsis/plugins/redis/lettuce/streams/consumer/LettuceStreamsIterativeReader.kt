@@ -76,6 +76,8 @@ internal class LettuceStreamsIterativeReader(
 
     private lateinit var redisAsyncCommand: RedisClusterAsyncCommands<ByteArray, ByteArray>
 
+    private val eventPrefix = "redis.lettuce.streams.consumer"
+
     override fun start(context: StepStartStopContext) {
         running = true
         runBlocking(ioCoroutineDispatcher) {
@@ -142,11 +144,11 @@ internal class LettuceStreamsIterativeReader(
                 consumerGroup, streamOffset
             ).asSuspended().get(DEFAULT_TIMEOUT_IN_DURATION)
             eventsLogger.info(
-                "lettuce.streams.consumer.response-time",
+                "$eventPrefix.response-time",
                 System.nanoTime() - requestStart,
                 tags = context.toEventTags()
             )
-            eventsLogger.info("lettuce.streams.consumer.total-messages", messages.size, tags = context.toEventTags())
+            eventsLogger.info("$eventPrefix.total-messages", messages.size, tags = context.toEventTags())
 
             if (messages.isNotEmpty()) {
                 acknowledgeMessages(messages)

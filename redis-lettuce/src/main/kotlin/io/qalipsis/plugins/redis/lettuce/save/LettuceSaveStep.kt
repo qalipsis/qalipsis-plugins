@@ -74,14 +74,14 @@ internal class LettuceSaveStep<I>(
 
     private var sendingFailure: Counter? = null
 
-    private val metersPrefix = "lettuce-save"
+    private val meterPrefix = "redis-lettuce-save"
 
     override suspend fun start(context: StepStartStopContext) {
         meterRegistry?.apply {
             val tags = context.toMetersTags()
-            sendingBytes = counter("$metersPrefix-sending-bytes", tags)
-            sentBytesMeter = counter("$metersPrefix-sent-bytes", tags)
-            sendingFailure = counter("$metersPrefix-sending-failure", tags)
+            sendingBytes = counter("$meterPrefix-sending-bytes", tags)
+            sentBytesMeter = counter("$meterPrefix-sent-bytes", tags)
+            sendingFailure = counter("$meterPrefix-sending-failure", tags)
         }
         connection = connectionFactory()
         redisAsyncCommands = RedisCommandsFactory.getAsyncCommand(connection)

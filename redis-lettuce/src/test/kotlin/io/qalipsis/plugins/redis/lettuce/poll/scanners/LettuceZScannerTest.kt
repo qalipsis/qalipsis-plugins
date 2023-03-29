@@ -49,9 +49,9 @@ internal class LettuceZScannerTest :
 
         // then
         coVerifyOnce {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             singleConnection.async().zscan("key".toByteArray())
-            eventsLogger.info("lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.info("redis.lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
         }
         confirmVerified(resultsChannel)
     }
@@ -67,9 +67,9 @@ internal class LettuceZScannerTest :
 
         // then
         coVerifyOnce {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             singleConnection.async().zscan("key".toByteArray())
-            eventsLogger.warn("lettuce.poll.failure", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.warn("redis.lettuce.poll.failure", any<Array<*>>(), any(), tags = refEq(tags))
         }
         confirmVerified(resultsChannel)
     }
@@ -106,11 +106,11 @@ internal class LettuceZScannerTest :
         // then
         val resultsCaptor = slot<PollRawResult<List<ScoredValue<ByteArray>>>>()
         coVerifyOrder {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             clusterConnection.async().zscan(eq("key".toByteArray()))
             clusterConnection.async().zscan(eq("key".toByteArray()), refEq(cursor1))
             clusterConnection.async().zscan(eq("key".toByteArray()), refEq(cursor2))
-            eventsLogger.info("lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.info("redis.lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
             resultsChannel.send(capture(resultsCaptor))
         }
 
@@ -163,11 +163,11 @@ internal class LettuceZScannerTest :
         // then
         val resultsCaptor = slot<PollRawResult<List<ScoredValue<ByteArray>>>>()
         coVerifyOrder {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             singleConnection.async().zscan(eq("key".toByteArray()))
             singleConnection.async().zscan(eq("key".toByteArray()), refEq(cursor1))
             singleConnection.async().zscan(eq("key".toByteArray()), refEq(cursor2))
-            eventsLogger.info("lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.info("redis.lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
             resultsChannel.send(capture(resultsCaptor))
         }
 

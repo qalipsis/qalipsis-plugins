@@ -48,9 +48,9 @@ internal class LettuceSScannerTest :
 
         // then
         coVerifyOnce {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             singleConnection.async().sscan("key".toByteArray())
-            eventsLogger.info("lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.info("redis.lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
         }
         confirmVerified(resultsChannel)
     }
@@ -66,9 +66,9 @@ internal class LettuceSScannerTest :
 
         // then
         coVerifyOnce {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             singleConnection.async().sscan("key".toByteArray())
-            eventsLogger.warn("lettuce.poll.failure", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.warn("redis.lettuce.poll.failure", any<Array<*>>(), any(), tags = refEq(tags))
         }
         confirmVerified(resultsChannel)
     }
@@ -105,11 +105,11 @@ internal class LettuceSScannerTest :
         // then
         val resultsCaptor = slot<PollRawResult<List<ByteArray>>>()
         coVerifyOrder {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             clusterConnection.async().sscan(eq("key".toByteArray()))
             clusterConnection.async().sscan(eq("key".toByteArray()), refEq(cursor1))
             clusterConnection.async().sscan(eq("key".toByteArray()), refEq(cursor2))
-            eventsLogger.info("lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.info("redis.lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
             resultsChannel.send(capture(resultsCaptor))
         }
 
@@ -163,11 +163,11 @@ internal class LettuceSScannerTest :
         // then
         val resultsCaptor = slot<PollRawResult<List<ByteArray>>>()
         coVerifyOrder {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             singleConnection.async().sscan(eq("key".toByteArray()))
             singleConnection.async().sscan(eq("key".toByteArray()), refEq(cursor1))
             singleConnection.async().sscan(eq("key".toByteArray()), refEq(cursor2))
-            eventsLogger.info("lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.info("redis.lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
             resultsChannel.send(capture(resultsCaptor))
         }
 

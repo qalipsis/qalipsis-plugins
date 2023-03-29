@@ -50,9 +50,9 @@ internal class LettuceHScannerTest :
 
         // then
         coVerifyOnce {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             singleConnection.async().hscan(eq("key".toByteArray()))
-            eventsLogger.info("lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.info("redis.lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
         }
         confirmVerified(resultsChannel, singleConnection, clusterConnection)
     }
@@ -68,9 +68,9 @@ internal class LettuceHScannerTest :
 
         // then
         coVerifyOnce {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             singleConnection.async().hscan(eq("key".toByteArray()))
-            eventsLogger.warn("lettuce.poll.failure", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.warn("redis.lettuce.poll.failure", any<Array<*>>(), any(), tags = refEq(tags))
         }
         confirmVerified(resultsChannel, singleConnection, clusterConnection)
     }
@@ -107,11 +107,11 @@ internal class LettuceHScannerTest :
         // then
         val resultsCaptor = slot<PollRawResult<MutableMap<ByteArray, ByteArray>>>()
         coVerifyOrder {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             clusterConnection.async().hscan(eq("key".toByteArray()))
             clusterConnection.async().hscan(eq("key".toByteArray()), refEq(cursor1))
             clusterConnection.async().hscan(eq("key".toByteArray()), refEq(cursor2))
-            eventsLogger.info("lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.info("redis.lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
             resultsChannel.send(capture(resultsCaptor))
         }
 
@@ -168,11 +168,11 @@ internal class LettuceHScannerTest :
         // then
         val resultsCaptor = slot<PollRawResult<MutableMap<ByteArray, ByteArray>>>()
         coVerifyOrder {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             singleConnection.async().hscan(eq("key".toByteArray()))
             singleConnection.async().hscan(eq("key".toByteArray()), refEq(cursor1))
             singleConnection.async().hscan(eq("key".toByteArray()), refEq(cursor2))
-            eventsLogger.info("lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.info("redis.lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
             resultsChannel.send(capture(resultsCaptor))
         }
 

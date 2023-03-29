@@ -1,0 +1,16 @@
+redis-lettuce-poll-hscan-records;counter
+redis-lettuce-poll-hscan-records-bytes;counter
+redis-lettuce-poll-scan-records;counter
+redis-lettuce-poll-scan-records-bytes;counter
+redis-lettuce-poll-sscan-records;counter
+redis-lettuce-poll-sscan-records-bytes;counter
+redis-lettuce-poll-zscan-records;counter
+redis-lettuce-poll-zscan-records-bytes;counter
+redis-lettuce-save-sending-bytes;counter
+redis-lettuce-save-sending-failure;counter
+redis-lettuce-save-sent-bytes;counter
+redis-lettuce-streams-consumer-records;counter
+redis-lettuce-streams-consumer-records-bytes;counter
+redis-lettuce-streams-sending-bytes;counter
+redis-lettuce-streams-sending-failure;counter
+redis-lettuce-streams-sent-bytes;counter

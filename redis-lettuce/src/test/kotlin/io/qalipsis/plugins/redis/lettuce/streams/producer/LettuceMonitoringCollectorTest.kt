@@ -74,7 +74,7 @@ internal class LettuceMonitoringCollectorTest {
     @Test
     fun `should record sending data`() {
 
-        every { meterRegistry.counter("lettuce-streams-sending-bytes", refEq(metersTags)) } returns sendingBytes
+        every { meterRegistry.counter("redis-lettuce-streams-sending-bytes", refEq(metersTags)) } returns sendingBytes
         val monitoringCollector =
             spyk(
                 LettuceMonitoringCollector(
@@ -95,7 +95,7 @@ internal class LettuceMonitoringCollectorTest {
         verify {
             sendingBytes.increment(11.0)
             eventsLogger.info(
-                name = eq("lettuce.streams.sending.bytes"),
+                name = eq("redis.lettuce.streams.sending.bytes"),
                 value = eq(11),
                 timestamp = any(),
                 tags = any<Map<String, String>>()
@@ -114,7 +114,7 @@ internal class LettuceMonitoringCollectorTest {
     @Test
     fun `should record sending data with more than 1 record`() {
 
-        every { meterRegistry.counter("lettuce-streams-sending-bytes", refEq(metersTags)) } returns sendingBytes
+        every { meterRegistry.counter("redis-lettuce-streams-sending-bytes", refEq(metersTags)) } returns sendingBytes
         val monitoringCollector =
             spyk(
                 LettuceMonitoringCollector(
@@ -136,7 +136,7 @@ internal class LettuceMonitoringCollectorTest {
         verify(exactly = 2) {
             sendingBytes.increment(10.0)
             eventsLogger.info(
-                name = eq("lettuce.streams.sending.bytes"),
+                name = eq("redis.lettuce.streams.sending.bytes"),
                 value = eq(10),
                 timestamp = any(),
                 tags = any<Map<String, String>>()
@@ -154,7 +154,7 @@ internal class LettuceMonitoringCollectorTest {
 
     @Test
     fun `should record sent data success`() {
-        every { meterRegistry.counter("lettuce-streams-sent-bytes", refEq(metersTags)) } returns sentBytesMeter
+        every { meterRegistry.counter("redis-lettuce-streams-sent-bytes", refEq(metersTags)) } returns sentBytesMeter
         val monitoringCollector =
             spyk(
                 LettuceMonitoringCollector(
@@ -176,7 +176,7 @@ internal class LettuceMonitoringCollectorTest {
         verify(exactly = 2) {
             sentBytesMeter.increment(10.0)
             eventsLogger.info(
-                name = eq("lettuce.streams.sent.bytes"),
+                name = eq("redis.lettuce.streams.sent.bytes"),
                 value = eq(arrayOf(Duration.ofSeconds(1), 10)),
                 timestamp = any(),
                 tags = any<Map<String, String>>()
@@ -194,7 +194,7 @@ internal class LettuceMonitoringCollectorTest {
 
     @Test
     fun `should record sent data failure`() {
-        every { meterRegistry.counter("lettuce-streams-sending-failure", refEq(metersTags)) } returns sendingFailure
+        every { meterRegistry.counter("redis-lettuce-streams-sending-failure", refEq(metersTags)) } returns sendingFailure
         val monitoringCollector =
             spyk(
                 LettuceMonitoringCollector(
@@ -219,7 +219,7 @@ internal class LettuceMonitoringCollectorTest {
         verify(exactly = 2) {
             sendingFailure.increment()
             eventsLogger.warn(
-                name = eq("lettuce.streams.sending.failed"),
+                name = eq("redis.lettuce.streams.sending.failed"),
                 value = any(),
                 timestamp = any(),
                 tags = any<Map<String, String>>()

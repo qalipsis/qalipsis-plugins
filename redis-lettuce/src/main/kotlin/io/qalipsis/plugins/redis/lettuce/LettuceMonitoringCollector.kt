@@ -36,7 +36,7 @@ internal class LettuceMonitoringCollector(
 
     private val meters = MetersImpl()
 
-    private val eventPrefix = "lettuce.${stepQualifier}"
+    private val eventPrefix = "redis.lettuce.${stepQualifier}"
 
     override fun recordSendingData(bytesToBeSent: Int) {
         meters.bytesToBeSent += bytesToBeSent

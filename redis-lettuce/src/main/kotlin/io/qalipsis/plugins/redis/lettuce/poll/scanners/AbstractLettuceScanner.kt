@@ -63,6 +63,8 @@ internal abstract class AbstractLettuceScanner<CURSOR : ScanCursor, RESULT : Any
      */
     abstract fun size(result: RESULT): Int
 
+    private val eventPrefix = "redis.lettuce.poll"
+
     /**
      * Delegates the call to the specific implementation of each redis command to execute in a cluster
      * connection or in a single node.
@@ -96,14 +98,14 @@ internal abstract class AbstractLettuceScanner<CURSOR : ScanCursor, RESULT : Any
         val overallStart = System.nanoTime()
 
         return try {
-            eventsLogger?.trace("lettuce.poll.polling", tags = contextEventTags)
+            eventsLogger?.trace("$eventPrefix.polling", tags = contextEventTags)
             while (cursor?.isFinished != true) {
                 cursor = command(keyOrPattern, cursor).asSuspended().get(DEFAULT_TIMEOUT)
                 pollCount++
                 result = collectValuesIntoResult(cursor, result)
             }
             val overAllDuration = Duration.ofNanos(System.nanoTime() - overallStart)
-            eventsLogger?.info("lettuce.poll.response", arrayOf(overAllDuration, size(result)), tags = contextEventTags)
+            eventsLogger?.info("$eventPrefix.response", arrayOf(overAllDuration, size(result)), tags = contextEventTags)
 
             PollRawResult(
                 result,
@@ -113,7 +115,7 @@ internal abstract class AbstractLettuceScanner<CURSOR : ScanCursor, RESULT : Any
             )
         } catch (e: Exception) {
             val overAllDuration = Duration.ofNanos(System.nanoTime() - overallStart)
-            eventsLogger?.warn("lettuce.poll.failure", arrayOf(overAllDuration, e), tags = contextEventTags)
+            eventsLogger?.warn("$eventPrefix.failure", arrayOf(overAllDuration, e), tags = contextEventTags)
             log.error(e) { "An error occurred while polling: ${e.message}" }
             null
         }

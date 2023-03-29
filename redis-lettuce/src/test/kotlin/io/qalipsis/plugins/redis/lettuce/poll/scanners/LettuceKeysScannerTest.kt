@@ -51,9 +51,9 @@ internal class LettuceKeysScannerTest :
         // then
         val scanArgument = slot<ScanArgs>()
         coVerifyOnce {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             singleConnection.async().scan(capture(scanArgument))
-            eventsLogger.info("lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.info("redis.lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
         }
         assertThat(scanArgument.captured).typedProp<ByteArray>("match").isEqualTo("pattern".toByteArray())
         confirmVerified(resultsChannel)
@@ -71,9 +71,9 @@ internal class LettuceKeysScannerTest :
         // then
         val scanArgument = slot<ScanArgs>()
         coVerifyOnce {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             singleConnection.async().scan(capture(scanArgument))
-            eventsLogger.warn("lettuce.poll.failure", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.warn("redis.lettuce.poll.failure", any<Array<*>>(), any(), tags = refEq(tags))
         }
         assertThat(scanArgument.captured).typedProp<ByteArray>("match").isEqualTo("pattern".toByteArray())
         confirmVerified(resultsChannel)
@@ -112,11 +112,11 @@ internal class LettuceKeysScannerTest :
         val scanArguments = mutableListOf<ScanArgs>()
         val resultsCaptor = slot<PollRawResult<List<ByteArray>>>()
         coVerifyOrder {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             clusterConnection.async().scan(capture(scanArguments))
             clusterConnection.async().scan(refEq(cursor1), capture(scanArguments))
             clusterConnection.async().scan(refEq(cursor2), capture(scanArguments))
-            eventsLogger.info("lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.info("redis.lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
             resultsChannel.send(capture(resultsCaptor))
         }
 
@@ -172,11 +172,11 @@ internal class LettuceKeysScannerTest :
         val scanArguments = mutableListOf<ScanArgs>()
         val resultsCaptor = slot<PollRawResult<List<ByteArray>>>()
         coVerifyOrder {
-            eventsLogger.trace("lettuce.poll.polling", null, any(), tags = refEq(tags))
+            eventsLogger.trace("redis.lettuce.poll.polling", null, any(), tags = refEq(tags))
             singleConnection.async().scan(capture(scanArguments))
             singleConnection.async().scan(refEq(cursor1), capture(scanArguments))
             singleConnection.async().scan(refEq(cursor2), capture(scanArguments))
-            eventsLogger.info("lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
+            eventsLogger.info("redis.lettuce.poll.response", any<Array<*>>(), any(), tags = refEq(tags))
             resultsChannel.send(capture(resultsCaptor))
         }
 
