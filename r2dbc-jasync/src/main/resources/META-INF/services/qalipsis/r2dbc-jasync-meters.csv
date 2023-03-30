@@ -1,0 +1,6 @@
+r2dbc-jasync-save-records;counter
+r2dbc-jasync-save-records-failure;counter
+r2dbc-jasync-save-records-success;counter
+r2dbc-jasync-save-records-time-to-response;timer
+r2dbc-jasync-poll-records;counter
+r2dbc-jasync-search-records;counter

@@ -37,10 +37,10 @@ import java.util.concurrent.TimeUnit
  * Implementation of a [io.qalipsis.api.steps.Step] able to perform a save on the database.
  *
  * @property connectionPoolBuilder closure to generate connection to database.
- * @property tableName name of the database.
- * @property columns name of the columns on the database.
+ * @property tableNameFactory name of the database.
+ * @property columnsFactory name of the columns on the database.
  * @property recordsFactory list of rows to add to database.
- * @property metrics metrics to track.
+ * @property meterRegistry metrics to track.
  *
  * @author Carlos Vieira
  */
@@ -58,9 +58,9 @@ internal class JasyncSaveStep<I>(
 
     private lateinit var connection: SuspendingConnection
 
-    private val eventPrefix: String = "jasync.save"
+    private val eventPrefix: String = "r2dbc.jasync.save"
 
-    private val meterPrefix: String = "jasync-save"
+    private val meterPrefix: String = "r2dbc-jasync-save"
 
     private var recordsCounter: Counter? = null
 
@@ -81,7 +81,7 @@ internal class JasyncSaveStep<I>(
             timeToResponse = timer("$meterPrefix-records-time-to-response", tags)
 
         }
-        eventTags = context.toEventTags();
+        eventTags = context.toEventTags()
         connection = connectionPoolBuilder()
         connection.connect()
     }
