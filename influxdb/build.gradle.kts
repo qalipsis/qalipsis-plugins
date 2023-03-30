@@ -41,45 +41,45 @@ val pluginPlatformVersion: String by project
 val influxdbVersion = "4.1.0"
 
 dependencies {
-    implementation(platform("io.qalipsis:plugin-platform:${pluginPlatformVersion}"))
+    implementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
     compileOnly("io.aeris-consulting:catadioptre-annotations")
 
     compileOnly("io.micronaut:micronaut-runtime")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     api("com.influxdb:influxdb-client-kotlin:$influxdbVersion")
 
-    api("io.qalipsis:api-common")
-    api("io.qalipsis:api-dsl")
+    api("io.qalipsis:qalipsis-api-common")
+    api("io.qalipsis:qalipsis-api-dsl")
     api("io.micronaut.micrometer:micronaut-micrometer-registry-influx")
 
     kapt("io.aeris-consulting:catadioptre-annotations")
-    kapt(platform("io.qalipsis:plugin-platform:${pluginPlatformVersion}"))
+    kapt(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
     kapt("io.micronaut:micronaut-inject-java")
     kapt("io.micronaut:micronaut-validation")
     kapt("io.micronaut:micronaut-graal")
-    kapt("io.qalipsis:api-processors")
-    kapt("io.qalipsis:api-dsl")
-    kapt("io.qalipsis:api-common")
+    kapt("io.qalipsis:qalipsis-api-processors")
+    kapt("io.qalipsis:qalipsis-api-dsl")
+    kapt("io.qalipsis:qalipsis-api-common")
 
-    testImplementation(platform("io.qalipsis:plugin-platform:${pluginPlatformVersion}"))
+    testImplementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
     testImplementation("io.aeris-consulting:catadioptre-kotlin")
     testImplementation("org.testcontainers:influxdb")
     testImplementation("io.micronaut.test:micronaut-test-junit5")
-    testImplementation("io.qalipsis:test")
-    testImplementation("io.qalipsis:api-dsl")
-    testImplementation(testFixtures("io.qalipsis:runtime"))
-    testImplementation(testFixtures("io.qalipsis:api-dsl"))
-    testImplementation(testFixtures("io.qalipsis:api-common"))
-    testRuntimeOnly("io.qalipsis:runtime")
-    testRuntimeOnly("io.qalipsis:head")
-    testRuntimeOnly("io.qalipsis:factory")
+    testImplementation("io.qalipsis:qalipsis-test")
+    testImplementation("io.qalipsis:qalipsis-api-dsl")
+    testImplementation(testFixtures("io.qalipsis:qalipsis-runtime"))
+    testImplementation(testFixtures("io.qalipsis:qalipsis-api-dsl"))
+    testImplementation(testFixtures("io.qalipsis:qalipsis-api-common"))
+    testRuntimeOnly("io.qalipsis:qalipsis-runtime")
+    testRuntimeOnly("io.qalipsis:qalipsis-head")
+    testRuntimeOnly("io.qalipsis:qalipsis-factory")
 
     testImplementation("javax.annotation:javax.annotation-api")
     testImplementation("io.micronaut:micronaut-runtime")
 
-    kaptTest(platform("io.qalipsis:plugin-platform:${pluginPlatformVersion}"))
+    kaptTest(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
     kaptTest("io.micronaut:micronaut-inject-java")
-    kaptTest("io.qalipsis:api-processors")
+    kaptTest("io.qalipsis:qalipsis-api-processors")
 }
 
 
