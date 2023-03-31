@@ -23,8 +23,8 @@ dependencies {
     kapt(platform("io.qalipsis:qalipsis-platform:<version>"))
     
     // Add your plugins:
-    implementation("io.qalipsis.plugin:cassandra")
-    implementation("io.qalipsis.plugin:jackson")
+    implementation("io.qalipsis.plugin:qalipsis-plugin-cassandra")
+    implementation("io.qalipsis.plugin:qalipsis-plugin-jackson")
     
     // Add the additional libraries you need:
     implementation("io.kotest:kotest-assertions-core:5.4.2")
