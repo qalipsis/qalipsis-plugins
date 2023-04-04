@@ -97,10 +97,10 @@ internal class RabbitMqProducerStepTest {
         rabbitMqProducerStep.start(stepStartStopContext)
 
         verifyOnce {
-            meterRegistry.counter("rabbitmq-produce-${stepName}-bytes", any<Iterable<Tag>>())
-            meterRegistry.counter("rabbitmq-produce-${stepName}-records", any<Iterable<Tag>>())
-            meterRegistry.counter("rabbitmq-produce-${stepName}-failed-bytes", any<Iterable<Tag>>())
-            meterRegistry.counter("rabbitmq-produce-${stepName}-failed-records", any<Iterable<Tag>>())
+            meterRegistry.counter("rabbitmq-produce-bytes", any<Iterable<Tag>>())
+            meterRegistry.counter("rabbitmq-produce-records", any<Iterable<Tag>>())
+            meterRegistry.counter("rabbitmq-produce-failed-bytes", any<Iterable<Tag>>())
+            meterRegistry.counter("rabbitmq-produce-failed-records", any<Iterable<Tag>>())
         }
 
         // when
@@ -139,7 +139,7 @@ internal class RabbitMqProducerStepTest {
             context.receive()
             rabbitMqProducer.execute(data)
             eventsLogger.info(
-                "rabbitmq.produce.${stepName}.success-response-time",
+                "rabbitmq.produce.success-response-time",
                 any<Array<Any>>(),
                 timestamp = any(),
                 tags = any<Map<String, String>>()
@@ -182,7 +182,7 @@ internal class RabbitMqProducerStepTest {
             context.receive()
             rabbitMqProducer.execute(data)
             eventsLogger.warn(
-                "rabbitmq.produce.${stepName}.failure-response-time",
+                "rabbitmq.produce.failure-response-time",
                 any<Array<Any>>(),
                 timestamp = any(),
                 tags = any<Map<String, String>>()

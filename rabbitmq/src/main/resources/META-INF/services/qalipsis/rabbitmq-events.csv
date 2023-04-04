@@ -1,0 +1,4 @@
+rabbitmq.consume.bytes;Int
+rabbitmq.consume.records;Int
+rabbitmq.produce.success-response-time;Long,RabbitMqProducerRecord
+rabbitmq.produce.failure-response-time;Long,RabbitMqProducerRecord

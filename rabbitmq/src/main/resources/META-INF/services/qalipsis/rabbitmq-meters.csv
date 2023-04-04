@@ -1,0 +1,6 @@
+rabbitmq-consume-bytes;counter
+rabbitmq-consume-records;counter
+rabbitmq-produce-bytes;counter
+rabbitmq-produce-records;counter
+rabbitmq-produce-failed-bytes;counter
+rabbitmq-produce-failed-records;counter

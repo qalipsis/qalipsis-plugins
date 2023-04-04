@@ -46,9 +46,9 @@ internal class RabbitMqProducerStep<I>(
     val eventsLogger: EventsLogger? = null
 ) : AbstractStep<I, RabbitMqProducerResult<I>>(stepName, retryPolicy) {
 
-    private val eventPrefix = "rabbitmq.produce.${stepName}"
+    private val eventPrefix = "rabbitmq.produce"
 
-    private val meterPrefix = "rabbitmq-produce-${stepName}"
+    private val meterPrefix = "rabbitmq-produce"
 
     private var meterBytesCounter: Counter? = null
 
