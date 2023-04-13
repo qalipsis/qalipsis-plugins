@@ -94,7 +94,7 @@ dependencies {
         // Plugins.
         api("io.qalipsis.plugin:qalipsis-plugin-cassandra:0.6.0-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-elasticsearch:0.6.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-graphite:0.6.0-SNAPSHOT")
+        api("io.qalipsis.plugin:qalipsis-plugin-graphite:0.6.1-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-influxdb:0.6.0-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-jackson:0.6.0-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-jakarta-ee-messaging:0.6.0-SNAPSHOT")
