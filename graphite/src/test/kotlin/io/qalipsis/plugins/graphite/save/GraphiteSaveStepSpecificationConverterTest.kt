@@ -50,9 +50,11 @@ internal class GraphiteSaveStepSpecificationConverterTest :
     @RegisterExtension
     val testDispatcherProvider = TestDispatcherProvider()
 
-    private val recordSupplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<String>) = { _, _ ->
+    private val recordSupplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<GraphiteRecord>) = { _, _ ->
         listOf(
-            "foo 1.1\n", "foo 1.2\n", "foo 1.3\n"
+            GraphiteRecord("foo", 1.1),
+            GraphiteRecord("foo", 1.2),
+            GraphiteRecord("foo", 1.3)
         )
     }
 

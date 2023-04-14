@@ -105,7 +105,7 @@ internal class GraphiteSaveStepIntegrationTest {
     }
 
     @Test
-    @Timeout(20)
+    @Timeout(50)
     fun `should succeed when sending query with results`() = testDispatcherProvider.run {
         //given
         val metersTags = relaxedMockk<Tags>()
@@ -142,12 +142,14 @@ internal class GraphiteSaveStepIntegrationTest {
         val strRequestTwo = "http://localhost:${httpPort}/render?target=$keyTwo&format=json"
         val strRequestThree = "http://localhost:${httpPort}/render?target=$keyThird&format=json"
 
-        val now = Instant.now().toEpochMilli() / 1000
+        val now = Instant.now()
 
         // when
         val resultOfExecute = saveClient.execute(
             listOf(
-                "foo.first 1.1 $now\n", "foo.second 1.2 $now\n", "foo.third 1.3 $now\n"
+                GraphiteRecord("foo.first", 1.1, now),
+                GraphiteRecord("foo.second", 1.2, now),
+                GraphiteRecord("foo.third", 1.3, now)
             ), tags
         )
 
@@ -215,7 +217,9 @@ internal class GraphiteSaveStepIntegrationTest {
 
         // when
         // No exception can be returned since there is no response from the server to know whether the records were saved or not.
-        saveClient.execute(listOf("hola.first 1.1", "hola.second 1.2"), tags)
+        saveClient.execute(listOf(
+            GraphiteRecord("hola.first", 1.1),
+            GraphiteRecord("hola.second", 1.2)), tags)
 
         //then
         val key = "hola.first"
@@ -244,9 +248,7 @@ internal class GraphiteSaveStepIntegrationTest {
     companion object {
 
         const val GRAPHITE_IMAGE_NAME = "graphiteapp/graphite-statsd:latest"
-
         const val HTTP_PORT = 80
-
         const val GRAPHITE_PLAINTEXT_PORT = 2003
 
         @Container

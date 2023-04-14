@@ -44,7 +44,7 @@ interface GraphiteSaveStepSpecification<I> :
     /**
      * Defines the statement to execute when saving.
      */
-    fun records(recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<String>)
+    fun records(recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<GraphiteRecord>)
 
     /**
      * Configures the monitoring of the save step.
@@ -64,7 +64,7 @@ internal class GraphiteSaveStepSpecificationImpl<I> :
 
     internal var connectionConfig = GraphiteConnectionSpecificationImpl()
 
-    internal var records: (suspend (ctx: StepContext<*, *>, input: I) -> List<String>) =  { _, _ -> emptyList() }
+    internal var records: (suspend (ctx: StepContext<*, *>, input: I) -> List<GraphiteRecord>) =  { _, _ -> emptyList() }
 
     internal var monitoringConfig = StepMonitoringConfiguration()
 
@@ -72,7 +72,7 @@ internal class GraphiteSaveStepSpecificationImpl<I> :
         connectionConfig.connectionConfiguration()
     }
 
-    override fun records(recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<String>) {
+    override fun records(recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<GraphiteRecord>) {
         this.records = recordsFactory
     }
 

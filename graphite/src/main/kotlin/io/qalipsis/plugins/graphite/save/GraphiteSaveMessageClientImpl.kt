@@ -66,7 +66,7 @@ internal class GraphiteSaveMessageClientImpl(
     }
 
     override suspend fun execute(
-        messages: List<String>,
+        messages: List<GraphiteRecord>,
         contextEventTags: Map<String, String>
     ): GraphiteSaveQueryMeters {
         eventsLogger?.debug("$eventPrefix.saving-messages", messages.size, tags = contextEventTags)

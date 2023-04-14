@@ -48,7 +48,7 @@ internal class GraphiteSaveClient(
 
     private lateinit var channelFuture: ChannelFuture
 
-    protected val channel: Channel
+    private val channel: Channel
         get() = channelFuture.channel()
 
     val isOpen: Boolean
@@ -84,7 +84,7 @@ internal class GraphiteSaveClient(
     }
 
 
-    suspend fun publish(values: List<String>) {
+    suspend fun publish(values: List<GraphiteRecord>) {
         val readinessLatch = ImmutableSlot<Result<Unit>>()
         channel.writeAndFlush(values).addListener {
             coroutineScope.launch {

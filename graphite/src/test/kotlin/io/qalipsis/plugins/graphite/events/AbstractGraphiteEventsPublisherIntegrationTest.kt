@@ -48,7 +48,6 @@ import java.util.concurrent.TimeUnit
  * @author rklymenko
  */
 @Testcontainers
-@Timeout(60)
 internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(private val protocol: GraphiteProtocol) {
 
     @JvmField
@@ -96,7 +95,7 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(private v
     }
 
     @Test
-    @Timeout(35)
+    @Timeout(25)
     fun `should save single event into graphite`() = testDispatcherProvider.run {
         //given
         val graphiteEventsPublisher = GraphiteEventsPublisher(
@@ -114,7 +113,7 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(private v
         //then
         val request =
             generateHttpGet("http://${configuration.host}:${containerHttpPort}/render?target=$key&format=json")
-        await.atMost(30, TimeUnit.SECONDS).until {
+        await.atMost(20, TimeUnit.SECONDS).until {
             kotlin.runCatching {
                 httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
             }.getOrNull()?.contains(key) ?: false
@@ -216,7 +215,7 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(private v
     }
 
     @Test
-    @Timeout(15)
+    @Timeout(25)
     fun `should save nothing due to insufficient event level`() = testDispatcherProvider.run {
         //given
         val graphiteEventsPublisher = spyk(

@@ -34,7 +34,7 @@ internal class GraphiteSaveStep<I>(
     id: StepName,
     retryPolicy: RetryPolicy?,
     private val graphiteSaveMessageClient: GraphiteSaveMessageClient,
-    private val messageFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<String>)
+    private val messageFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<GraphiteRecord>)
 ) : AbstractStep<I, GraphiteSaveResult<I>>(id, retryPolicy) {
 
     override suspend fun start(context: StepStartStopContext) {

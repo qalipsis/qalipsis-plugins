@@ -121,10 +121,10 @@ internal class GraphiteMeterRegistryFactoryIntegrationTest {
 
     companion object {
 
-        const val GRAPHITE_IMAGE_NAME = "graphiteapp/graphite-statsd:latest"
         const val HTTP_PORT = 80
-        const val GRAPHITE_PLAINTEXT_PORT = 2003
-        const val GRAPHITE_PICKLE_PORT = 2004
+        private const val GRAPHITE_PLAINTEXT_PORT = 2003
+        private const val GRAPHITE_PICKLE_PORT = 2004
+        private const val GRAPHITE_IMAGE_NAME = "graphiteapp/graphite-statsd:latest"
 
         @Container
         @JvmStatic

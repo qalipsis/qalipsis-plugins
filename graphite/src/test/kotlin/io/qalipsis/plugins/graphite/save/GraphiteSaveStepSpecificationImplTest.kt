@@ -25,7 +25,6 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.aerisconsulting.catadioptre.getProperty
-import io.netty.channel.nio.NioEventLoopGroup
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
@@ -42,9 +41,11 @@ import org.junit.jupiter.api.extension.RegisterExtension
  */
 internal class GraphiteSaveStepSpecificationImplTest {
 
-    private val recordSupplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<String>) = { _, _ ->
+    private val recordSupplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<GraphiteRecord>) = { _, _ ->
         listOf(
-            "foo 1.1\n", "foo 1.2\n", "foo 1.3\n"
+            GraphiteRecord("foo", 1.1),
+            GraphiteRecord("foo", 1.2),
+            GraphiteRecord("foo", 1.3)
         )
     }
 
@@ -59,7 +60,7 @@ internal class GraphiteSaveStepSpecificationImplTest {
             name = "my-save-step"
             connect {
                 server("localhost", 8080)
-                workerGroup { NioEventLoopGroup() }
+                //Worker group is NioEventLoopGroup by default
             }
             records(recordSupplier)
         }
@@ -78,7 +79,13 @@ internal class GraphiteSaveStepSpecificationImplTest {
             previousStep.nextSteps[0] as GraphiteSaveStepSpecificationImpl<*>
 
         val messages = step.getProperty<suspend (ctx: StepContext<*, *>, input: Int) -> String>("records")
-        assertThat(messages(relaxedMockk(), relaxedMockk())).isEqualTo(listOf("foo 1.1\n", "foo 1.2\n", "foo 1.3\n"))
+        assertThat(messages(relaxedMockk(), relaxedMockk())).isEqualTo(
+            listOf(
+                GraphiteRecord("foo", 1.1),
+                GraphiteRecord("foo", 1.2),
+                GraphiteRecord("foo", 1.3)
+            )
+        )
     }
 
 
@@ -89,7 +96,7 @@ internal class GraphiteSaveStepSpecificationImplTest {
             name = "my-save-step"
             connect {
                 server("localhost", 8080)
-                workerGroup { NioEventLoopGroup() }
+                //Worker group is NioEventLoopGroup by default
             }
             records(recordSupplier)
             monitoring {
@@ -112,6 +119,12 @@ internal class GraphiteSaveStepSpecificationImplTest {
             previousStep.nextSteps[0] as GraphiteSaveStepSpecificationImpl<*>
 
         val messages = step.getProperty<suspend (ctx: StepContext<*, *>, input: Int) -> String>("records")
-        assertThat(messages(relaxedMockk(), relaxedMockk())).isEqualTo(listOf("foo 1.1\n", "foo 1.2\n", "foo 1.3\n"))
+        assertThat(messages(relaxedMockk(), relaxedMockk())).isEqualTo(
+            listOf(
+                GraphiteRecord("foo", 1.1),
+                GraphiteRecord("foo", 1.2),
+                GraphiteRecord("foo", 1.3)
+            )
+        )
     }
 }

@@ -35,7 +35,7 @@ internal interface GraphiteSaveMessageClient {
      * Inserts messages to the Graphite server.
      */
     suspend fun execute(
-        messages: List<String>,
+        messages: List<GraphiteRecord>,
         contextEventTags: Map<String, String>
     ): GraphiteSaveQueryMeters
 

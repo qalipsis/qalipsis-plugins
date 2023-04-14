@@ -16,17 +16,24 @@
 
 package io.qalipsis.plugins.graphite.save
 
+import io.qalipsis.plugins.graphite.save.codecs.GraphitePlaintextStringEncoder
+import java.time.Instant
+
 /**
- * Wrapper for the result of save messages procedure in Graphite.
+ * A wrapper class for converting data to the plaintext.
  *
- * @property input the data to save in Graphite
- * @property messages the data formatted to be able to save in Graphite
- * @property meters meters of the save step
+ * @property metricPath is the metric namespace that you want to populate
+ * @property value is the value that you want to assign to the metric at this time
+ * @property timestamp is the number of seconds since unix epoch time
  *
- * @author Palina Bril
+ * @author Alexey Prudnikov
  */
-data class GraphiteSaveResult<I>(
-    val input: I,
-    val messages: List<GraphiteRecord>,
-    val meters: GraphiteSaveQueryMeters
-)
+data class GraphiteRecord (
+    val metricPath: String,
+    val value: Any? = null,
+    val timestamp: Instant? = null
+){
+    override fun toString(): String {
+        return GraphitePlaintextStringEncoder().convertToPlaintext(this)
+    }
+}
