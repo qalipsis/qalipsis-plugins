@@ -102,14 +102,14 @@ internal class ResultSetBatchConverterTest {
         assertThat(converted).all {
             prop(JasyncPollResults<*>::records).all {
                 hasSize(2)
-                index(0).all {
+                index(0).isNotNull().isInstanceOf<DatasourceRecord<Map<String, Any?>>>().all {
                     prop(DatasourceRecord<Map<String, Any?>>::ordinal).isEqualTo(123L)
                     prop(DatasourceRecord<Map<String, Any?>>::value).all {
                         key("col-1").isEqualTo("converted_1_1")
                         key("col-2").isEqualTo("converted_1_2")
                     }
                 }
-                index(1).all {
+                index(1).isNotNull().isInstanceOf<DatasourceRecord<Map<String, Any?>>>().all {
                     prop(DatasourceRecord<Map<String, Any?>>::ordinal).isEqualTo(124L)
                     prop(DatasourceRecord<Map<String, Any?>>::value).all {
                         key("col-1").isEqualTo("converted_2_1")
@@ -172,14 +172,14 @@ internal class ResultSetBatchConverterTest {
         assertThat(converted).all {
             prop(JasyncPollResults<*>::records).all {
                 hasSize(2)
-                index(0).all {
+                index(0).isNotNull().isInstanceOf<DatasourceRecord<Map<String, Any?>>>().all {
                     prop(DatasourceRecord<Map<String, Any?>>::ordinal).isEqualTo(123L)
                     prop(DatasourceRecord<Map<String, Any?>>::value).all {
                         key("col-1").isEqualTo("converted_1_1")
                         key("col-2").isEqualTo("converted_1_2")
                     }
                 }
-                index(1).all {
+                index(1).isNotNull().isInstanceOf<DatasourceRecord<Map<String, Any?>>>().all {
                     prop(DatasourceRecord<Map<String, Any?>>::ordinal).isEqualTo(124L)
                     prop(DatasourceRecord<Map<String, Any?>>::value).all {
                         key("col-1").isEqualTo("converted_2_1")
