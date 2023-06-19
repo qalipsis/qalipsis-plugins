@@ -22,5 +22,5 @@ meters:
       enabled: false
       step: PT10S
       org: qalipsis
-      bucket: qalipsis-event
+      bucket: qalipsis-meter
 
