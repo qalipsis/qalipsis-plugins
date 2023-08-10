@@ -21,8 +21,6 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
 import assertk.assertions.prop
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Tag
 import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.every
@@ -32,12 +30,13 @@ import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.coVerifyNever
 import io.qalipsis.test.mockk.coVerifyOnce
-import io.qalipsis.test.mockk.verifyExactly
+import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -66,8 +65,15 @@ internal class RabbitMqProducerStepTest {
 
     private lateinit var rabbitMqProducerStep: RabbitMqProducerStep<Any>
 
-    @RelaxedMockK
-    private lateinit var meterRegistry: CampaignMeterRegistry
+    private val recordsCount = relaxedMockk<Counter>()
+
+    private val recordsByteCount = relaxedMockk<Counter>()
+
+    private val failureCounter = relaxedMockk<Counter>()
+
+    private val successCounter = relaxedMockk<Counter>()
+
+    private val successByteCounter = relaxedMockk<Counter>()
 
     private val data = listOf(
         RabbitMqProducerRecord(
@@ -81,51 +87,151 @@ internal class RabbitMqProducerStepTest {
     @Test
     fun `should start and stop the step`() = testDispatcherProvider.runTest {
         // given
-        val stepName = "test-step"
+        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val stepStartStopContext = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "test-scenario"
+            every { stepName } returns "test-step"
+        }
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-records",
+                    refEq(tags)
+                )
+            } returns recordsCount
+            every { recordsCount.report(any()) } returns recordsCount
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-bytes",
+                    refEq(tags)
+                )
+            } returns recordsByteCount
+            every { recordsByteCount.report(any()) } returns recordsByteCount
+
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-failed-records",
+                    refEq(tags)
+                )
+            } returns failureCounter
+            every { failureCounter.report(any()) } returns failureCounter
+
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-success-records",
+                    refEq(tags)
+                )
+            } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-success-bytes",
+                    refEq(tags)
+                )
+            } returns successByteCounter
+            every { successByteCounter.report(any()) } returns successByteCounter
+        }
         rabbitMqProducerStep = RabbitMqProducerStep(
-            stepName = stepName,
+            stepName = "test-step",
             retryPolicy = retryPolicy,
             rabbitMqProducer = rabbitMqProducer,
             recordFactory = { _, _ -> data },
             eventsLogger = eventsLogger,
             meterRegistry = meterRegistry
         )
-        val stepStartStopContext =
-            StepStartStopContext(campaignKey = "1", scenarioName = "1", dagId = "1", stepName = stepName)
 
         // when
         rabbitMqProducerStep.start(stepStartStopContext)
 
         verifyOnce {
-            meterRegistry.counter("rabbitmq-produce-bytes", any<Iterable<Tag>>())
-            meterRegistry.counter("rabbitmq-produce-records", any<Iterable<Tag>>())
-            meterRegistry.counter("rabbitmq-produce-failed-bytes", any<Iterable<Tag>>())
-            meterRegistry.counter("rabbitmq-produce-failed-records", any<Iterable<Tag>>())
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-bytes", tags)
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-records", tags)
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-failed-bytes", tags)
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-success-bytes", tags)
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-success-records", tags)
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-failed-records", tags)
         }
 
-        // when
         rabbitMqProducerStep.stop(stepStartStopContext)
-
-        // then
-        verifyExactly(4) {
-            meterRegistry.remove(any<Counter>())
-        }
     }
 
     @Test
     fun `should execute the step`() = testDispatcherProvider.runTest {
         // given
-        val stepName = "test-step"
+        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val stepStartStopContext = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "test-scenario"
+            every { stepName } returns "test-step"
+        }
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-records",
+                    refEq(tags)
+                )
+            } returns recordsCount
+            every { recordsCount.report(any()) } returns recordsCount
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-bytes",
+                    refEq(tags)
+                )
+            } returns recordsByteCount
+            every { recordsByteCount.report(any()) } returns recordsByteCount
+
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-failed-records",
+                    refEq(tags)
+                )
+            } returns failureCounter
+            every { failureCounter.report(any()) } returns failureCounter
+
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-success-records",
+                    refEq(tags)
+                )
+            } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-success-bytes",
+                    refEq(tags)
+                )
+            } returns successByteCounter
+            every { successByteCounter.report(any()) } returns successByteCounter
+        }
         rabbitMqProducerStep = RabbitMqProducerStep(
-            stepName = stepName,
+            stepName = "test-step",
             retryPolicy = retryPolicy,
             rabbitMqProducer = rabbitMqProducer,
             recordFactory = { _, _ -> data },
             eventsLogger = eventsLogger,
             meterRegistry = meterRegistry
         )
-        val stepStartStopContext =
-            StepStartStopContext(campaignKey = "1", scenarioName = "1", dagId = "1", stepName = stepName)
         rabbitMqProducerStep.start(stepStartStopContext)
         val resultSlot = slot<RabbitMqProducerResult<Any>>()
         coEvery { context.receive() } returns "This is the input"
@@ -155,19 +261,71 @@ internal class RabbitMqProducerStepTest {
     @Test
     fun `should produce failed message`() = testDispatcherProvider.runTest {
         // given
-        val stepName = "test-step"
-        val exception = RuntimeException()
-        every { rabbitMqProducer.execute(any()) } throws exception
+        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val stepStartStopContext = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "test-scenario"
+            every { stepName } returns "test-step"
+        }
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-records",
+                    refEq(tags)
+                )
+            } returns recordsCount
+            every { recordsCount.report(any()) } returns recordsCount
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-bytes",
+                    refEq(tags)
+                )
+            } returns recordsByteCount
+            every { recordsByteCount.report(any()) } returns recordsByteCount
+
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-failed-records",
+                    refEq(tags)
+                )
+            } returns failureCounter
+            every { failureCounter.report(any()) } returns failureCounter
+
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-success-records",
+                    refEq(tags)
+                )
+            } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-produce-success-bytes",
+                    refEq(tags)
+                )
+            } returns successByteCounter
+            every { successByteCounter.report(any()) } returns successByteCounter
+        }
         rabbitMqProducerStep = RabbitMqProducerStep(
-            stepName = stepName,
+            stepName = "test-step",
             retryPolicy = retryPolicy,
             rabbitMqProducer = rabbitMqProducer,
             recordFactory = { _, _ -> data },
             eventsLogger = eventsLogger,
             meterRegistry = meterRegistry
         )
-        val stepStartStopContext =
-            StepStartStopContext(campaignKey = "1", scenarioName = "1", dagId = "1", stepName = stepName)
+        val exception = RuntimeException()
+        every { rabbitMqProducer.execute(any()) } throws exception
         rabbitMqProducerStep.start(stepStartStopContext)
         coEvery { context.receive() } returns "This is the input"
 

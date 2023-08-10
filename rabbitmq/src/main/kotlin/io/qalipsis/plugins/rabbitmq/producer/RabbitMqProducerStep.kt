@@ -16,14 +16,15 @@
 
 package io.qalipsis.plugins.rabbitmq.producer
 
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Tags
+import io.qalipsis.api.context.ScenarioName
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
 
@@ -54,30 +55,74 @@ internal class RabbitMqProducerStep<I>(
 
     private var meterRecordsCounter: Counter? = null
 
+    private var successRecordsCounter: Counter? = null
+
+    private var successByteCounter: Counter? = null
+
     private var meterFailedBytesCounter: Counter? = null
 
     private var meterFailedRecordsCounter: Counter? = null
 
-    private var meterTags: Tags? = null
-
-    private var eventTags: Map<String, String>? = null
+    private lateinit var eventTags: Map<String, String>
 
 
     override suspend fun start(context: StepStartStopContext) {
-        meterTags = context.toMetersTags()
         eventTags = context.toEventTags()
-
-        initMonitoringMetrics()
+        val scenarioName = context.scenarioName
+        val stepName = context.stepName
+        initMonitoringMetrics(scenarioName, stepName)
 
         rabbitMqProducer.start()
     }
 
-    private fun initMonitoringMetrics() {
+    private fun initMonitoringMetrics(scenarioName: ScenarioName, stepName: StepName) {
         meterRegistry?.apply {
-            meterBytesCounter = counter("${meterPrefix}-bytes", meterTags!!)
-            meterRecordsCounter = counter("${meterPrefix}-records", meterTags!!)
-            meterFailedBytesCounter = counter("${meterPrefix}-failed-bytes", meterTags!!)
-            meterFailedRecordsCounter = counter("${meterPrefix}-failed-records", meterTags!!)
+            meterBytesCounter = counter(scenarioName, stepName, "${meterPrefix}-bytes", eventTags).report {
+                display(
+                    format = "attempted %,.0f bytes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 1,
+                    Counter::count
+                )
+            }
+            meterRecordsCounter = counter(scenarioName, stepName,"${meterPrefix}-records", eventTags).report {
+                display(
+                    format = "attempted rec %,.0f",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 0,
+                    Counter::count
+                )
+            }
+            successByteCounter = counter(scenarioName, stepName, "${meterPrefix}-success-bytes", eventTags).report {
+                display(
+                    format = "\u2713 %,.0f bytes successes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 3,
+                    Counter::count
+                )
+            }
+            successRecordsCounter = counter(scenarioName, stepName,"${meterPrefix}-success-records", eventTags).report {
+                display(
+                    format = "\u2713 %,.0f successes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 2,
+                    Counter::count
+                )
+            }
+            meterFailedBytesCounter = counter(scenarioName, stepName,"${meterPrefix}-failed-bytes", eventTags)
+            meterFailedRecordsCounter = counter(scenarioName, stepName,"${meterPrefix}-failed-records", eventTags).report {
+                display(
+                    format = "\u2716 %,.0f failures",
+                    severity = ReportMessageSeverity.ERROR,
+                    row = 0,
+                    column = 4,
+                    Counter::count
+                )
+            }
         }
 
     }
@@ -89,25 +134,29 @@ internal class RabbitMqProducerStep<I>(
         val executionStart = System.nanoTime()
 
         try {
+            messages.forEach {
+                meterBytesCounter?.increment(it.value.size.toDouble())
+                meterRecordsCounter?.increment()
+            }
             rabbitMqProducer.execute(messages)
 
             val executionTime = System.nanoTime() - executionStart
             eventsLogger?.info(
                 "${eventPrefix}.success-response-time",
                 arrayOf(executionTime, messages),
-                tags = eventTags!!
+                tags = eventTags
             )
 
             messages.forEach {
-                meterBytesCounter?.increment(it.value.size.toDouble())
-                meterRecordsCounter?.increment()
+                successByteCounter?.increment(it.value.size.toDouble())
+                successRecordsCounter?.increment()
             }
         } catch (e: Exception) {
             val executionTime = System.nanoTime() - executionStart
             eventsLogger?.warn(
                 "${eventPrefix}.failure-response-time",
                 arrayOf(executionTime, messages),
-                tags = eventTags!!
+                tags = eventTags
             )
             messages.forEach {
                 meterFailedBytesCounter?.increment(it.value.size.toDouble())
@@ -128,10 +177,6 @@ internal class RabbitMqProducerStep<I>(
 
     private fun stopMonitoringMetrics() {
         meterRegistry?.apply {
-            meterBytesCounter?.let { remove(it) }
-            meterRecordsCounter?.let { remove(it) }
-            meterFailedBytesCounter?.let { remove(it) }
-            meterFailedRecordsCounter?.let { remove(it) }
             meterBytesCounter = null
             meterRecordsCounter = null
             meterFailedBytesCounter = null

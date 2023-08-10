@@ -32,16 +32,16 @@ import com.rabbitmq.client.Delivery
 import com.rabbitmq.client.Envelope
 import com.rabbitmq.client.MessageProperties
 import io.aerisconsulting.catadioptre.getProperty
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Tag
+import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
+import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
 import io.qalipsis.plugins.rabbitmq.Constants.DOCKER_IMAGE
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
-import io.qalipsis.test.mockk.verifyExactly
 import io.qalipsis.test.mockk.verifyNever
 import io.qalipsis.test.mockk.verifyOnce
 import kotlinx.coroutines.TimeoutCancellationException
@@ -79,10 +79,16 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     private val factory = ConnectionFactory()
 
     @RelaxedMockK
-    private lateinit var meterRegistry: CampaignMeterRegistry
+    private lateinit var eventsLogger: EventsLogger
 
     @RelaxedMockK
-    private lateinit var eventsLogger: EventsLogger
+    private lateinit var mockMeterRegistry: CampaignMeterRegistry
+
+    private val recordsCount = relaxedMockk<Counter>()
+
+    private val failureCounter = relaxedMockk<Counter>()
+
+    private val successCounter = relaxedMockk<Counter>()
 
     @BeforeEach
     internal fun setUp() {
@@ -134,6 +140,46 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     @Test
     @Timeout(10)
     internal fun `should always have next at start but not at stop`() = testDispatcherProvider.run {
+        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val stepStartStopContext = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "test-scenario"
+            every { stepName } returns "test-step"
+        }
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-records",
+                    refEq(tags)
+                )
+            } returns recordsCount
+            every { recordsCount.report(any()) } returns recordsCount
+
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-failures",
+                    refEq(tags)
+                )
+            } returns failureCounter
+            every { failureCounter.report(any()) } returns failureCounter
+
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-successes",
+                    refEq(tags)
+                )
+            } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+        }
+        val queueName = "test"
+        val channel = connection.createChannel()
+        createExchangeAndQueue(channel, queueName)
         reader = RabbitMqConsumerIterativeReader(
             2,
             20,
@@ -143,17 +189,53 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
             eventsLogger
         )
 
-        reader.start(relaxedMockk())
+        reader.start(stepStartStopContext)
         Assertions.assertTrue(reader.hasNext())
 
-        reader.stop(relaxedMockk())
+        reader.stop(stepStartStopContext)
         Assertions.assertFalse(reader.hasNext())
     }
 
     @Test
     @Timeout(10)
     internal fun `should accept start after stop and consume`() = testDispatcherProvider.run {
+        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val stepStartStopContext = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "test-scenario"
+            every { stepName } returns "test-step"
+        }
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-records",
+                    refEq(tags)
+                )
+            } returns recordsCount
+            every { recordsCount.report(any()) } returns recordsCount
 
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-failures",
+                    refEq(tags)
+                )
+            } returns failureCounter
+            every { failureCounter.report(any()) } returns failureCounter
+
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-successes",
+                    refEq(tags)
+                )
+            } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+        }
         val queueName = "test-start-stop"
         val channel = connection.createChannel()
         createExchangeAndQueue(channel, queueName)
@@ -166,14 +248,14 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
             meterRegistry,
             eventsLogger
         )
-        reader.start(relaxedMockk())
+        reader.start(stepStartStopContext)
         val initialChannel = reader.getProperty<kotlinx.coroutines.channels.Channel<*>>("resultChannel")
 
-        reader.stop(relaxedMockk())
+        reader.stop(stepStartStopContext)
 
         val recordsPublished = publishRecords(channel, queueName, 10)
 
-        reader.start(relaxedMockk())
+        reader.start(stepStartStopContext)
         val afterStopStartChannel = reader.getProperty<kotlinx.coroutines.channels.Channel<*>>("resultChannel")
         val received = mutableListOf<Delivery>()
 
@@ -182,7 +264,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
             received.add(record)
         }
 
-        reader.stop(relaxedMockk())
+        reader.stop(stepStartStopContext)
 
         assertThat(afterStopStartChannel).isInstanceOf(kotlinx.coroutines.channels.Channel::class)
             .isNotEqualTo(initialChannel)
@@ -203,7 +285,6 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     @Timeout(10)
     internal fun `should work without monitoring`() = testDispatcherProvider.run {
         val queueName = "test"
-
         reader = RabbitMqConsumerIterativeReader(
             2,
             20,
@@ -221,8 +302,8 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
         reader.start(relaxedMockk())
 
         verifyNever {
-            meterRegistry.counter("rabbitmq-consume-bytes", any<Iterable<Tag>>())
-            meterRegistry.counter("rabbitmq-consume-records", any<Iterable<Tag>>())
+            mockMeterRegistry.counter(any<String>(), any<String>(), "rabbitmq-consume-bytes", mapOf())
+            mockMeterRegistry.counter(any<String>(), any<String>(), "rabbitmq-consume-records", mapOf())
         }
 
         verifyNever {
@@ -257,17 +338,49 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
         }
 
         reader.stop(relaxedMockk())
-
-        verifyNever {
-            meterRegistry.remove(any<Counter>())
-        }
     }
 
     @Test
     @Timeout(10)
     internal fun `should consume all the data from queue in a direct exchange type`() = testDispatcherProvider.run {
         val queueName = "test"
+        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val stepStartStopContext = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "test-scenario"
+            every { stepName } returns "test-step"
+        }
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-records",
+                    refEq(tags)
+                )
+            } returns recordsCount
+            every { recordsCount.report(any()) } returns recordsCount
 
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-failures",
+                    refEq(tags)
+                )
+            } returns failureCounter
+            every { failureCounter.report(any()) } returns failureCounter
+
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-successes",
+                    refEq(tags)
+                )
+            } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+        }
         reader = RabbitMqConsumerIterativeReader(
             2,
             20,
@@ -281,12 +394,11 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
 
         createExchangeAndQueue(channel, queueName)
         val recordsPublished = publishRecords(channel, queueName)
-
-        reader.start(relaxedMockk())
+        reader.start(stepStartStopContext)
 
         verifyOnce {
-            meterRegistry.counter("rabbitmq-consume-bytes", any<Iterable<Tag>>())
-            meterRegistry.counter("rabbitmq-consume-records", any<Iterable<Tag>>())
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-consume-bytes", tags)
+            meterRegistry.counter("test-scenario", "test-step","rabbitmq-consume-records", tags)
         }
         // when
         val received = mutableListOf<Delivery>()
@@ -314,11 +426,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
             }
         }
 
-        reader.stop(relaxedMockk())
-
-        verifyExactly(2) {
-            meterRegistry.remove(any<Counter>())
-        }
+        reader.stop(stepStartStopContext)
     }
 
     @Test
@@ -326,6 +434,43 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     internal fun `should consume all the data from queue in a fanout exchange type`() = testDispatcherProvider.run {
         val exchangeName = "test-fanout"
         val queueName = "test-fanout-queue"
+        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val stepStartStopContext = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "test-scenario"
+            every { stepName } returns "test-step"
+        }
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-records",
+                    refEq(tags)
+                )
+            } returns recordsCount
+            every { recordsCount.report(any()) } returns recordsCount
+
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-failures",
+                    refEq(tags)
+                )
+            } returns failureCounter
+            every { failureCounter.report(any()) } returns failureCounter
+
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-successes",
+                    refEq(tags)
+                )
+            } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+        }
         reader = RabbitMqConsumerIterativeReader(
             2,
             20,
@@ -334,9 +479,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
             meterRegistry,
             eventsLogger
         )
-
         val channel = connection.createChannel()
-
         createExchangeAndQueue(channel, exchangeName, "fanout")
 
         val queue = channel.queueDeclare(queueName, true, false, false, emptyMap()).queue
@@ -344,7 +487,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
 
         val recordsPublished = publishRecords(channel, exchangeName, "", 50)
 
-        reader.start(relaxedMockk())
+        reader.start(stepStartStopContext)
 
         // when
         val received = mutableListOf<Delivery>()
@@ -373,7 +516,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
             }
         }
 
-        reader.stop(relaxedMockk())
+        reader.stop(stepStartStopContext)
     }
 
     @Test
@@ -381,6 +524,43 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     internal fun `should consume all the data from queue in a topic exchange type`() = testDispatcherProvider.run {
         val exchangeName = "test-topic"
         val queueName = "test-topic-queue"
+        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val stepStartStopContext = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "test-scenario"
+            every { stepName } returns "test-step"
+        }
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-records",
+                    refEq(tags)
+                )
+            } returns recordsCount
+            every { recordsCount.report(any()) } returns recordsCount
+
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-failures",
+                    refEq(tags)
+                )
+            } returns failureCounter
+            every { failureCounter.report(any()) } returns failureCounter
+
+            every {
+                counter(
+                    "test-scenario",
+                    "test-step",
+                    "rabbitmq-consume-successes",
+                    refEq(tags)
+                )
+            } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+        }
         reader = RabbitMqConsumerIterativeReader(
             2,
             20,
@@ -399,7 +579,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
 
         val recordsPublished = publishRecords(channel, exchangeName, "publish.topic.test", 20)
 
-        reader.start(relaxedMockk())
+        reader.start(stepStartStopContext)
 
         // when
         val received = mutableListOf<Delivery>()
@@ -428,7 +608,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
             }
         }
 
-        reader.stop(relaxedMockk())
+        reader.stop(stepStartStopContext)
     }
 
     companion object {

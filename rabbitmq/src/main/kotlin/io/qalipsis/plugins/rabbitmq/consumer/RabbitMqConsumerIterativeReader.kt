@@ -21,13 +21,15 @@ import com.rabbitmq.client.Connection
 import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.DeliverCallback
 import com.rabbitmq.client.Delivery
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Tags
+import io.qalipsis.api.context.ScenarioName
+import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLog
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.steps.datasource.DatasourceIterativeReader
 import kotlinx.coroutines.channels.Channel
 import java.time.Duration
@@ -75,16 +77,18 @@ internal class RabbitMqConsumerIterativeReader(
 
     private var meterRecordsCounter: Counter? = null
 
-    private var meterTags: Tags? = null
+    private var failureCounter: Counter? = null
 
-    private var eventTags: Map<String, String>? = null
+    private var successCounter: Counter? = null
+
+    private lateinit var eventTags: Map<String, String>
 
     override fun start(context: StepStartStopContext) {
 
-        meterTags = context.toMetersTags()
         eventTags = context.toEventTags()
-
-        initMonitoringMetrics()
+        val scenarioName = context.scenarioName
+        val stepName = context.stepName
+        initMonitoringMetrics(scenarioName, stepName)
 
         running = true
 
@@ -102,10 +106,36 @@ internal class RabbitMqConsumerIterativeReader(
         }
     }
 
-    private fun initMonitoringMetrics() {
+    private fun initMonitoringMetrics(scenarioName: ScenarioName, stepName: StepName) {
         meterRegistry?.apply {
-            meterBytesCounter = meterRegistry.counter("${meterPrefix}-bytes", meterTags!!)
-            meterRecordsCounter = meterRegistry.counter("${meterPrefix}-records", meterTags!!)
+            meterBytesCounter = meterRegistry.counter(scenarioName, stepName, "${meterPrefix}-bytes", eventTags)
+            meterRecordsCounter = meterRegistry.counter(scenarioName, stepName, "${meterPrefix}-records", eventTags).report {
+                display(
+                    format = "attempted req: %,.0f",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 0,
+                    Counter::count
+                )
+            }
+            successCounter = meterRegistry.counter(scenarioName, stepName, "${meterPrefix}-successes", eventTags).report {
+                display(
+                    format = "\u2713 %,.0f req",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 1,
+                    column = 0,
+                    Counter::count
+                )
+            }
+            failureCounter = meterRegistry.counter(scenarioName, stepName, "${meterPrefix}-failures", eventTags).report {
+                display(
+                    format = "\u2716 %,.0f failures",
+                    severity = ReportMessageSeverity.ERROR,
+                    row = 0,
+                    column = 1,
+                    Counter::count
+                )
+            }
         }
     }
 
@@ -126,6 +156,7 @@ internal class RabbitMqConsumerIterativeReader(
             )
         } catch (e: Exception) {
             log.error(e) { "An error occurred in the rabbitMQ consumer: ${e.message}" }
+            failureCounter?.increment()
         }
     }
 
@@ -133,8 +164,8 @@ internal class RabbitMqConsumerIterativeReader(
         meterBytesCounter?.increment(message.size.toDouble())
         meterRecordsCounter?.increment()
         eventsLogger?.apply {
-            info("${eventPrefix}.bytes", message.size, tags = eventTags!!)
-            info("${eventPrefix}.records", 1, tags = eventTags!!)
+            info("${eventPrefix}.bytes", message.size, tags = eventTags)
+            info("${eventPrefix}.records", 1, tags = eventTags)
         }
     }
 
@@ -159,8 +190,6 @@ internal class RabbitMqConsumerIterativeReader(
 
     private fun stopMonitoringMetrics() {
         meterRegistry?.apply {
-            meterBytesCounter?.let { remove(it) }
-            meterRecordsCounter?.let { remove(it) }
             meterBytesCounter = null
             meterRecordsCounter = null
         }
