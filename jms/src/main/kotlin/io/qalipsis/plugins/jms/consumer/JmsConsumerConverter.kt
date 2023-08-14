@@ -16,11 +16,12 @@
 
 package io.qalipsis.plugins.jms.consumer
 
-import io.micrometer.core.instrument.Counter
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.plugins.jms.JmsDeserializer
 import java.util.concurrent.atomic.AtomicLong
@@ -49,17 +50,32 @@ internal class JmsConsumerConverter<O : Any?>(
 
     override fun start(context: StepStartStopContext) {
         meterRegistry?.apply {
-            val tags = context.toMetersTags()
-            consumedBytesCounter = counter("$meterPrefix-value-bytes", tags)
-            consumedRecordsCounter = counter("$meterPrefix-records", tags)
+            eventTags = context.toEventTags()
+            val scenarioName = context.scenarioName
+            val stepName = context.stepName
+            consumedBytesCounter = counter(scenarioName, stepName,"$meterPrefix-value-bytes", eventTags).report {
+                display(
+                    format = "received: %,.0f bytes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 1,
+                    column = 0,
+                    Counter::count
+                )
+            }
+            consumedRecordsCounter = counter(scenarioName, stepName,"$meterPrefix-records", eventTags).report {
+                display(
+                    format = "received rec: %,.0f",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 1,
+                    column = 1,
+                    Counter::count
+                )
+            }
         }
-        eventTags = context.toEventTags()
     }
 
     override fun stop(context: StepStartStopContext) {
         meterRegistry?.apply {
-            remove(consumedBytesCounter!!)
-            remove(consumedRecordsCounter!!)
             consumedBytesCounter = null
             consumedRecordsCounter = null
         }
@@ -73,12 +89,12 @@ internal class JmsConsumerConverter<O : Any?>(
         eventsLogger?.info("${eventPrefix}.received.records", 1, tags = eventTags)
         consumedRecordsCounter?.increment()
 
-        val bytesCount = if (value is TextMessage) {
-            value.text.toByteArray().size
-        } else if (value is BytesMessage) {
-            value.bodyLength.toInt()
-        } else {
-            0
+        val bytesCount = when (value) {
+            is TextMessage -> value.text.toByteArray().size
+
+            is BytesMessage -> value.bodyLength.toInt()
+
+            else -> 0
         }
 
         consumedBytesCounter?.increment(bytesCount.toDouble())

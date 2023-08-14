@@ -21,14 +21,15 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.prop
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Tags
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.verify
+import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Meter
 import io.qalipsis.plugins.jms.Constants
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
@@ -99,11 +100,18 @@ internal class JmsProducerIntegrationTest {
         // given
         val tags: Map<String, String> = emptyMap()
         val eventsLogger = relaxedMockk<EventsLogger>()
-        val metersTags = relaxedMockk<Tags>()
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("jms-produce-producing-records", refEq(metersTags)) } returns recordsToProduceCounter
-            every { counter("jms-produce-produced-value-bytes", refEq(metersTags)) } returns bytesCounter
-            every { counter("jms-produce-produced-records", refEq(metersTags)) } returns producedRecordsCounter
+            every { counter("scenario-name", "step-name", "jms-produce-producing-records", refEq(tags)) } returns recordsToProduceCounter
+            every { recordsToProduceCounter.report(any()) } returns recordsToProduceCounter
+            every { counter("scenario-name", "step-name", "jms-produce-produced-value-bytes", refEq(tags)) } returns bytesCounter
+            every { bytesCounter.report(any()) } returns bytesCounter
+            every { counter("scenario-name", "step-name", "jms-produce-produced-records", refEq(tags)) } returns producedRecordsCounter
+            every { producedRecordsCounter.report(any()) } returns producedRecordsCounter
+        }
+        val context = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "scenario-name"
+            every { stepName } returns "step-name"
         }
         val produceClient = JmsProducer(
             connectionFactory = { connectionFactory.createConnection() },
@@ -112,7 +120,7 @@ internal class JmsProducerIntegrationTest {
             meterRegistry
         )
 
-        produceClient.start(metersTags)
+        produceClient.start(context)
 
         // when
         val result = produceClient.execute(
@@ -142,6 +150,9 @@ internal class JmsProducerIntegrationTest {
             recordsToProduceCounter.increment(2.0)
             producedRecordsCounter.increment(2.0)
             bytesCounter.increment(26.0)
+            bytesCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
+            recordsToProduceCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
+            producedRecordsCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
 
             eventsLogger.debug("jms.produce.producing.records", 2, any(), tags = refEq(tags))
             eventsLogger.info("jms.produce.produced.records", 2, any(), tags = refEq(tags))

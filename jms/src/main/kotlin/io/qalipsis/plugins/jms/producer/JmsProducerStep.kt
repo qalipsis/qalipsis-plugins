@@ -39,7 +39,7 @@ internal class JmsProducerStep<I>(
 ) : AbstractStep<I, JmsProducerResult<I>>(stepId, retryPolicy) {
 
     override suspend fun start(context: StepStartStopContext) {
-        jmsProducer.start(context.toMetersTags())
+        jmsProducer.start(context)
     }
 
     override suspend fun execute(context: StepContext<I, JmsProducerResult<I>>) {
