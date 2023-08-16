@@ -24,8 +24,6 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isLessThanOrEqualTo
 import assertk.assertions.prop
 import io.lettuce.core.StreamMessage
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Tags
 import io.mockk.coEvery
 import io.mockk.confirmVerified
 import io.mockk.every
@@ -35,6 +33,8 @@ import io.mockk.verify
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Meter
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
@@ -60,14 +60,18 @@ internal class LettuceStreamsConsumerBatchConverterTest {
     @Test
     internal fun `should deserialize and count the records`() = testDispatcherProvider.runTest {
         //given
-        val metersTags = relaxedMockk<Tags>()
+        val tags: Map<String, String> = emptyMap()
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("redis-lettuce-streams-consumer-records", refEq(metersTags)) } returns counter
-            every { counter("redis-lettuce-streams-consumer-records-bytes", refEq(metersTags)) } returns byteCounter
+            every { counter("scenario-name", "step-name", "redis-lettuce-streams-consumer-records", refEq(tags)) } returns counter
+            every { counter.report(any()) } returns counter
+            every { counter("scenario-name", "step-name", "redis-lettuce-streams-consumer-records-bytes", refEq(tags)) } returns byteCounter
+            every { byteCounter.report(any()) } returns byteCounter
         }
 
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toMetersTags() } returns metersTags
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "scenario-name"
+            every { stepName } returns "step-name"
         }
 
         val converter = spyk(
@@ -96,6 +100,8 @@ internal class LettuceStreamsConsumerBatchConverterTest {
         //then
         verify(exactly = 2) { counter.increment() }
         verify(exactly = 2) { byteCounter.increment(any()) }
+        verify(exactly = 1) { counter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())}
+        verify(exactly = 1) { byteCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())}
 
         assertThat(results.records).all {
             hasSize(2)

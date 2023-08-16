@@ -19,7 +19,6 @@ package io.qalipsis.plugins.redis.lettuce.streams.producer
 import assertk.all
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.mockk.confirmVerified
@@ -29,6 +28,7 @@ import io.mockk.spyk
 import io.mockk.verify
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.Counter
 import io.qalipsis.plugins.redis.lettuce.LettuceMonitoringCollector
 import io.qalipsis.plugins.redis.lettuce.MetersImpl
 import io.qalipsis.test.assertk.prop

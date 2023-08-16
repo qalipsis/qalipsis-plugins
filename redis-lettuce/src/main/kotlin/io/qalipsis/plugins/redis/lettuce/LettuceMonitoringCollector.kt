@@ -16,10 +16,10 @@
 
 package io.qalipsis.plugins.redis.lettuce
 
-import io.micrometer.core.instrument.Counter
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepError
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.Counter
 import io.qalipsis.plugins.redis.lettuce.save.LettuceSaveResult
 import io.qalipsis.plugins.redis.lettuce.streams.producer.LettuceStreamsProducerResult
 import java.time.Duration

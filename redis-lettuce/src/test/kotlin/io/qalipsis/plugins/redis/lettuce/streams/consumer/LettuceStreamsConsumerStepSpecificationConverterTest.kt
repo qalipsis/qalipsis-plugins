@@ -25,13 +25,13 @@ import assertk.assertions.isNull
 import assertk.assertions.isSameAs
 import io.aerisconsulting.catadioptre.invokeInvisible
 import io.lettuce.core.StreamMessage
-import io.micrometer.core.instrument.Tags
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.spyk
 import io.mockk.verify
 import io.qalipsis.api.context.StepStartStopContext
+import io.qalipsis.api.meters.Counter
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepCreationContextImpl
 import io.qalipsis.api.steps.StepMonitoringConfiguration
@@ -65,10 +65,15 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
     @RelaxedMockK
     private lateinit var ioCoroutineDispatcher: CoroutineDispatcher
 
+    @RelaxedMockK
+    private lateinit var recordsCount: Counter
+
+    @RelaxedMockK
+    private lateinit var bytesCounter: Counter
+
     @Test
     override fun `should not support unexpected spec`() {
         Assertions.assertFalse(converter.support(relaxedMockk()))
-
     }
 
     @Test
@@ -225,11 +230,31 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
     @Test
     internal fun `should build converter with records counter and bytes counter`() {
         val monitoringConfiguration = StepMonitoringConfiguration(true, true)
-        val metersTags = relaxedMockk<Tags>()
-
+        val tags: Map<String, String> = emptyMap()
+        every {
+            meterRegistry.counter(
+                "scenario-name",
+                "step-name",
+                "redis-lettuce-streams-consumer-records",
+                refEq(tags)
+            )
+        } returns recordsCount
+        every { recordsCount.report(any()) } returns recordsCount
+        every {
+            meterRegistry.counter(
+                "scenario-name",
+                "step-name",
+                "redis-lettuce-streams-consumer-records-bytes",
+                refEq(tags)
+            )
+        } returns bytesCounter
+        every { bytesCounter.report(any()) } returns bytesCounter
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toMetersTags() } returns metersTags
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "scenario-name"
+            every { stepName } returns "step-name"
         }
+
         // when
         val recordsConverter =
             converter.invokeInvisible<DatasourceObjectConverter<List<StreamMessage<ByteArray, ByteArray>>, out Any?>>(
@@ -245,8 +270,13 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
             prop("valuesBytesReceived").isNotNull()
         }
         verify {
-            meterRegistry.counter("redis-lettuce-streams-consumer-records", metersTags)
-            meterRegistry.counter("redis-lettuce-streams-consumer-records-bytes", metersTags)
+            meterRegistry.counter("scenario-name", "step-name", "redis-lettuce-streams-consumer-records", tags)
+            meterRegistry.counter(
+                "scenario-name",
+                "step-name",
+                "redis-lettuce-streams-consumer-records-bytes",
+                tags
+            )
         }
         confirmVerified(meterRegistry)
     }

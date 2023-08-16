@@ -16,13 +16,14 @@
 
 package io.qalipsis.plugins.redis.lettuce.poll.converters
 
-import io.micrometer.core.instrument.Counter
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLogOrNull
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.plugins.redis.lettuce.RedisRecord
 import io.qalipsis.plugins.redis.lettuce.poll.LettucePollMeters
@@ -57,9 +58,27 @@ internal class PollResultSetBatchConverter(
 
     override fun start(context: StepStartStopContext) {
         meterRegistry?.apply {
-            val tags = context.toMetersTags()
-            recordsCounter = counter("$meterPrefix-records", tags)
-            recordsBytes = counter("$meterPrefix-records-bytes", tags)
+            val tags = context.toEventTags()
+            val scenarioName = context.scenarioName
+            val stepName = context.stepName
+            recordsCounter = counter(scenarioName, stepName, "$meterPrefix-records", tags).report {
+                display(
+                    format = "attempted req: %,.0f",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 0,
+                    Counter::count
+                )
+            }
+            recordsBytes = counter(scenarioName, stepName, "$meterPrefix-records-bytes", tags).report {
+                display(
+                    format = "received %,.0f bytes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 1,
+                    column = 1,
+                    Counter::count
+                )
+            }
         }
         this.context = context
         eventTags = context.toEventTags()
@@ -67,8 +86,6 @@ internal class PollResultSetBatchConverter(
 
     override fun stop(context: StepStartStopContext) {
         meterRegistry?.apply {
-            remove(recordsCounter!!)
-            remove(recordsBytes!!)
             recordsCounter = null
             recordsBytes = null
         }
@@ -96,19 +113,14 @@ internal class PollResultSetBatchConverter(
         eventsLogger?.info("$eventPrefix.records-count", value.recordsCount, tags = eventTags)
         recordsCounter?.increment(value.recordsCount.toDouble())
         val records = when (value.records) {
-            is List<*> -> {
-                value.records
-            }
-            is Map<*, *> -> {
-                value.records.toList()
-            }
-            else -> {
-                throw IllegalArgumentException("Not supported type: ${value::class}")
-            }
-        }
+            is List<*> -> value.records
 
+            is Map<*, *> -> value.records.toList()
+
+            else -> throw IllegalArgumentException("Not supported type: ${value::class}")
+        }
         tryAndLogOrNull(log) {
-            val bytes = AtomicInteger(0)
+        val bytes = AtomicInteger(0)
             output.send(
                 LettucePollResult(
                     records = records.map {

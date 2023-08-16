@@ -17,12 +17,13 @@
 package io.qalipsis.plugins.redis.lettuce.streams.consumer
 
 import io.lettuce.core.StreamMessage
-import io.micrometer.core.instrument.Counter
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.lang.tryAndLogOrNull
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import java.util.concurrent.atomic.AtomicLong
 
@@ -44,16 +45,32 @@ internal class LettuceStreamsConsumerSingleConverter(
 
     override fun start(context: StepStartStopContext) {
         meterRegistry?.apply {
-            val tags = context.toMetersTags()
-            recordsCounter = counter("$meterPrefix-records", tags)
-            valuesBytesReceived = counter("$meterPrefix-records-bytes", tags)
+            val tags = context.toEventTags()
+            val scenarioName = context.scenarioName
+            val stepName = context.stepName
+            recordsCounter = counter(scenarioName, stepName, "$meterPrefix-records", tags).report {
+                display(
+                    format = "received rec: %,.0f",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 1,
+                    column = 0,
+                    Counter::count
+                )
+            }
+            valuesBytesReceived = counter(scenarioName, stepName, "$meterPrefix-records-bytes", tags).report {
+                display(
+                    format = "received: %,.0f bytes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 1,
+                    column = 1,
+                    Counter::count
+                )
+            }
         }
     }
 
     override fun stop(context: StepStartStopContext) {
         meterRegistry?.apply {
-            remove(recordsCounter!!)
-            remove(valuesBytesReceived!!)
             recordsCounter = null
             valuesBytesReceived = null
         }

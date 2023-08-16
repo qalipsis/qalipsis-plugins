@@ -24,8 +24,6 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isLessThanOrEqualTo
 import assertk.assertions.prop
 import io.lettuce.core.ScoredValue
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Tags
 import io.mockk.coJustRun
 import io.mockk.confirmVerified
 import io.mockk.every
@@ -34,6 +32,8 @@ import io.mockk.impl.annotations.SpyK
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Meter
 import io.qalipsis.plugins.redis.lettuce.RedisRecord
 import io.qalipsis.plugins.redis.lettuce.poll.PollRawResult
 import io.qalipsis.test.coroutines.TestDispatcherProvider
@@ -81,16 +81,19 @@ internal class PollResultSetSingleConverterTest {
             Duration.ofNanos(3),
             1
         )
-        val metersTags = relaxedMockk<Tags>()
+        val tags: Map<String, String> = emptyMap()
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("redis-lettuce-poll-method-records", refEq(metersTags)) } returns recordsCounter
-            every { counter("redis-lettuce-poll-method-records-bytes", refEq(metersTags)) } returns recordsBytes
+            every { counter("scenario-name", "step-name", "redis-lettuce-poll-method-records", refEq(tags)) } returns recordsCounter
+            every { recordsCounter.report(any()) } returns recordsCounter
+            every { counter("scenario-name", "step-name", "redis-lettuce-poll-method-records-bytes", refEq(tags)) } returns recordsBytes
+            every { recordsBytes.report(any()) } returns recordsBytes
         }
 
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toMetersTags() } returns metersTags
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "scenario-name"
+            every { stepName } returns "step-name"
         }
-        val tags: Map<String, String> = startStopContext.toEventTags()
 
         val converter = PollResultSetSingleConverter(
             redisToJavaConverter,
@@ -124,6 +127,8 @@ internal class PollResultSetSingleConverterTest {
         verifyOnce {
             recordsCounter.increment(2.0)
             recordsBytes.increment(9.0)
+            recordsCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
+            recordsBytes.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
             eventsLogger.info("redis.lettuce.poll.method.records-count", 2, any(), tags = tags)
             eventsLogger.info("redis.lettuce.poll.method.records-bytes", 9, any(), tags = tags)
         }
@@ -142,16 +147,19 @@ internal class PollResultSetSingleConverterTest {
             Duration.ofNanos(3),
             1
         )
-        val metersTags = relaxedMockk<Tags>()
+        val tags: Map<String, String> = emptyMap()
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("redis-lettuce-poll-method-records", refEq(metersTags)) } returns recordsCounter
-            every { counter("redis-lettuce-poll-method-records-bytes", refEq(metersTags)) } returns recordsBytes
+            every { counter("scenario-name", "step-name", "redis-lettuce-poll-method-records", refEq(tags)) } returns recordsCounter
+            every { recordsCounter.report(any()) } returns recordsCounter
+            every { counter("scenario-name", "step-name", "redis-lettuce-poll-method-records-bytes", refEq(tags)) } returns recordsBytes
+            every { recordsBytes.report(any()) } returns recordsBytes
         }
 
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toMetersTags() } returns metersTags
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "scenario-name"
+            every { stepName } returns "step-name"
         }
-        val tags: Map<String, String> = startStopContext.toEventTags()
 
         val converter = PollResultSetSingleConverter(
             redisToJavaConverter,
@@ -186,6 +194,8 @@ internal class PollResultSetSingleConverterTest {
         verifyOnce {
             recordsCounter.increment(2.0)
             recordsBytes.increment(25.0)
+            recordsCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
+            recordsBytes.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
             eventsLogger.info("redis.lettuce.poll.method.records-count", 2, any(), tags = tags)
             eventsLogger.info("redis.lettuce.poll.method.records-bytes", 25, any(), tags = tags)
         }
@@ -194,7 +204,6 @@ internal class PollResultSetSingleConverterTest {
 
     @Test
     internal fun `should deserialize map and count the records`() = testDispatcherProvider.runTest {
-        //given
         //given
         val records = PollRawResult(
             mapOf(
@@ -205,16 +214,19 @@ internal class PollResultSetSingleConverterTest {
             Duration.ofNanos(3),
             1
         )
-        val metersTags = relaxedMockk<Tags>()
+        val tags: Map<String, String> = emptyMap()
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("redis-lettuce-poll-method-records", refEq(metersTags)) } returns recordsCounter
-            every { counter("redis-lettuce-poll-method-records-bytes", refEq(metersTags)) } returns recordsBytes
+            every { counter("scenario-name", "step-name", "redis-lettuce-poll-method-records", refEq(tags)) } returns recordsCounter
+            every { recordsCounter.report(any()) } returns recordsCounter
+            every { counter("scenario-name", "step-name", "redis-lettuce-poll-method-records-bytes", refEq(tags)) } returns recordsBytes
+            every { recordsBytes.report(any()) } returns recordsBytes
         }
 
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toMetersTags() } returns metersTags
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "scenario-name"
+            every { stepName } returns "step-name"
         }
-        val tags: Map<String, String> = startStopContext.toEventTags()
 
         val converter = PollResultSetSingleConverter(
             redisToJavaConverter,
@@ -249,6 +261,8 @@ internal class PollResultSetSingleConverterTest {
         verifyOnce {
             recordsCounter.increment(2.0)
             recordsBytes.increment(21.0)
+            recordsCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
+            recordsBytes.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
             eventsLogger.info("redis.lettuce.poll.method.records-count", 2, any(), tags = tags)
             eventsLogger.info("redis.lettuce.poll.method.records-bytes", 21, any(), tags = tags)
         }

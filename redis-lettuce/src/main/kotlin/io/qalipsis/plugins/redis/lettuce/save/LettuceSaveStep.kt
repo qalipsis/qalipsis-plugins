@@ -19,7 +19,6 @@ package io.qalipsis.plugins.redis.lettuce.save
 import io.lettuce.core.RedisFuture
 import io.lettuce.core.api.StatefulConnection
 import io.lettuce.core.cluster.api.async.RedisClusterAsyncCommands
-import io.micrometer.core.instrument.Counter
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
@@ -27,6 +26,8 @@ import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLog
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
 import io.qalipsis.api.sync.asSuspended
@@ -78,10 +79,36 @@ internal class LettuceSaveStep<I>(
 
     override suspend fun start(context: StepStartStopContext) {
         meterRegistry?.apply {
-            val tags = context.toMetersTags()
-            sendingBytes = counter("$meterPrefix-sending-bytes", tags)
-            sentBytesMeter = counter("$meterPrefix-sent-bytes", tags)
-            sendingFailure = counter("$meterPrefix-sending-failure", tags)
+            val tags = context.toEventTags()
+            val scenarioName = context.scenarioName
+            val stepName = context.stepName
+            sendingBytes = counter(scenarioName, stepName,"$meterPrefix-sending-bytes", tags).report {
+                display(
+                    format = "attempted saves: %,.0f bytes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 1,
+                    Counter::count
+                )
+            }
+            sentBytesMeter = counter(scenarioName, stepName, "$meterPrefix-sent-bytes", tags).report {
+                display(
+                    format = "\u2713 %,.0f byte successes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 3,
+                    Counter::count
+                )
+            }
+            sendingFailure = counter(scenarioName, stepName, "$meterPrefix-sending-failure", tags).report {
+                display(
+                    format = "\u2716 %,.0f failures",
+                    severity = ReportMessageSeverity.ERROR,
+                    row = 0,
+                    column = 4,
+                    Counter::count
+                )
+            }
         }
         connection = connectionFactory()
         redisAsyncCommands = RedisCommandsFactory.getAsyncCommand(connection)
@@ -157,9 +184,6 @@ internal class LettuceSaveStep<I>(
 
     override suspend fun stop(context: StepStartStopContext) {
         meterRegistry?.apply {
-            remove(sendingBytes!!)
-            remove(sentBytesMeter!!)
-            remove(sendingFailure!!)
             sendingBytes = null
             sentBytesMeter = null
             sendingFailure = null
