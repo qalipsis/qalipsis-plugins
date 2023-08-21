@@ -24,12 +24,9 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.startsWith
-import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.request.get
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Tags
-import io.micrometer.core.instrument.Timer
+import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.request.*
 import io.micronaut.http.HttpStatus
 import io.mockk.confirmVerified
 import io.mockk.every
@@ -39,6 +36,9 @@ import io.netty.channel.nio.NioEventLoopGroup
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Meter
+import io.qalipsis.api.meters.Timer
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
@@ -92,6 +92,9 @@ internal class GraphiteSaveStepIntegrationTest {
     private lateinit var recordsCount: Counter
 
     @RelaxedMockK
+    private lateinit var successCounter: Counter
+
+    @RelaxedMockK
     private lateinit var eventsLogger: EventsLogger
 
     @BeforeEach
@@ -108,13 +111,39 @@ internal class GraphiteSaveStepIntegrationTest {
     @Timeout(50)
     fun `should succeed when sending query with results`() = testDispatcherProvider.run {
         //given
-        val metersTags = relaxedMockk<Tags>()
+        val eventTags = emptyMap<String, String>()
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("graphite-save-saving-messages", refEq(metersTags)) } returns recordsCount
-            every { timer("graphite-save-time-to-response", refEq(metersTags)) } returns timeToResponse
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "graphite-save-saving-messages",
+                    refEq(eventTags)
+                )
+            } returns recordsCount
+            every { recordsCount.report(any()) } returns recordsCount
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "graphite-save-successes",
+                    refEq(eventTags)
+                )
+            } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+            every {
+                timer(
+                    "scenario-test",
+                    "step-test",
+                    "graphite-save-time-to-response",
+                    refEq(eventTags)
+                )
+            } returns timeToResponse
         }
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toMetersTags() } returns metersTags
+            every { toEventTags() } returns eventTags
+            every { scenarioName } returns "scenario-test"
+            every { stepName } returns "step-test"
         }
         val results = mutableListOf<String>()
         val saveClient = GraphiteSaveMessageClientImpl(
@@ -162,13 +191,13 @@ internal class GraphiteSaveStepIntegrationTest {
             eventsLogger.debug("graphite.save.saving-messages", 3, any(), tags = tags)
             timeToResponse.record(more(0L), TimeUnit.NANOSECONDS)
             recordsCount.increment(3.0)
+            recordsCount.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
             eventsLogger.info("graphite.save.time-to-response", any<Duration>(), any(), tags = tags)
             eventsLogger.info("graphite.save.successes", any<Array<*>>(), any(), tags = tags)
         }
         confirmVerified(timeToResponse, recordsCount, eventsLogger)
         await().atMost(10, TimeUnit.SECONDS)
             .until { httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body().contains(key) }
-
         results.add(ktorHttpClient.get(strRequest).body())
         results.add(ktorHttpClient.get(strRequestTwo).body())
         results.add(ktorHttpClient.get(strRequestThree).body())
@@ -191,13 +220,39 @@ internal class GraphiteSaveStepIntegrationTest {
     @Timeout(10)
     fun `should fail when sending wrong format message`() = testDispatcherProvider.run {
         //given
-        val metersTags = relaxedMockk<Tags>()
+        val eventTags = emptyMap<String, String>()
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("graphite-save-saving-messages", refEq(metersTags)) } returns recordsCount
-            every { timer("graphite-save-time-to-response", refEq(metersTags)) } returns timeToResponse
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "graphite-save-saving-messages",
+                    refEq(eventTags)
+                )
+            } returns recordsCount
+            every { recordsCount.report(any()) } returns recordsCount
+            every {
+                timer(
+                    "scenario-test",
+                    "step-test",
+                    "graphite-save-time-to-response",
+                    refEq(eventTags)
+                )
+            } returns timeToResponse
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "graphite-save-successes",
+                    refEq(eventTags)
+                )
+            } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
         }
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toMetersTags() } returns metersTags
+            every { toEventTags() } returns eventTags
+            every { scenarioName } returns "scenario-test"
+            every { stepName } returns "step-test"
         }
         val results = mutableListOf<String>()
         val saveClient = GraphiteSaveMessageClientImpl(

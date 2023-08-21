@@ -16,13 +16,14 @@
 
 package io.qalipsis.plugins.graphite.save
 
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Timer
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLog
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Timer
+import io.qalipsis.api.report.ReportMessageSeverity
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
@@ -58,10 +59,28 @@ internal class GraphiteSaveMessageClientImpl(
         client = clientBuilder()
         client.start()
         meterRegistry?.apply {
-            val tags = context.toMetersTags()
-            messageCounter = counter("$meterPrefix-saving-messages", tags)
-            timeToResponse = timer("$meterPrefix-time-to-response", tags)
-            successCounter = counter("$meterPrefix-successes", tags)
+            val tags = context.toEventTags()
+            val scenarioName = context.scenarioName
+            val stepName = context.stepName
+            messageCounter = counter(scenarioName, stepName, "$meterPrefix-saving-messages", tags).report {
+                display(
+                    format = "attempted req %,.0f",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 0,
+                    Counter::count
+                )
+            }
+            timeToResponse = timer(scenarioName, stepName, "$meterPrefix-time-to-response", tags)
+            successCounter = counter(scenarioName, stepName, "$meterPrefix-successes", tags).report {
+                display(
+                    format = "\u2713 %,.0f successes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 2,
+                    Counter::count
+                )
+            }
         }
     }
 
@@ -90,9 +109,6 @@ internal class GraphiteSaveMessageClientImpl(
 
     override suspend fun stop(context: StepStartStopContext) {
         meterRegistry?.apply {
-            remove(messageCounter!!)
-            remove(timeToResponse!!)
-            remove(successCounter!!)
             messageCounter = null
             timeToResponse = null
             successCounter = null

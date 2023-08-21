@@ -10,12 +10,15 @@ import assertk.assertions.isTrue
 import io.aerisconsulting.catadioptre.getProperty
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.impl.annotations.SpyK
 import io.mockk.spyk
 import io.mockk.verify
+import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
 import io.qalipsis.api.sync.SuspendedCountLatch
 import io.qalipsis.plugins.graphite.render.service.GraphiteRenderApiService
 import io.qalipsis.test.coroutines.TestDispatcherProvider
@@ -56,11 +59,41 @@ internal class GraphiteIterativeReaderTest {
 
     private val clientBuilder: () -> GraphiteRenderApiService by lazy { { client } }
 
+    private val recordsCount = relaxedMockk<Counter>()
+
+    private val failureCounter = relaxedMockk<Counter>()
+
     @Test
-    @Timeout(5)
+    @Timeout(6)
     fun `should be restartable`() = testDispatcherProvider.run {
         // given
         val latch = SuspendedCountLatch(1, true)
+
+        val tags: Map<String, String> = emptyMap()
+        every {
+            meterRegistry.counter(
+                "scenario-test",
+                "step-test",
+                "graphite-poll-received-records",
+                refEq(tags)
+            )
+        } returns recordsCount
+        every { recordsCount.report(any()) } returns recordsCount
+        every {
+            meterRegistry.counter(
+                "scenario-test",
+                "step-test",
+                "graphite-poll-failures",
+                refEq(tags)
+            )
+        } returns failureCounter
+        every { failureCounter.report(any()) } returns failureCounter
+
+        val startStopContext = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "scenario-test"
+            every { stepName } returns "step-test"
+        }
         val reader = spyk(
             GraphiteIterativeReader(
                 clientFactory = clientBuilder,
@@ -75,7 +108,7 @@ internal class GraphiteIterativeReaderTest {
         coEvery { reader["poll"](any<GraphiteRenderApiService>()) } coAnswers { latch.decrement() }
 
         // when
-        reader.start(relaxedMockk { })
+        reader.start(startStopContext)
 
         // then
         latch.await()
@@ -99,7 +132,7 @@ internal class GraphiteIterativeReaderTest {
 
         // when
         latch.reset()
-        reader.start(relaxedMockk { })
+        reader.start(startStopContext)
         // then
         verify { reader["init"]() }
         verify { resultsChannelFactory() }
@@ -108,7 +141,7 @@ internal class GraphiteIterativeReaderTest {
         assertThat(reader.getProperty<GraphiteRenderApiService>("client")).isNotNull()
         assertThat(reader.getProperty<Channel<GraphiteQueryResult>>("resultsChannel")).isSameAs(resultsChannel)
 
-        reader.stop(relaxedMockk())
+        reader.stop(startStopContext)
     }
 
     @Test
@@ -137,6 +170,31 @@ internal class GraphiteIterativeReaderTest {
     @Timeout(20)
     fun `should poll at least twice after start`() = runBlocking {
         // given
+        val tags: Map<String, String> = emptyMap()
+        every {
+            meterRegistry.counter(
+                "scenario-test",
+                "step-test",
+                "graphite-poll-received-records",
+                refEq(tags)
+            )
+        } returns recordsCount
+        every { recordsCount.report(any()) } returns recordsCount
+        every {
+            meterRegistry.counter(
+                "scenario-test",
+                "step-test",
+                "graphite-poll-failures",
+                refEq(tags)
+            )
+        } returns failureCounter
+        every { failureCounter.report(any()) } returns failureCounter
+
+        val startStopContext = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "scenario-test"
+            every { stepName } returns "step-test"
+        }
         val reader = spyk(
             GraphiteIterativeReader(
                 clientFactory = clientBuilder,
@@ -152,14 +210,14 @@ internal class GraphiteIterativeReaderTest {
         coEvery { reader["poll"](any<GraphiteRenderApiService>()) } coAnswers { countDownLatch.decrement() }
 
         // when
-        reader.start(relaxedMockk())
+        reader.start(startStopContext)
         countDownLatch.await()
 
         // then
         coVerify(atLeast = 2) { reader["poll"](any<GraphiteRenderApiService>()) }
         assertThat(reader.hasNext()).isTrue()
 
-        reader.stop(relaxedMockk())
+        reader.stop(startStopContext)
     }
 
 }
