@@ -16,11 +16,12 @@
 
 package io.qalipsis.plugins.jakarta.producer
 
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Tags
+import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.sync.ImmutableSlot
 import jakarta.jms.CompletionListener
 import jakarta.jms.Connection
@@ -68,11 +69,41 @@ internal class JakartaProducer(
     /**
      * Prepares producer inside before execute.
      */
-    fun start(contextMetersTags: Tags) {
+    fun start(context: StepStartStopContext) {
+        val scenarioName = context.scenarioName
+        val stepName = context.stepName
+        val contextEventTags = context.toEventTags()
         meterRegistry?.apply {
-            recordsToProduce = counter("$meterPrefix-producing-records", contextMetersTags)
-            producedBytesCounter = counter("$meterPrefix-produced-value-bytes", contextMetersTags)
-            producedRecordsCounter = counter("$meterPrefix-produced-records", contextMetersTags)
+            recordsToProduce =
+                counter(scenarioName, stepName, "$meterPrefix-producing-records", contextEventTags).report {
+                    display(
+                        format = "attempted rec: %,.0f",
+                        severity = ReportMessageSeverity.INFO,
+                        row = 0,
+                        column = 0,
+                        Counter::count
+                    )
+                }
+            producedBytesCounter =
+                counter(scenarioName, stepName, "$meterPrefix-produced-value-bytes", contextEventTags).report {
+                    display(
+                        format = "produced: %,.0f bytes",
+                        severity = ReportMessageSeverity.INFO,
+                        row = 0,
+                        column = 3,
+                        Counter::count
+                    )
+                }
+            producedRecordsCounter =
+                counter(scenarioName, stepName, "$meterPrefix-produced-records", contextEventTags).report {
+                    display(
+                        format = "produced rec: %,.0f",
+                        severity = ReportMessageSeverity.INFO,
+                        row = 0,
+                        column = 2,
+                        Counter::count
+                    )
+                }
         }
         running = true
         connection = connectionFactory()
@@ -141,9 +172,6 @@ internal class JakartaProducer(
      */
     fun stop() {
         meterRegistry?.apply {
-            remove(recordsToProduce!!)
-            remove(producedBytesCounter!!)
-            remove(producedRecordsCounter!!)
             recordsToProduce = null
             producedBytesCounter = null
             producedRecordsCounter = null

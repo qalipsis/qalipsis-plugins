@@ -39,7 +39,7 @@ internal class JakartaProducerStep<I>(
 ) : AbstractStep<I, JakartaProducerResult<I>>(stepId, retryPolicy) {
 
     override suspend fun start(context: StepStartStopContext) {
-        jakartaProducer.start(context.toMetersTags())
+        jakartaProducer.start(context)
     }
 
     override suspend fun execute(context: StepContext<I, JakartaProducerResult<I>>) {

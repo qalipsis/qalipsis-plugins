@@ -16,11 +16,12 @@
 
 package io.qalipsis.plugins.jakarta.consumer
 
-import io.micrometer.core.instrument.Counter
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.plugins.jakarta.JakartaDeserializer
 import jakarta.jms.BytesMessage
@@ -44,22 +45,37 @@ internal class JakartaConsumerConverter<O : Any?>(
     private val meterPrefix: String = "jakarta-consume"
     private var consumedBytesCounter: Counter? = null
     private var consumedRecordsCounter: Counter? = null
-
     private lateinit var eventTags: Map<String, String>
 
     override fun start(context: StepStartStopContext) {
         meterRegistry?.apply {
-            val tags = context.toMetersTags()
-            consumedBytesCounter = counter("$meterPrefix-value-bytes", tags)
-            consumedRecordsCounter = counter("$meterPrefix-records", tags)
+            val tags = context.toEventTags()
+            val scenarioName = context.scenarioName
+            val stepName = context.stepName
+            consumedBytesCounter = counter(scenarioName, stepName, "$meterPrefix-value-bytes", tags).report {
+                display(
+                    format = "received: %,.0f bytes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 1,
+                    column = 0,
+                    Counter::count
+                )
+            }
+            consumedRecordsCounter = counter(scenarioName, stepName, "$meterPrefix-records", tags).report {
+                display(
+                    format = "received rec: %,.0f",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 1,
+                    column = 1,
+                    Counter::count
+                )
+            }
         }
         eventTags = context.toEventTags()
     }
 
     override fun stop(context: StepStartStopContext) {
         meterRegistry?.apply {
-            remove(consumedBytesCounter!!)
-            remove(consumedRecordsCounter!!)
             consumedBytesCounter = null
             consumedRecordsCounter = null
         }

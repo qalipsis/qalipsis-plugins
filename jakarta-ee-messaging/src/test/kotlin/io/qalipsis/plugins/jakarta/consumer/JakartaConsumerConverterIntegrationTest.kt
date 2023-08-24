@@ -22,8 +22,6 @@ import assertk.assertions.hasSize
 import assertk.assertions.index
 import assertk.assertions.isEqualTo
 import assertk.assertions.prop
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Tags
 import io.mockk.coEvery
 import io.mockk.confirmVerified
 import io.mockk.every
@@ -33,6 +31,8 @@ import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Meter
 import io.qalipsis.plugins.jakarta.Constants
 import io.qalipsis.plugins.jakarta.JakartaDeserializer
 import io.qalipsis.test.coroutines.TestDispatcherProvider
@@ -70,10 +70,12 @@ internal class JakartaConsumerConverterIntegrationTest {
         every { deserialize(any()) } answers { firstArg<TextMessage>().text }
     }
 
-    private val metersTags = relaxedMockk<Tags>()
+    private val eventTags: Map<String, String> = emptyMap()
 
     private val startStopContext = relaxedMockk<StepStartStopContext> {
-        every { toMetersTags() } returns metersTags
+        every { toEventTags() } returns eventTags
+        every { scenarioName } returns "scenario-name"
+        every { stepName } returns "step-name"
     }
 
     private val consumedBytesCounter = relaxedMockk<Counter>()
@@ -81,13 +83,29 @@ internal class JakartaConsumerConverterIntegrationTest {
     private val consumedRecordsCounter = relaxedMockk<Counter>()
 
     private val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-        every { counter("jakarta-consume-value-bytes", refEq(metersTags)) } returns consumedBytesCounter
-        every { counter("jakarta-consume-records", refEq(metersTags)) } returns consumedRecordsCounter
+        every {
+            counter(
+                "scenario-name",
+                "step-name",
+                "jakarta-consume-value-bytes",
+                refEq(eventTags)
+            )
+        } returns consumedBytesCounter
+        every { consumedBytesCounter.report(any()) } returns consumedBytesCounter
+        every {
+            counter(
+                "scenario-name",
+                "step-name",
+                "jakarta-consume-records",
+                refEq(eventTags)
+            )
+        } returns consumedRecordsCounter
+        every { consumedRecordsCounter.report(any()) } returns consumedRecordsCounter
     }
 
     private val eventsLogger = relaxedMockk<EventsLogger>()
 
-    private val tags: Map<String, String> = startStopContext.toEventTags()
+    private val tags: Map<String, String> = eventTags
 
     private lateinit var connectionFactory: ActiveMQConnectionFactory
 
@@ -122,6 +140,8 @@ internal class JakartaConsumerConverterIntegrationTest {
             consumedRecordsCounter.increment()
             consumedBytesCounter.increment(14.0)
             consumedRecordsCounter.increment()
+            consumedBytesCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
+            consumedRecordsCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
         }
 
         verifyOrder {
