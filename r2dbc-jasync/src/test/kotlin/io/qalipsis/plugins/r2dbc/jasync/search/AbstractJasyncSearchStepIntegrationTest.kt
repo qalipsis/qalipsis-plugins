@@ -22,13 +22,13 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import com.github.jasync.sql.db.SuspendingConnection
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Tags
 import io.mockk.coEvery
 import io.mockk.every
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Meter
 import io.qalipsis.plugins.r2dbc.jasync.converters.JasyncResultSetConverter
 import io.qalipsis.plugins.r2dbc.jasync.converters.ResultValuesConverter
 import io.qalipsis.plugins.r2dbc.jasync.poll.AbstractJasyncIntegrationTest
@@ -71,6 +71,10 @@ internal abstract class AbstractJasyncSearchStepIntegrationTest(
 
     val dropScript = readResource("schemas/$scriptFolderBaseName/drop-table-buildingentries.sql").trim()
 
+    private val successCounter = relaxedMockk<Counter>()
+
+    private val failureCounter = relaxedMockk<Counter>()
+
     @BeforeEach
     override fun setUp() {
         super.setUp()
@@ -87,12 +91,19 @@ internal abstract class AbstractJasyncSearchStepIntegrationTest(
         val query =
             "select username, timestamp from buildingentries where action = ? and enabled = ? order by timestamp"
         val parameters = listOf("IN", false)
-        val metersTags = relaxedMockk<Tags>()
+        val tags = mapOf("kit" to "kat")
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("r2dbc-jasync-search-records", refEq(metersTags)) } returns recordsCounter
+            every { counter("scenario-test", "step-test", "r2dbc-jasync-search-records", refEq(tags)) } returns recordsCounter
+            every { recordsCounter.report(any()) } returns recordsCounter
+            every { counter("scenario-test", "step-test", "r2dbc-jasync-search-successes", refEq(tags)) } returns successCounter
+            every { counter("scenario-test", "step-test", "r2dbc-jasync-search-failures", refEq(tags)) } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+            every { failureCounter.report(any()) } returns failureCounter
         }
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toMetersTags() } returns metersTags
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "scenario-test"
+            every { stepName } returns "step-test"
         }
         val converter = JasyncResultSetBatchConverter<String>(
             resultValuesConverter,
@@ -157,6 +168,7 @@ internal abstract class AbstractJasyncSearchStepIntegrationTest(
         }
         coVerifyOnce {
             recordsCounter.increment(3.0)
+            recordsCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
         }
     }
 }

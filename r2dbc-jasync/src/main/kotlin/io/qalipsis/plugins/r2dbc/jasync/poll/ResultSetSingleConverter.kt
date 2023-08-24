@@ -17,13 +17,13 @@
 package io.qalipsis.plugins.r2dbc.jasync.poll
 
 import com.github.jasync.sql.db.ResultSet
-import io.micrometer.core.instrument.Counter
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
-import io.qalipsis.api.lang.tryAndLogOrNull
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.api.steps.datasource.DatasourceRecord
 import io.qalipsis.plugins.r2dbc.jasync.converters.ResultValuesConverter
@@ -45,20 +45,51 @@ internal class ResultSetSingleConverter(
 
     private var recordsCounter: Counter? = null
 
+    private var successCounter: Counter? = null
+
+    private var failureCounter: Counter? = null
+
     private lateinit var eventTags: Map<String, String>
 
     override fun start(context: StepStartStopContext) {
         meterRegistry?.apply {
-            val tags = context.toMetersTags()
-            recordsCounter = counter("$meterPrefix-records", tags)
+            val tags = context.toEventTags()
+            recordsCounter = counter(context.scenarioName, context.stepName, "$meterPrefix-records", tags).report {
+                display(
+                    format = "attempted req %,.0f",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 0,
+                    Counter::count
+                )
+            }
+            failureCounter = counter(context.scenarioName, context.stepName, "$meterPrefix-failures", tags).report {
+                display(
+                    format = "\u2716 %,.0f failures",
+                    severity = ReportMessageSeverity.ERROR,
+                    row = 0,
+                    column = 1,
+                    Counter::count
+                )
+            }
+            successCounter = counter(context.scenarioName, context.stepName, "$meterPrefix-successes", tags).report {
+                display(
+                    format = "\u2713 %,.0f successes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 1,
+                    column = 0,
+                    Counter::count
+                )
+            }
         }
         eventTags = context.toEventTags()
     }
 
     override fun stop(context: StepStartStopContext) {
         meterRegistry?.apply {
-            remove(recordsCounter!!)
             recordsCounter = null
+            successCounter = null
+            failureCounter = null
         }
     }
 
@@ -69,8 +100,7 @@ internal class ResultSetSingleConverter(
     ) {
         eventsLogger?.info("${eventPrefix}.records", value.size, tags = eventTags)
         recordsCounter?.increment(value.size.toDouble())
-
-        tryAndLogOrNull(log) {
+        try {
             value.map { row ->
                 DatasourceRecord(
                     offset.getAndIncrement(),
@@ -81,6 +111,10 @@ internal class ResultSetSingleConverter(
             }.forEach {
                 output.send(it)
             }
+            successCounter?.increment()
+        } catch (e: Exception) {
+            log.error(e.message, e)
+            failureCounter?.increment()
         }
     }
 

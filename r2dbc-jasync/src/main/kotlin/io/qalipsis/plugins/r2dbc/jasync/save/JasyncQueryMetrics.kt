@@ -16,8 +16,8 @@
 
 package io.qalipsis.plugins.r2dbc.jasync.save
 
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Timer
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Timer
 import java.util.concurrent.TimeUnit
 
 /**
@@ -26,11 +26,11 @@ import java.util.concurrent.TimeUnit
  * @author Carlos Vieira
  */
 data class JasyncQueryMetrics(
-        val recordsCount: Counter? = null,
-        val timeToSuccess: Timer? = null,
-        val timeToFailure: Timer? = null,
-        val successCounter: Counter? = null,
-        val failureCounter: Counter? = null,
+    val recordsCount: Counter? = null,
+    val timeToSuccess: Timer? = null,
+    val timeToFailure: Timer? = null,
+    val successCounter: Counter? = null,
+    val failureCounter: Counter? = null,
 ) {
     /**
      * Records the number of send records.

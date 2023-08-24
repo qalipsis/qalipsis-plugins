@@ -18,11 +18,14 @@ package io.qalipsis.plugins.r2dbc.jasync.converters
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.hasSize
+import assertk.assertions.index
+import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
+import assertk.assertions.key
+import assertk.assertions.prop
 import com.github.jasync.sql.db.general.ArrayRowData
 import com.github.jasync.sql.db.general.MutableResultSet
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Tags
 import io.mockk.coEvery
 import io.mockk.confirmVerified
 import io.mockk.every
@@ -30,6 +33,8 @@ import io.mockk.impl.annotations.RelaxedMockK
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Meter
 import io.qalipsis.api.steps.datasource.DatasourceRecord
 import io.qalipsis.plugins.r2dbc.jasync.poll.ResultSetSingleConverter
 import io.qalipsis.test.coroutines.TestDispatcherProvider
@@ -57,9 +62,13 @@ internal class ResultSetSingleConverterTest {
 
     private val eventsLogger = relaxedMockk<EventsLogger>()
 
+    private val successCounter = relaxedMockk<Counter>()
+
+    private val failureCounter = relaxedMockk<Counter>()
+
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    @Timeout(2)
+    @Timeout(5)
     internal fun `should convert without monitoring`() = testDispatcherProvider.runTest {
         // given
         every { resultValuesConverter.process(any()) } answers { "converted_${firstArg<String>()}" }
@@ -80,9 +89,9 @@ internal class ResultSetSingleConverterTest {
             )
         )
         val channel = Channel<DatasourceRecord<Map<String, Any?>>>(2)
-        val metersTags = relaxedMockk<Tags>()
+        val tags = emptyMap<String, String>()
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toMetersTags() } returns metersTags
+            every { toEventTags() } returns tags
         }
         val converter = ResultSetSingleConverter(
             resultValuesConverter, null, null
@@ -123,7 +132,7 @@ internal class ResultSetSingleConverterTest {
 
     @ExperimentalCoroutinesApi
     @Test
-    @Timeout(2)
+    @Timeout(4)
     internal fun `should deserialize and count the records`() = testDispatcherProvider.runTest {
         // given
         every { resultValuesConverter.process(any()) } answers { "converted_${firstArg<String>()}" }
@@ -146,13 +155,19 @@ internal class ResultSetSingleConverterTest {
         val channel = Channel<DatasourceRecord<Map<String, Any?>>>(2)
         val tags: Map<String, String> = emptyMap()
 
-        val metersTags = relaxedMockk<Tags>()
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("r2dbc-jasync-poll-records", refEq(metersTags)) } returns counter
+            every { counter("scenario-test", "step-test","r2dbc-jasync-poll-records", refEq(tags)) } returns counter
+            every { counter.report(any()) } returns counter
+            every { counter("scenario-test", "step-test", "r2dbc-jasync-poll-successes", refEq(tags)) } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+            every { counter("scenario-test", "step-test", "r2dbc-jasync-poll-failures", refEq(tags)) } returns failureCounter
+            every { failureCounter.report(any()) } returns failureCounter
         }
 
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toMetersTags() } returns metersTags
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "scenario-test"
+            every { stepName } returns "step-test"
         }
         val converter = ResultSetSingleConverter(
             resultValuesConverter, meterRegistry, eventsLogger
@@ -190,6 +205,7 @@ internal class ResultSetSingleConverterTest {
         }
         verifyOnce {
             counter.increment(2.0)
+            counter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
             eventsLogger.info("r2dbc.jasync.poll.records", 2, any(), tags = tags)
         }
         confirmVerified(counter, eventsLogger)

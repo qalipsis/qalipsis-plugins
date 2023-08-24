@@ -18,8 +18,6 @@ package io.qalipsis.plugins.r2dbc.jasync.save
 
 import com.github.jasync.sql.db.SuspendingConnection
 import com.github.jasync.sql.db.mysql.MySQLQueryResult
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Timer
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepError
 import io.qalipsis.api.context.StepName
@@ -27,6 +25,9 @@ import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Timer
+import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Dialect
@@ -74,11 +75,37 @@ internal class JasyncSaveStep<I>(
 
     override suspend fun start(context: StepStartStopContext) {
         meterRegistry?.apply {
-            val tags = context.toMetersTags()
-            recordsCounter = counter("$meterPrefix-records", tags)
-            failureCounter = counter("$meterPrefix-records-failure", tags)
-            successCounter = counter("$meterPrefix-records-success", tags)
-            timeToResponse = timer("$meterPrefix-records-time-to-response", tags)
+            val tags = context.toEventTags()
+            val scenarioName = context.scenarioName
+            val stepName = context.stepName
+            recordsCounter = counter(scenarioName, stepName, "$meterPrefix-records", tags).report {
+                display(
+                    format = "attempted saves: %,.0f",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 0,
+                    Counter::count
+                )
+            }
+            failureCounter = counter(scenarioName, stepName, "$meterPrefix-records-failures", tags).report {
+                display(
+                    format = "\u2716 %,.0f failures",
+                    severity = ReportMessageSeverity.ERROR,
+                    row = 0,
+                    column = 4,
+                    Counter::count
+                )
+            }
+            successCounter = counter(scenarioName, stepName, "$meterPrefix-records-success", tags).report {
+                display(
+                    format = "\u2713 %,.0f successes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 2,
+                    Counter::count
+                )
+            }
+            timeToResponse = timer(scenarioName, stepName, "$meterPrefix-records-time-to-response", tags)
 
         }
         eventTags = context.toEventTags()
@@ -88,10 +115,6 @@ internal class JasyncSaveStep<I>(
 
     override suspend fun stop(context: StepStartStopContext) {
         meterRegistry?.apply {
-            remove(recordsCounter!!)
-            remove(failureCounter!!)
-            remove(successCounter!!)
-            remove(timeToResponse!!)
             recordsCounter = null
             failureCounter = null
             successCounter = null
