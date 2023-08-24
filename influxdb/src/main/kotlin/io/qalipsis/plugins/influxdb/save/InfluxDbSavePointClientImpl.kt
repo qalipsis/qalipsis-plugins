@@ -19,13 +19,14 @@ package io.qalipsis.plugins.influxdb.save
 import com.influxdb.client.kotlin.InfluxDBClientKotlin
 import com.influxdb.client.kotlin.WriteKotlinApi
 import com.influxdb.client.write.Point
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Timer
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLog
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Timer
+import io.qalipsis.api.report.ReportMessageSeverity
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
@@ -59,14 +60,43 @@ internal class InfluxDbSavePointClientImpl(
 
     private var successCounter: Counter? = null
 
+    private var failureCounter: Counter? = null
+
     override suspend fun start(context: StepStartStopContext) {
         client = clientBuilder()
         writeApi = client.getWriteKotlinApi()
+        val failures = (pointsCounter?.count()?.minus(successCounter?.count()!!))
+        failures?.let { failureCounter?.increment(it) }
         meterRegistry?.apply {
-            val tags = context.toMetersTags()
-            pointsCounter = counter("$meterPrefix-saving-points", tags)
-            timeToResponse = timer("$meterPrefix-time-to-response", tags)
-            successCounter = counter("$meterPrefix-successes", tags)
+            val tags = context.toEventTags()
+            val scenarioName = context.scenarioName
+            val stepName = context.stepName
+            pointsCounter = counter(scenarioName, stepName, "$meterPrefix-saving-points", tags).report {
+                display(
+                    format = "attempted saves: %,.0f",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 0,
+                    Counter::count
+                )
+            }
+            timeToResponse = timer(scenarioName, stepName, "$meterPrefix-time-to-response", tags)
+            successCounter = counter(scenarioName, stepName, "$meterPrefix-successes", tags).report {
+                display(
+                    format = "\u2713 %,.0f successes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 1,
+                    Counter::count
+                )
+                display(
+                    format = "\u2716 %,.0f failures",
+                    severity = ReportMessageSeverity.ERROR,
+                    row = 0,
+                    column = 2,
+                )
+                { ((pointsCounter?.count()?.minus(this.count())) ?: 0) }
+            }
         }
     }
 
@@ -94,9 +124,6 @@ internal class InfluxDbSavePointClientImpl(
 
     override suspend fun stop(context: StepStartStopContext) {
         meterRegistry?.apply {
-            remove(pointsCounter!!)
-            remove(timeToResponse!!)
-            remove(successCounter!!)
             pointsCounter = null
             timeToResponse = null
             successCounter = null

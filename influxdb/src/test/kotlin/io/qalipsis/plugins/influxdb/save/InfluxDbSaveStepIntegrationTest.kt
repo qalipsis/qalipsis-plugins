@@ -26,15 +26,15 @@ import assertk.assertions.key
 import com.influxdb.client.domain.WritePrecision
 import com.influxdb.client.write.Point
 import com.influxdb.exceptions.UnprocessableEntityException
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Tags
-import io.micrometer.core.instrument.Timer
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.verify
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Meter
+import io.qalipsis.api.meters.Timer
 import io.qalipsis.plugins.influxdb.AbstractInfluxDbIntegrationTest
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.mockk.relaxedMockk
@@ -60,13 +60,37 @@ internal class InfluxDbSaveStepIntegrationTest : AbstractInfluxDbIntegrationTest
     @Timeout(10)
     fun `should successfully save a unique point`() = testDispatcherProvider.run {
         // given
-        val metersTags = relaxedMockk<Tags>()
-        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("influxdb-save-saving-points", refEq(metersTags)) } returns recordsCount
-            every { timer("influxdb-save-time-to-response", refEq(metersTags)) } returns timeToResponse
-        }
+        val tags: Map<String, String> = emptyMap()
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toMetersTags() } returns metersTags
+            every { toEventTags() } returns tags
+        }
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
+            every {
+                counter(
+                    startStopContext.scenarioName,
+                    startStopContext.stepName,
+                    "influxdb-save-saving-points",
+                    refEq(tags)
+                )
+            } returns recordsCount
+            every { recordsCount.report(any()) } returns recordsCount
+            every {
+                counter(
+                    startStopContext.scenarioName,
+                    startStopContext.stepName,
+                    "influxdb-save-successes",
+                    refEq(tags)
+                )
+            } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+            every {
+                timer(
+                    startStopContext.scenarioName,
+                    startStopContext.stepName,
+                    "influxdb-save-time-to-response",
+                    refEq(tags)
+                )
+            } returns timeToResponse
         }
         val results = mutableListOf<Map<String, Any>>()
         val point = Point.measurement("temp")
@@ -80,7 +104,6 @@ internal class InfluxDbSaveStepIntegrationTest : AbstractInfluxDbIntegrationTest
             meterRegistry = meterRegistry,
             eventsLogger = eventsLogger
         )
-        val tags: Map<String, String> = emptyMap()
 
         saveClient.start(startStopContext)
 
@@ -111,6 +134,7 @@ internal class InfluxDbSaveStepIntegrationTest : AbstractInfluxDbIntegrationTest
             eventsLogger.debug("influxdb.save.saving-points", 1, any(), tags = tags)
             timeToResponse.record(more(0L), TimeUnit.NANOSECONDS)
             recordsCount.increment(1.0)
+            recordsCount.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
             eventsLogger.info("influxdb.save.time-to-response", any<Duration>(), any(), tags = tags)
             eventsLogger.info("influxdb.save.successes", any<Array<*>>(), any(), tags = tags)
         }
@@ -122,12 +146,29 @@ internal class InfluxDbSaveStepIntegrationTest : AbstractInfluxDbIntegrationTest
     fun `should fail when sending points with date earlier than retention policy allows`(): Unit =
         testDispatcherProvider.run {
             // given
-            val metersTags = relaxedMockk<Tags>()
-            val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-                every { counter("influxdb-save-successes", refEq(metersTags)) } returns successCounter
-            }
+            val tags: Map<String, String> = emptyMap()
             val startStopContext = relaxedMockk<StepStartStopContext> {
-                every { toMetersTags() } returns metersTags
+                every { toEventTags() } returns tags
+            }
+            val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
+                every {
+                    counter(
+                        startStopContext.scenarioName,
+                        startStopContext.stepName,
+                        "influxdb-save-saving-points",
+                        refEq(tags)
+                    )
+                } returns recordsCount
+                every { recordsCount.report(any()) } returns recordsCount
+                every {
+                    counter(
+                        startStopContext.scenarioName,
+                        startStopContext.stepName,
+                        "influxdb-save-successes",
+                        refEq(tags)
+                    )
+                } returns successCounter
+                every { successCounter.report(any()) } returns successCounter
             }
 
             val saveClient = InfluxDbSavePointClientImpl(
@@ -135,7 +176,6 @@ internal class InfluxDbSaveStepIntegrationTest : AbstractInfluxDbIntegrationTest
                 meterRegistry = meterRegistry,
                 eventsLogger = eventsLogger
             )
-            val tags: Map<String, String> = emptyMap()
             saveClient.start(startStopContext)
 
             // when + then

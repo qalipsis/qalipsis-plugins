@@ -19,13 +19,14 @@ package io.qalipsis.plugins.influxdb.search
 import com.influxdb.client.kotlin.InfluxDBClientKotlin
 import com.influxdb.client.kotlin.QueryKotlinApi
 import com.influxdb.query.FluxRecord
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Timer
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.tryAndLog
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Timer
+import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.plugins.influxdb.poll.InfluxDbQueryMeters
 import io.qalipsis.plugins.influxdb.poll.InfluxDbQueryResult
 import kotlinx.coroutines.CancellationException
@@ -69,11 +70,39 @@ internal class InfluxDbQueryClientImpl(
         client = clientFactory()
         queryClient = client.getQueryKotlinApi()
         meterRegistry?.apply {
-            val tags = context.toMetersTags()
-            recordsCount = counter("$meterPrefix-received-records", tags)
-            timeToResponse = timer("$meterPrefix-time-to-response", tags)
-            successCounter = counter("$meterPrefix-success", tags)
-            failureCounter = counter("$meterPrefix-failure", tags)
+            val tags = context.toEventTags()
+            val scenarioName = context.scenarioName
+            val stepName = context.stepName
+            recordsCount = counter(scenarioName, stepName, "$meterPrefix-received-records", tags).report {
+                display(
+                    format = "attempted req: %,.0f",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 0,
+                    Counter::count
+                )
+            }
+            timeToResponse = timer(scenarioName, stepName,"$meterPrefix-time-to-response", tags)
+            successCounter = counter(scenarioName, stepName,"$meterPrefix-success", tags).report {
+                display(
+                    format = "\u2713 %,.0f successes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 1,
+                    column = 0,
+                    Counter::count
+                )
+            }
+            failureCounter = counter(scenarioName, stepName,"$meterPrefix-failure", tags).apply {
+                report {
+                    display(
+                        format = "\u2716 %,.0f failures",
+                        severity = ReportMessageSeverity.ERROR,
+                        row = 0,
+                        column = 1,
+                        Counter::count
+                    )
+                }
+            }
         }
     }
 
@@ -122,10 +151,6 @@ internal class InfluxDbQueryClientImpl(
      */
     override suspend fun stop(context: StepStartStopContext) {
         meterRegistry?.apply {
-            remove(recordsCount!!)
-            remove(timeToResponse!!)
-            remove(successCounter!!)
-            remove(failureCounter!!)
             recordsCount = null
             timeToResponse = null
             successCounter = null

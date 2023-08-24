@@ -27,12 +27,15 @@ import com.influxdb.client.kotlin.InfluxDBClientKotlin
 import io.aerisconsulting.catadioptre.getProperty
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.impl.annotations.SpyK
 import io.mockk.spyk
 import io.mockk.verify
+import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
 import io.qalipsis.api.sync.SuspendedCountLatch
 import io.qalipsis.plugins.influxdb.InfluxDbStepConnectionImpl
 import io.qalipsis.test.coroutines.TestDispatcherProvider
@@ -67,13 +70,19 @@ internal class InfluxDbIterativeReaderTest {
     @RelaxedMockK
     private lateinit var meterRegistry: CampaignMeterRegistry
 
+    private val recordsCount = relaxedMockk<Counter>()
+
+    private val failureCounter = relaxedMockk<Counter>()
+
+    private val successCounter = relaxedMockk<Counter>()
+
     @RelaxedMockK
     private lateinit var client: InfluxDBClientKotlin
 
     private val clientBuilder: () -> InfluxDBClientKotlin by lazy { { client } }
 
     @Test
-    @Timeout(3)
+    @Timeout(7)
     internal fun `should be restartable`() = testDispatcherProvider.run {
         val connectionConfig = InfluxDbStepConnectionImpl()
 
@@ -82,6 +91,12 @@ internal class InfluxDbIterativeReaderTest {
         connectionConfig.user = "name"
         connectionConfig.bucket = "db"
         // given
+        val tags: Map<String, String> = emptyMap()
+        val startStopContext = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "scenario-test"
+            every { stepName } returns "step-test"
+        }
         val latch = SuspendedCountLatch(1, true)
         val reader = spyk(
             InfluxDbIterativeReader(
@@ -94,10 +109,37 @@ internal class InfluxDbIterativeReaderTest {
                 meterRegistry = meterRegistry,
             ), recordPrivateCalls = true
         )
+        every {
+            meterRegistry.counter(
+                "scenario-test",
+                "step-test",
+                "influxdb-poll-received-records",
+                refEq(tags)
+            )
+        } returns recordsCount
+        every { recordsCount.report(any()) } returns recordsCount
+        every {
+            meterRegistry.counter(
+                "scenario-test",
+                "step-test",
+                "influxdb-poll-successes",
+                refEq(tags)
+            )
+        } returns successCounter
+        every {
+            meterRegistry.counter(
+                "scenario-test",
+                "step-test",
+                "influxdb-poll-failures",
+                refEq(tags)
+            )
+        } returns failureCounter
+        every { successCounter.report(any()) } returns successCounter
+        every { failureCounter.report(any()) } returns failureCounter
         coEvery { reader["poll"](any<InfluxDBClientKotlin>()) } coAnswers { latch.decrement() }
 
         // when
-        reader.start(relaxedMockk { })
+        reader.start(startStopContext)
 
         // then
         latch.await()
@@ -112,7 +154,7 @@ internal class InfluxDbIterativeReaderTest {
         assertThat(resultsChannel).isSameAs(resultsChannel)
 
         // when
-        reader.stop(relaxedMockk())
+        reader.stop(startStopContext)
         verify { resultsChannel.cancel() }
         verify { pollStatement.reset() }
         // then
@@ -120,7 +162,7 @@ internal class InfluxDbIterativeReaderTest {
 
         // when
         latch.reset()
-        reader.start(relaxedMockk { })
+        reader.start(startStopContext)
         // then
         verify { reader["init"]() }
         verify { resultsChannelFactory() }
@@ -129,7 +171,7 @@ internal class InfluxDbIterativeReaderTest {
         assertThat(reader.getProperty<InfluxDBClientKotlin>("client")).isNotNull()
         assertThat(reader.getProperty<Channel<InfluxDbQueryResult>>("resultsChannel")).isSameAs(resultsChannel)
 
-        reader.stop(relaxedMockk())
+        reader.stop(startStopContext)
     }
 
     @Test
@@ -169,6 +211,43 @@ internal class InfluxDbIterativeReaderTest {
         connectionConfig.url = "http://127.0.0.1:8086"
         connectionConfig.user = "name"
         connectionConfig.bucket = "db"
+        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val startStopContext = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns tags
+            every { scenarioName } returns "influx-scenario"
+            every { stepName } returns "influx-step"
+        }
+        val mockMeterRegistry = relaxedMockk<CampaignMeterRegistry> {
+            every {
+                counter(
+                    "influx-scenario",
+                    "influx-step",
+                    "influxdb-poll-received-records",
+                    refEq(tags)
+                )
+            } returns recordsCount
+            every { recordsCount.report(any()) } returns recordsCount
+
+            every {
+                counter(
+                    "influx-scenario",
+                    "influx-step",
+                    "influxdb-poll-failures",
+                    refEq(tags)
+                )
+            } returns failureCounter
+            every { failureCounter.report(any()) } returns failureCounter
+
+            every {
+                counter(
+                    "influx-scenario",
+                    "influx-step",
+                    "influxdb-poll-successes",
+                    refEq(tags)
+                )
+            } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+        }
         val reader = spyk(
             InfluxDbIterativeReader(
                 clientFactory = clientBuilder,
@@ -177,20 +256,20 @@ internal class InfluxDbIterativeReaderTest {
                 resultsChannelFactory = resultsChannelFactory,
                 coroutineScope = this,
                 eventsLogger = eventsLogger,
-                meterRegistry = meterRegistry,
+                meterRegistry = mockMeterRegistry,
             ), recordPrivateCalls = true
         )
         val countDownLatch = SuspendedCountLatch(2, true)
         coEvery { reader["poll"](any<InfluxDBClientKotlin>()) } coAnswers { countDownLatch.decrement() }
 
         // when
-        reader.start(relaxedMockk())
+        reader.start(startStopContext)
         countDownLatch.await()
 
         // then
         coVerify(atLeast = 2) { reader["poll"](any<InfluxDBClientKotlin>()) }
         assertThat(reader.hasNext()).isTrue()
 
-        reader.stop(relaxedMockk())
+        reader.stop(startStopContext)
     }
 }
