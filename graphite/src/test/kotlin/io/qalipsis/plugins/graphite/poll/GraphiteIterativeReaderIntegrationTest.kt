@@ -20,6 +20,7 @@ import io.netty.channel.nio.NioEventLoopGroup
 import io.qalipsis.api.events.Event
 import io.qalipsis.api.events.EventLevel
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.plugins.graphite.Constants
 import io.qalipsis.plugins.graphite.poll.model.events.GraphiteEventsClient
 import io.qalipsis.plugins.graphite.poll.model.events.model.GraphiteProtocol
 import io.qalipsis.plugins.graphite.poll.model.GraphiteQuery
@@ -68,7 +69,7 @@ internal class GraphiteIterativeReaderIntegrationTest {
     @BeforeAll
     @Timeout(25)
     fun setUpAll() = testDispatcherProvider.run {
-        val serverUrl = "http://localhost:${CONTAINER.getMappedPort(HTTP_PORT)}"
+        val serverUrl = "http://localhost:${CONTAINER.getMappedPort(Constants.HTTP_PORT)}"
         while (httpClient.get("${serverUrl}/render").status != HttpStatusCode.OK) {
             delay(500)
         }
@@ -76,7 +77,7 @@ internal class GraphiteIterativeReaderIntegrationTest {
         graphiteEventsClient = GraphiteEventsClient(
             protocolType = GraphiteProtocol.PLAINTEXT,
             host = "localhost",
-            port = CONTAINER.getMappedPort(GRAPHITE_PLAINTEXT_PORT),
+            port = CONTAINER.getMappedPort(Constants.GRAPHITE_PLAINTEXT_PORT),
             coroutineScope = coroutineScope,
             workerGroup = NioEventLoopGroup()
         ).apply {
@@ -183,27 +184,17 @@ internal class GraphiteIterativeReaderIntegrationTest {
 
         val log = logger()
 
-        const val GRAPHITE_IMAGE_NAME = "graphiteapp/graphite-statsd:latest"
-
-        const val HTTP_PORT = 80
-
-        const val GRAPHITE_PLAINTEXT_PORT = 2003
-
-        const val GRAPHITE_PICKLE_PORT = 2004
-
-        const val CARBON_CONFIG_PATH = "/opt/graphite/conf/carbon.conf"
-
         @Container
         @JvmStatic
         val CONTAINER = GenericContainer<Nothing>(
-            DockerImageName.parse(GRAPHITE_IMAGE_NAME)
+            DockerImageName.parse(Constants.GRAPHITE_IMAGE_NAME)
         ).apply {
             setWaitStrategy(HostPortWaitStrategy())
-            withExposedPorts(HTTP_PORT, GRAPHITE_PLAINTEXT_PORT, GRAPHITE_PICKLE_PORT)
+            withExposedPorts(Constants.HTTP_PORT, Constants.GRAPHITE_PLAINTEXT_PORT, Constants.GRAPHITE_PICKLE_PORT)
             withAccessToHost(true)
             withStartupTimeout(Duration.ofSeconds(60))
             withCreateContainerCmdModifier { it.hostConfig!!.withMemory((512 * 1e20).toLong()).withCpuCount(2) }
-            withClasspathResourceMapping("carbon.conf", CARBON_CONFIG_PATH, BindMode.READ_ONLY)
+            withClasspathResourceMapping("carbon.conf", Constants.CARBON_CONFIG_PATH, BindMode.READ_ONLY)
         }
     }
 }

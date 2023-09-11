@@ -39,6 +39,7 @@ import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.meters.Counter
 import io.qalipsis.api.meters.Meter
 import io.qalipsis.api.meters.Timer
+import io.qalipsis.plugins.graphite.Constants
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
@@ -99,12 +100,12 @@ internal class GraphiteSaveStepIntegrationTest {
 
     @BeforeEach
     fun setUp() = testDispatcherProvider.run {
-        httpPort = container.getMappedPort(HTTP_PORT)
+        httpPort = container.getMappedPort(Constants.HTTP_PORT)
         val request = "http://localhost:${httpPort}/render"
         while (ktorHttpClient.get(request).status.value != HttpStatus.OK.code) {
             delay(1_000)
         }
-        graphiteProtocolPort = container.getMappedPort(GRAPHITE_PLAINTEXT_PORT)
+        graphiteProtocolPort = container.getMappedPort(Constants.GRAPHITE_PLAINTEXT_PORT)
     }
 
     @Test
@@ -302,17 +303,13 @@ internal class GraphiteSaveStepIntegrationTest {
 
     companion object {
 
-        const val GRAPHITE_IMAGE_NAME = "graphiteapp/graphite-statsd:latest"
-        const val HTTP_PORT = 80
-        const val GRAPHITE_PLAINTEXT_PORT = 2003
-
         @Container
         @JvmStatic
         private val CONTAINER = GenericContainer<Nothing>(
-            DockerImageName.parse(GRAPHITE_IMAGE_NAME)
+            DockerImageName.parse(Constants.GRAPHITE_IMAGE_NAME)
         ).apply {
             setWaitStrategy(HostPortWaitStrategy())
-            withExposedPorts(HTTP_PORT, GRAPHITE_PLAINTEXT_PORT)
+            withExposedPorts(Constants.HTTP_PORT, Constants.GRAPHITE_PLAINTEXT_PORT)
             withAccessToHost(true)
             withStartupTimeout(Duration.ofSeconds(60))
             withCreateContainerCmdModifier { it.hostConfig!!.withMemory((512 * 1e20).toLong()).withCpuCount(2) }

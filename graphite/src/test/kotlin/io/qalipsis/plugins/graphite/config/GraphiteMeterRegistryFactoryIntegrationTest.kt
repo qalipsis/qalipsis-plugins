@@ -25,6 +25,7 @@ import io.micrometer.graphite.GraphiteMeterRegistry
 import io.micronaut.context.ApplicationContext
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.micronaut.test.support.TestPropertyProvider
+import io.qalipsis.plugins.graphite.Constants
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -108,7 +109,7 @@ internal class GraphiteMeterRegistryFactoryIntegrationTest {
                 "meters.enabled" to "true",
                 "meters.export.graphite.enabled" to "true",
                 "meters.export.graphite.host" to CONTAINER.host,
-                "meters.export.graphite.port" to CONTAINER.getMappedPort(HTTP_PORT).toString()
+                "meters.export.graphite.port" to CONTAINER.getMappedPort(Constants.HTTP_PORT).toString()
             )
         }
 
@@ -121,18 +122,13 @@ internal class GraphiteMeterRegistryFactoryIntegrationTest {
 
     companion object {
 
-        const val HTTP_PORT = 80
-        private const val GRAPHITE_PLAINTEXT_PORT = 2003
-        private const val GRAPHITE_PICKLE_PORT = 2004
-        private const val GRAPHITE_IMAGE_NAME = "graphiteapp/graphite-statsd:latest"
-
         @Container
         @JvmStatic
         private val CONTAINER = GenericContainer<Nothing>(
-            DockerImageName.parse(GRAPHITE_IMAGE_NAME)
+            DockerImageName.parse(Constants.GRAPHITE_IMAGE_NAME)
         ).apply {
             setWaitStrategy(HostPortWaitStrategy())
-            withExposedPorts(HTTP_PORT, GRAPHITE_PLAINTEXT_PORT, GRAPHITE_PICKLE_PORT)
+            withExposedPorts(Constants.HTTP_PORT, Constants.GRAPHITE_PLAINTEXT_PORT, Constants.GRAPHITE_PICKLE_PORT)
             withAccessToHost(true)
             withStartupTimeout(Duration.ofSeconds(60))
             withCreateContainerCmdModifier { it.hostConfig!!.withMemory((512 * 1e20).toLong()).withCpuCount(2) }

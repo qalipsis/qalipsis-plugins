@@ -21,6 +21,7 @@ import io.mockk.spyk
 import io.qalipsis.api.events.Event
 import io.qalipsis.api.events.EventLevel
 import io.qalipsis.api.events.EventTag
+import io.qalipsis.plugins.graphite.Constants
 import io.qalipsis.plugins.graphite.poll.model.events.model.GraphiteProtocol
 import io.qalipsis.plugins.graphite.poll.model.events.GraphiteEventsConfiguration
 import io.qalipsis.plugins.graphite.poll.model.events.GraphiteEventsPublisher
@@ -66,15 +67,15 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(private v
 
     @BeforeAll
     fun setUp() {
-        containerHttpPort = container.getMappedPort(HTTP_PORT)
+        containerHttpPort = container.getMappedPort(Constants.HTTP_PORT)
         val request = generateHttpGet("http://$LOCALHOST_HOST:${containerHttpPort}/render")
         while (httpClient.send(request, HttpResponse.BodyHandlers.ofString()).statusCode() != HttpStatus.OK.code) {
             Thread.sleep(1_000)
         }
 
         protocolPort =
-            if (protocol == GraphiteProtocol.PICKLE) container.getMappedPort(GRAPHITE_PICKLE_PORT)
-            else container.getMappedPort(GRAPHITE_PLAINTEXT_PORT)
+            if (protocol == GraphiteProtocol.PICKLE) container.getMappedPort(Constants.GRAPHITE_PICKLE_PORT)
+            else container.getMappedPort(Constants.GRAPHITE_PLAINTEXT_PORT)
         val thatProtocol = protocol
         configuration = object : GraphiteEventsConfiguration {
             override val host: String
@@ -250,20 +251,15 @@ internal abstract class AbstractGraphiteEventsPublisherIntegrationTest(private v
 
 
     companion object {
-
-        private const val GRAPHITE_IMAGE_NAME = "graphiteapp/graphite-statsd:latest"
-        const val HTTP_PORT = 80
-        const val GRAPHITE_PLAINTEXT_PORT = 2003
-        const val GRAPHITE_PICKLE_PORT = 2004
         const val LOCALHOST_HOST = "localhost"
 
         @Container
         @JvmStatic
         private val CONTAINER = GenericContainer<Nothing>(
-            DockerImageName.parse(GRAPHITE_IMAGE_NAME)
+            DockerImageName.parse(Constants.GRAPHITE_IMAGE_NAME)
         ).apply {
             setWaitStrategy(HostPortWaitStrategy())
-            withExposedPorts(HTTP_PORT, GRAPHITE_PLAINTEXT_PORT, GRAPHITE_PICKLE_PORT)
+            withExposedPorts(Constants.HTTP_PORT, Constants.GRAPHITE_PLAINTEXT_PORT, Constants.GRAPHITE_PICKLE_PORT)
             withAccessToHost(true)
             withStartupTimeout(Duration.ofSeconds(60))
             withCreateContainerCmdModifier { it.hostConfig!!.withMemory((512 * 1e20).toLong()).withCpuCount(2) }
