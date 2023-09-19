@@ -14,21 +14,30 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.jakarta.producer
-
-import io.qalipsis.plugins.jakarta.destination.Destination
+package io.qalipsis.plugins.jakarta.destination
 
 /**
- * Qalipsis representation of a Jakarta message to be produced.
+ * Qalipsis representation of a Jakarta destination.
  *
- * @property destination name of the topic or queue where message should be produced
- * @property messageType it is a type used for creating native JMS [jakarta.jms.Message]
- * @property value the payload of the [jakarta.jms.Message]
+ * @property name of the topic or queue where message should be produced
  *
- * @author Krawist Ngoben
  */
-data class JakartaProducerRecord(
-    val destination: Destination,
-    val messageType: JakartaMessageType = JakartaMessageType.AUTO,
-    val value: Any
-)
+interface Destination {
+    val name: String
+}
+
+/**
+ * Implementation of [Destination] used to create topics.
+ *
+ */
+data class Topic(
+    override val name: String,
+) : Destination
+
+/**
+ * Implementation of [Destination] used to create queues.
+ *
+ */
+data class Queue(
+    override val name: String,
+) : Destination

@@ -28,10 +28,12 @@ import io.aerisconsulting.catadioptre.getProperty
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.plugins.jakarta.Constants
+import io.qalipsis.plugins.jakarta.destination.Queue
+import io.qalipsis.plugins.jakarta.destination.Topic
 import io.qalipsis.plugins.jakarta.jakarta
 import jakarta.jms.Connection
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory
-import org.apache.activemq.artemis.jms.client.ActiveMQDestination
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.testcontainers.containers.GenericContainer
@@ -43,6 +45,7 @@ import kotlin.math.pow
  * @author Krawist Ngoben
  * */
 @Testcontainers
+@OptIn(ExperimentalCoroutinesApi::class)
 internal class JakartaProducerStepSpecificationIntegrationTest {
 
     private lateinit var connectionFactory: Connection
@@ -59,11 +62,11 @@ internal class JakartaProducerStepSpecificationIntegrationTest {
     @Test
     internal fun `should apply connection`() {
         val rec1 = JakartaProducerRecord(
-            destination = ActiveMQDestination.createDestination("dest-1", ActiveMQDestination.TYPE.DESTINATION),
+            destination = Topic("topic-1"),
             value = "text-1"
         )
         val rec2 = JakartaProducerRecord(
-            destination = ActiveMQDestination.createDestination("dest-2", ActiveMQDestination.TYPE.DESTINATION),
+            destination = Queue("queue-1"),
             value = "text-2"
         )
 
@@ -96,13 +99,13 @@ internal class JakartaProducerStepSpecificationIntegrationTest {
 
     @Test
     internal fun `should apply bytes count`() {
-        val recordSuplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<JakartaProducerRecord>) =
+        val recordSupplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<JakartaProducerRecord>) =
             { _, _ -> listOf() }
 
         val scenario = DummyStepSpecification()
         scenario.jakarta().produce {
             connect { connectionFactory }
-            records(recordSuplier)
+            records(recordSupplier)
 
             metrics {
                 bytesCount = true
@@ -119,13 +122,13 @@ internal class JakartaProducerStepSpecificationIntegrationTest {
 
     @Test
     internal fun `should apply records count`() {
-        val recordSuplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<JakartaProducerRecord>) =
+        val recordSupplier: (suspend (ctx: StepContext<*, *>, input: Any?) -> List<JakartaProducerRecord>) =
             { _, _ -> listOf() }
 
         val scenario = DummyStepSpecification()
         scenario.jakarta().produce {
             connect { connectionFactory }
-            records(recordSuplier)
+            records(recordSupplier)
 
             metrics {
                 recordsCount = true
@@ -153,5 +156,4 @@ internal class JakartaProducerStepSpecificationIntegrationTest {
             withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY, Constants.CONTAINER_PASSWORD)
         }
     }
-
 }

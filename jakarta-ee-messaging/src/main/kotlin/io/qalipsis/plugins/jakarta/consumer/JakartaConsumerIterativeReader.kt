@@ -18,22 +18,23 @@ package io.qalipsis.plugins.jakarta.consumer
 
 import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
+import io.qalipsis.api.lang.tryAndLogOrNull
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.steps.datasource.DatasourceIterativeReader
-import jakarta.jms.Destination
+import jakarta.jms.Connection
 import jakarta.jms.Message
-import jakarta.jms.MessageConsumer
-import jakarta.jms.MessageListener
-import jakarta.jms.Queue
 import jakarta.jms.QueueConnection
 import jakarta.jms.Session
 import jakarta.jms.Session.AUTO_ACKNOWLEDGE
-import jakarta.jms.Topic
 import jakarta.jms.TopicConnection
 import kotlinx.coroutines.channels.Channel
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import kotlin.concurrent.thread
 
 /**
  * Implementation of [DatasourceIterativeReader] to poll messages from Jakarta topics or queues.
+ * See the [official documentation](https://jakarta.ee/specifications/messaging/3.0/jakarta-messaging-spec-3.0.html#receiving-messages-asynchronously).
  *
  * @author Krawist Ngoben
  */
@@ -45,50 +46,117 @@ internal class JakartaConsumerIterativeReader(
     private val queueConnectionFactory: (() -> QueueConnection)?
 ) : DatasourceIterativeReader<Message> {
 
-    private val channel = Channel<Message>(Channel.UNLIMITED)
-
-    private val messageListener: MessageListener = JakartaChannelForwarder(channel)
+    private var channel: Channel<Message>? = null
 
     private var running = false
 
-    private val consumers = mutableListOf<MessageConsumer>()
+    private lateinit var consumerLatch: CountDownLatch
 
-    private var topicConnection: TopicConnection? = null
-
-    private var queueConnection: QueueConnection? = null
+    private lateinit var consumersOwningThread: Thread
 
     override fun start(context: StepStartStopContext) {
+        consumerLatch = CountDownLatch(1)
+
+        channel = Channel(Channel.UNLIMITED)
         running = true
-        topicConnection = topicConnectionFactory?.invoke()
-        queueConnection = queueConnectionFactory?.invoke()
+        // This future aims at waiting for the consumers to be up and running.
+        val creationCompletionFuture = CompletableFuture<Result<Unit>>()
+        createAllConsumers(creationCompletionFuture)
+        // If an exception was thrown be the consumer creation, it should be thrown to stop the whole process.
+        creationCompletionFuture.get().getOrThrow()
+    }
 
-        verifyConnections()
+    /**
+     * According to the [documentation](https://jakarta.ee/specifications/messaging/3.0/jakarta-messaging-spec-3.0.html#classic-api-interfaces),
+     * the [Session] should be kept and used in a single thread.
+     *
+     * So we create the sessions for the topics and queue in a unique thread, kept alive during the whole execution
+     * of a campaign.
+     *
+     * The thread will be blocked until [consumerLatch] reaches 0, then will close the connections,
+     * which automatically leads to closing the attached consumers and sessions.
+     *
+     * When an exception occurs during the initialization process, it is provided as result into [creationCompletionFuture]
+     * which can be used by the starting operation.
+     *
+     * When the initialization process succeeds, [creationCompletionFuture] receives an empty result to let the starting
+     * operation go on.
+     */
+    private fun createAllConsumers(creationCompletionFuture: CompletableFuture<Result<Unit>>) {
+        consumersOwningThread = thread(
+            start = true,
+            isDaemon = false,
+            name = "jakarta-ee-consumer-${stepId}-consumers"
+        ) {
 
-        consumers.clear()
-        try {
-            startConsumer()
-        } catch (e: Exception) {
-            log.error(e) { "An error occurred in the step $stepId while starting the consumer: ${e.message}" }
-            throw e
+            val messageListener = JakartaChannelForwarder(channel!!)
+            val connections = mutableListOf<Connection>()
+            try {
+                if (topics.isNotEmpty()) {
+                    val connection = requireNotNull(topicConnectionFactory).invoke()
+                    connections += connection
+                    connection.clientID = "qalipsis-jakarta-ee-messaging-topic-consumer-$stepId"
+                    val session = connection.createSession(false, AUTO_ACKNOWLEDGE)
+                    topics.forEach { topicName ->
+                        log.debug { "Creating a consumer for the topic $topicName" }
+                        session.createConsumer(session.createTopic(topicName)).also {
+                            it.messageListener = messageListener
+                        }
+                    }
+                    connection.start()
+                }
+
+                if (queues.isNotEmpty()) {
+                    val connection = requireNotNull(queueConnectionFactory).invoke()
+                    connections += connection
+                    connection.clientID = "qalipsis-jakarta-ee-messaging-queue-consumer-$stepId"
+                    val session = connection.createSession(false, AUTO_ACKNOWLEDGE)
+                    queues.forEach { queueName ->
+                        log.debug { "Creating a consumer for the queue $queueName" }
+                        session.createConsumer(session.createQueue(queueName)).also {
+                            it.messageListener = messageListener
+                        }
+                    }
+                    connection.start()
+                }
+                creationCompletionFuture.complete(Result.success(Unit))
+
+                // Wait until the step to be stopped before we go on and close everything.
+                log.debug { "Waiting for the step to be stopped" }
+                consumerLatch.await()
+            } catch (e: InterruptedException) {
+                // Do nothing.
+            } catch (e: Exception) {
+                log.error(e) { "An error occurred during the initialization of the consumers: ${e.message}" }
+                if (!creationCompletionFuture.isDone) {
+                    creationCompletionFuture.complete(Result.failure(e))
+                }
+            } finally {
+                log.debug { "Closing the connections" }
+                connections.forEach {
+                    tryAndLogOrNull(log) {
+                        // Closing the connections will close all the attached sessions and consumers.
+                        it.close()
+                    }
+                }
+            }
         }
     }
 
-    private fun startConsumer() {
-        createTopicConsumers(topicConnection, topics)
-        createQueueConsumers(queueConnection, queues)
-
-        topicConnection?.start()
-        queueConnection?.start()
-    }
-
     override fun stop(context: StepStartStopContext) {
-        log.debug { "Stopping the JMS consumer for step $stepId" }
+        log.debug { "Stopping the Jakarta consumer for step $stepId" }
         running = false
-        consumers.forEach { it.close() }
-        consumers.clear()
-        topicConnection?.stop()
-        queueConnection?.stop()
-        log.debug { "JMS consumer for step $stepId was stopped" }
+        consumerLatch.countDown()
+        kotlin.runCatching {
+            // Normally the thread should have been stopped by the consumerLatch already.
+            // This is just for double-security.
+            consumersOwningThread.interrupt()
+        }
+
+        // Releases the resources.
+        channel?.cancel()
+        channel = null
+        log.debug { "Jakarta consumer for step $stepId was stopped" }
     }
 
     override suspend fun hasNext(): Boolean {
@@ -96,52 +164,9 @@ internal class JakartaConsumerIterativeReader(
     }
 
     override suspend fun next(): Message {
-        return channel.receive()
+        return channel!!.receive()
     }
 
-    private fun createQueueConsumers(queueConnection: QueueConnection?, queues: Collection<String>) {
-        queueConnection?.let {
-            val queueSession: Session = queueConnection.createSession(false, AUTO_ACKNOWLEDGE)
-            queues.forEach { queueName ->
-                val queue: Queue = queueSession.createQueue(queueName)
-                val queueConsumer = createMessageConsumer(queueSession, queue)
-                consumers.add(queueConsumer)
-            }
-        }
-    }
-
-    private fun createTopicConsumers(topicConnection: TopicConnection?, topics: Collection<String>) {
-        topicConnection?.let {
-            val topicSession: Session = topicConnection.createSession(false, AUTO_ACKNOWLEDGE)
-            topics.forEach { topicName ->
-                val topic: Topic = topicSession.createTopic(topicName)
-                val topicConsumer = createMessageConsumer(topicSession, topic)
-                consumers.add(topicConsumer)
-            }
-        }
-
-    }
-
-    private fun createMessageConsumer(session: Session, destination: Destination): MessageConsumer {
-        val consumer: MessageConsumer = session.createConsumer(destination)
-        consumer.messageListener = messageListener
-        return consumer
-    }
-
-    private fun verifyConnections() {
-
-        require((queueConnection != null && topicConnection == null) || (queueConnection == null && topicConnection != null)){
-            "Only one of queueConnection or topicConnection should be provided"
-        }
-
-        if (queueConnection != null && queues.isEmpty()) {
-            throw IllegalArgumentException("At least one queue is expected")
-        }
-
-        if (topicConnection != null && topics.isEmpty()) {
-            throw IllegalArgumentException("At least one topic is expected")
-        }
-    }
 
     companion object {
 

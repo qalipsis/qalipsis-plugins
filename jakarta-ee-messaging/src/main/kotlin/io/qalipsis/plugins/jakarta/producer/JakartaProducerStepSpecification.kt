@@ -24,6 +24,7 @@ import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.jakarta.JakartaStepSpecification
 import jakarta.jms.Connection
+import jakarta.jms.Session
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /**
@@ -41,6 +42,16 @@ interface JakartaProducerStepSpecification<I> :
      * Configures the connection to the Jakarta server.
      */
     fun connect(connectionFactory: () -> Connection)
+
+    /**
+     * Configures the session to the Jakarta server.
+     */
+    fun session(sessionFactory: (connection: Connection) -> Session)
+
+    /**
+     * Defines the count of producing threads to create, defaults to 1.
+     */
+    fun producers(count: Int)
 
     /**
      * records closure to generate a list of [JakartaProducerRecord]
@@ -71,6 +82,10 @@ internal class JakartaProducerStepSpecificationImpl<I> :
 
     internal lateinit var connectionFactory: () -> Connection
 
+    internal lateinit var sessionFactory: (connection: Connection) -> Session
+
+    internal var producersCount = 1
+
     internal var recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JakartaProducerRecord> =
         { _, _ -> listOf() }
 
@@ -79,6 +94,14 @@ internal class JakartaProducerStepSpecificationImpl<I> :
 
     override fun connect(connectionFactory: () -> Connection) {
         this.connectionFactory = connectionFactory
+    }
+
+    override fun producers(count: Int) {
+        producersCount = count
+    }
+
+    override fun session(sessionFactory: (connection: Connection) -> Session) {
+        this.sessionFactory = sessionFactory
     }
 
     override fun records(recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JakartaProducerRecord>) {
@@ -124,7 +147,7 @@ data class JakartaProducerMonitoringConfiguration(
 )
 
 /**
- * Provides [jakarta.jms.Message] to JMS server using a io.qalipsis.plugins.jakarta.producer query.
+ * Provides [jakarta.jms.Message] to JMS server using an io.qalipsis.plugins.jakarta.producer query.
  *
  * @author Alexander Sosnovsky
  */

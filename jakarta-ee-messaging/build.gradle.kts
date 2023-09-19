@@ -49,9 +49,11 @@ val pluginPlatformVersion: String by project
 dependencies {
     implementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
     compileOnly("io.micronaut:micronaut-runtime")
+    testCompileOnly("org.junit.jupiter:junit-jupiter:5.6.0")
 
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("org.apache.activemq:artemis-jakarta-client:2.26.0")
 
     api("jakarta.jms:jakarta.jms-api:3.1.0")
     api("io.qalipsis:qalipsis-api-common")

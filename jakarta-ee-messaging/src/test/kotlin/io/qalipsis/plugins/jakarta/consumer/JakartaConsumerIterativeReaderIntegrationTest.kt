@@ -33,8 +33,10 @@ import jakarta.jms.MessageProducer
 import jakarta.jms.Session
 import jakarta.jms.TextMessage
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
@@ -79,8 +81,13 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
     fun setUp() {
         producerConnection = connectionFactory.createConnection()
         producerConnection.start()
-
         producerSession = producerConnection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    }
+
+    @AfterEach
+    fun tearDown() {
+        producerSession.close()
+        producerConnection.close()
     }
 
     private fun prepareQueueProducer(queueName: String): MessageProducer {
@@ -106,17 +113,13 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
         producer.send(message)
     }
 
+
     @Test
-    @Timeout(50)
+    @Timeout(20)
     internal fun `should consume all the data from subscribed queues only`(): Unit = testDispatcherProvider.run {
         val producer1 = prepareQueueProducer("queue-1")
         val producer2 = prepareQueueProducer("queue-2")
         val producer3 = prepareQueueProducer("queue-3")
-
-        sendMessage("test-queue-message-1", producer1)
-        sendMessage("test-queue-message-2", producer1)
-        sendMessage("test-queue-message-3", producer2)
-        sendMessage("test-queue-message-4", producer3)
 
         reader = JakartaConsumerIterativeReader(
             "any",
@@ -128,6 +131,12 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
 
         reader.start(relaxedMockk())
 
+        delay(4000)
+
+        sendMessage("test-queue-message-1", producer1)
+        sendMessage("test-queue-message-2", producer1)
+        sendMessage("test-queue-message-3", producer2)
+        sendMessage("test-queue-message-4", producer3)
 
         // when
         val received = mutableListOf<TextMessage>()
@@ -136,10 +145,8 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
             received.add(records as TextMessage)
         }
 
-        reader.stop(relaxedMockk())
-
         // then
-        assertThat(received).transform { it.sortedBy { it.text } }.all {
+        assertThat(received).transform { it -> it.sortedBy { it.text } }.all {
             hasSize(3)
             index(0).isInstanceOf(TextMessage::class).all {
                 transform("text") { it.text }.isEqualTo("test-queue-message-1")
@@ -159,12 +166,11 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
             }
         }
 
-        producerSession.close()
-        producerConnection.close()
+        reader.stop(relaxedMockk())
     }
 
     @Test
-    @Timeout(50)
+    @Timeout(20)
     internal fun `should consume all the data from subscribed topics only`(): Unit = testDispatcherProvider.run {
         val producer1 = prepareTopicProducer("topic-1")
         val producer2 = prepareTopicProducer("topic-2")
@@ -192,10 +198,8 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
             received.add(records as TextMessage)
         }
 
-        reader.stop(relaxedMockk())
-
         // then
-        assertThat(received).transform { it.sortedBy { it.text } }.all {
+        assertThat(received).transform { it -> it.sortedBy { it.text } }.all {
             hasSize(3)
             index(0).all {
                 prop(TextMessage::getText).isEqualTo("test-topic-message-1")
@@ -215,8 +219,7 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
             }
         }
 
-        producerSession.close()
-        producerConnection.close()
+        reader.stop(relaxedMockk())
     }
 
 
@@ -239,7 +242,7 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
     }
 
     @Test
-    @Timeout(50)
+    @Timeout(20)
     internal fun `should accept start after stop and consume`() = testDispatcherProvider.run {
         val producer1 = prepareTopicProducer("topic-1")
         val producer2 = prepareTopicProducer("topic-2")
@@ -270,7 +273,7 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
 
         reader.stop(relaxedMockk())
 
-        assertThat(received).transform { it.sortedBy { it.text } }.all {
+        assertThat(received).transform { it -> it.sortedBy { it.text } }.all {
             hasSize(3)
             index(0).all {
                 prop(TextMessage::getText).isEqualTo("test-startstop-message-1")
@@ -289,7 +292,7 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
         @Container
         @JvmStatic
         val container = GenericContainer<Nothing>(Constants.DOCKER_IMAGE).apply {
-            withExposedPorts(61616)
+            withExposedPorts(61616, 8161)
             withCreateContainerCmdModifier {
                 it.hostConfig!!.withMemory(256 * 1024.0.pow(2).toLong()).withCpuCount(1)
             }

@@ -27,9 +27,9 @@ import jakarta.jms.Destination
 import jakarta.jms.MessageProducer
 import jakarta.jms.Session
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory
-import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.testcontainers.containers.GenericContainer
@@ -47,33 +47,26 @@ internal class JakartaScenarioIntegrationTest {
 
     private lateinit var producerSession: Session
 
-    private lateinit var connectionFactory: ActiveMQConnectionFactory
+    private lateinit var queueConnectionFactory: ActiveMQConnectionFactory
 
-    private var initialized = false
-
-    @BeforeAll
+    @BeforeEach
     internal fun setUp() {
-        if (!initialized) {
+        queueConnectionFactory = ActiveMQConnectionFactory(
+            "tcp://localhost:${container.getMappedPort(61616)}",
+            Constants.CONTAINER_USER_NAME,
+            Constants.CONTAINER_PASSWORD
+        )
 
-            connectionFactory = ActiveMQConnectionFactory(
-                "tcp://localhost:${container.getMappedPort(61616)}",
-                Constants.CONTAINER_USER_NAME,
-                Constants.CONTAINER_PASSWORD
-            )
+        producerConnection = queueConnectionFactory.createConnection()
 
-            producerConnection = connectionFactory.createConnection()
+        producerConnection.start()
 
-            producerConnection.start()
+        producerSession = producerConnection.createSession()
 
-            producerSession = producerConnection.createSession()
-
-            JakartaScenario.queueConnection = connectionFactory.createQueueConnection()
-
-            initialized = true
-        }
+        JakartaScenario.queueConnectionFactory = queueConnectionFactory
     }
 
-    @AfterAll
+    @AfterEach
     internal fun tearDown() {
         producerSession.close()
         producerConnection.close()
@@ -85,17 +78,16 @@ internal class JakartaScenarioIntegrationTest {
     internal fun `should run the consumer scenario`() {
         val producer1 = prepareQueueProducer("queue-1")
         val producer2 = prepareQueueProducer("queue-2")
-        sendMessage(ObjectMapper().writeValueAsString(JakartaScenario.User("10", "alex")), producer1)
-        sendMessage(ObjectMapper().writeValueAsString(JakartaScenario.User("20", "bob")), producer1)
-        sendMessage(ObjectMapper().writeValueAsString(JakartaScenario.User("10", "charly")), producer2)
-        sendMessage(ObjectMapper().writeValueAsString(JakartaScenario.User("20", "david")), producer2)
+        val objectMapper = ObjectMapper()
+        sendMessage(objectMapper.writeValueAsString(JakartaScenario.User("10", "alex")), producer1)
+        sendMessage(objectMapper.writeValueAsString(JakartaScenario.User("20", "bob")), producer1)
+        sendMessage(objectMapper.writeValueAsString(JakartaScenario.User("10", "charly")), producer2)
+        sendMessage(objectMapper.writeValueAsString(JakartaScenario.User("20", "david")), producer2)
 
         JakartaScenario.receivedMessages.clear()
         val exitCode = QalipsisTestRunner.withScenarios("consumer-jakarta").execute()
         assertEquals(0, exitCode)
 
-        // FIXME, on some cases, receivedMessages is empty here when the scenario is completed,
-        // and the expected values are actually visible in the next test.
         assertThat(
             listOf(
                 JakartaScenario.receivedMessages.poll(),

@@ -16,6 +16,7 @@
 
 package io.qalipsis.plugins.jakarta.consumer
 
+import io.qalipsis.api.logging.LoggerHelper.logger
 import jakarta.jms.Message
 import jakarta.jms.MessageListener
 import kotlinx.coroutines.channels.Channel
@@ -28,7 +29,12 @@ import kotlinx.coroutines.channels.Channel
 internal class JakartaChannelForwarder(private val channel: Channel<Message>) : MessageListener {
 
     override fun onMessage(message: Message) {
+        log.trace { "Received message from ${message.jmsDestination}" }
         channel.trySend(message).getOrThrow()
+    }
+
+    private companion object {
+        val log = logger()
     }
 }
 

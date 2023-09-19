@@ -18,10 +18,11 @@ package io.qalipsis.plugins.jakarta.producer
 
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.verify
+import io.qalipsis.plugins.jakarta.destination.Queue
+import io.qalipsis.plugins.jakarta.destination.Topic
 import io.qalipsis.test.mockk.CleanMockkRecordedCalls
 import io.qalipsis.test.mockk.WithMockk
 import jakarta.jms.Session
-import org.apache.activemq.artemis.jms.client.ActiveMQDestination
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertThrows
@@ -47,7 +48,7 @@ internal class JakartaProducerConverterTest {
         val bytes = "byte-array".toByteArray()
 
         val producerRecord = JakartaProducerRecord(
-            destination = ActiveMQDestination.createDestination("dest-1", ActiveMQDestination.TYPE.DESTINATION),
+            destination = Topic("topic-1"),
             messageType = JakartaMessageType.BYTES,
             value = bytes
         )
@@ -66,7 +67,7 @@ internal class JakartaProducerConverterTest {
         val userObj = User("id", "name")
 
         val producerRecord = JakartaProducerRecord(
-            destination = ActiveMQDestination.createDestination("dest-1", ActiveMQDestination.TYPE.DESTINATION),
+            destination = Topic("topic-1"),
             messageType = JakartaMessageType.OBJECT,
             value = userObj
         )
@@ -85,7 +86,7 @@ internal class JakartaProducerConverterTest {
         val text = "text"
 
         val producerRecord = JakartaProducerRecord(
-            destination = ActiveMQDestination.createDestination("dest-1", ActiveMQDestination.TYPE.DESTINATION),
+            destination = Topic("topic-1"),
             messageType = JakartaMessageType.TEXT,
             value = text
         )
@@ -99,12 +100,12 @@ internal class JakartaProducerConverterTest {
 
     @Test
     @Timeout(2)
-    internal fun `should throw exception if prvided object are not serializable`() {
+    internal fun `should throw exception if provided object are not serializable`() {
 
         val userObj = UserNotSerializable("id", "name")
 
         val producerRecord = JakartaProducerRecord(
-            destination = ActiveMQDestination.createDestination("dest-1", ActiveMQDestination.TYPE.DESTINATION),
+            destination = Queue("queue-1"),
             messageType = JakartaMessageType.OBJECT,
             value = userObj
         )
@@ -121,21 +122,21 @@ internal class JakartaProducerConverterTest {
         val text = "text"
 
         val producerRecordText = JakartaProducerRecord(
-            destination = ActiveMQDestination.createDestination("dest-1", ActiveMQDestination.TYPE.DESTINATION),
+            destination = Topic("topic-1"),
             value = text
         )
 
         val bytes = "byte-array".toByteArray()
 
         val producerRecordBytes = JakartaProducerRecord(
-            destination = ActiveMQDestination.createDestination("dest-1", ActiveMQDestination.TYPE.DESTINATION),
+            destination = Topic("topic-1"),
             value = bytes
         )
 
         val userObj = User("id", "name")
 
         val producerRecordObject = JakartaProducerRecord(
-            destination = ActiveMQDestination.createDestination("dest-1", ActiveMQDestination.TYPE.DESTINATION),
+            destination = Topic("topic-1"),
             value = userObj
         )
 

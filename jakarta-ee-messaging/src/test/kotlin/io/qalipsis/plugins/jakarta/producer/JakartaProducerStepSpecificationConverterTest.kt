@@ -26,13 +26,16 @@ import io.mockk.spyk
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepCreationContextImpl
+import io.qalipsis.plugins.jakarta.destination.Queue
+import io.qalipsis.plugins.jakarta.destination.Topic
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
 import jakarta.jms.Connection
+import jakarta.jms.Session
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
-import org.apache.activemq.artemis.jms.client.ActiveMQDestination
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
@@ -41,14 +44,13 @@ import org.junit.jupiter.api.extension.RegisterExtension
  * @author Krawist Ngoben
  */
 @Suppress("UNCHECKED_CAST")
+@OptIn(ExperimentalCoroutinesApi::class)
 internal class JakartaProducerStepSpecificationConverterTest :
     AbstractStepSpecificationConverterTest<JakartaProducerStepSpecificationConverter>() {
 
-    @JvmField
-    @RegisterExtension
-    val testDispatcherProvider = TestDispatcherProvider()
-
     private val connectionFactory: () -> Connection = { relaxedMockk() }
+
+    private val sessionFactory: (connection: Connection) -> Session = { relaxedMockk() }
 
     @Test
     override fun `should not support unexpected spec`() {
@@ -63,11 +65,11 @@ internal class JakartaProducerStepSpecificationConverterTest :
     @Test
     internal fun `should convert spec with name`() = testDispatcherProvider.runTest {
         val rec1 = JakartaProducerRecord(
-            destination = ActiveMQDestination.createDestination("dest-1", ActiveMQDestination.TYPE.DESTINATION),
+            destination = Topic("topic-1"),
             value = "text-1"
         )
         val rec2 = JakartaProducerRecord(
-            destination = ActiveMQDestination.createDestination("dest-2", ActiveMQDestination.TYPE.DESTINATION),
+            destination = Queue("queue-1"),
             value = "text-2"
         )
 
@@ -78,6 +80,7 @@ internal class JakartaProducerStepSpecificationConverterTest :
         spec.also {
             it.name = "my-step"
             it.connect(connectionFactory)
+            it.session(sessionFactory)
             it.records(recordSupplier)
         }
 
@@ -98,9 +101,16 @@ internal class JakartaProducerStepSpecificationConverterTest :
                 prop("recordFactory").isEqualTo(recordSupplier)
                 prop("jakartaProducer").isNotNull().all {
                     prop("connectionFactory").isEqualTo(connectionFactory)
+                    prop("sessionFactory").isEqualTo(sessionFactory)
                 }
                 prop("retryPolicy").isNull()
             }
         }
+    }
+
+    companion object {
+        @JvmField
+        @RegisterExtension
+        val testDispatcherProvider = TestDispatcherProvider()
     }
 }

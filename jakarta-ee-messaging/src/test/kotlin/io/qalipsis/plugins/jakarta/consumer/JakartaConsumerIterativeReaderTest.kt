@@ -25,6 +25,7 @@ import jakarta.jms.QueueConnection
 import jakarta.jms.TopicConnection
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.RegisterExtension
 
@@ -33,10 +34,6 @@ import org.junit.jupiter.api.extension.RegisterExtension
  */
 @WithMockk
 internal class JakartaConsumerIterativeReaderTest {
-
-    @JvmField
-    @RegisterExtension
-    val testDispatcherProvider = TestDispatcherProvider()
 
     @RelaxedMockK
     private lateinit var topicConnectionFactory: () -> TopicConnection
@@ -59,28 +56,44 @@ internal class JakartaConsumerIterativeReaderTest {
     }
 
     @Test
-    internal fun `should throw exception if both connection are provided`() = testDispatcherProvider.runTest {
+    internal fun `should throw no exception if both connections are provided`() = testDispatcherProvider.runTest {
         reader = JakartaConsumerIterativeReader(
             "any",
-            queues = listOf(),
+            queues = listOf("queue-1", "queue-2"),
             queueConnectionFactory = queueConnectionFactory,
-            topics = listOf(),
+            topics = listOf("topic-1", "topic-2"),
             topicConnectionFactory = topicConnectionFactory
         )
 
-        assertThrows<IllegalArgumentException> {
+        assertDoesNotThrow {
             reader.start(relaxedMockk())
         }
     }
 
     @Test
-    internal fun `should throw exception if queues not provided for connection`() = testDispatcherProvider.runTest {
+    internal fun `should throw no exception if both connections are not provided and both topics and queues are emtpy`() = testDispatcherProvider.runTest {
         reader = JakartaConsumerIterativeReader(
             "any",
             queues = listOf(),
-            queueConnectionFactory = queueConnectionFactory,
+            queueConnectionFactory = null,
             topics = listOf(),
             topicConnectionFactory = null
+        )
+
+        assertDoesNotThrow {
+            reader.start(relaxedMockk())
+        }
+    }
+
+
+    @Test
+    internal fun `should throw exception if queues not provided for connection`() = testDispatcherProvider.runTest {
+        reader = JakartaConsumerIterativeReader(
+            "any",
+            queues = listOf("queue-1", "queue-2"),
+            queueConnectionFactory = null,
+            topics = listOf("topic-1", "topic-2"),
+            topicConnectionFactory = topicConnectionFactory
         )
 
         assertThrows<IllegalArgumentException> {
@@ -92,10 +105,10 @@ internal class JakartaConsumerIterativeReaderTest {
     internal fun `should throw exception if topics not provided for connection`() = testDispatcherProvider.runTest {
         reader = JakartaConsumerIterativeReader(
             "any",
-            queues = listOf(),
-            queueConnectionFactory = null,
-            topics = listOf(),
-            topicConnectionFactory = topicConnectionFactory
+            queues = listOf("queue-1", "queue-2"),
+            queueConnectionFactory = queueConnectionFactory,
+            topics = listOf("topic-1", "topic-2"),
+            topicConnectionFactory = null
         )
 
         assertThrows<IllegalArgumentException> {
@@ -107,14 +120,20 @@ internal class JakartaConsumerIterativeReaderTest {
     internal fun `should throw exception if no connection provided`() = testDispatcherProvider.runTest {
         reader = JakartaConsumerIterativeReader(
             "any",
-            queues = listOf(),
+            queues = listOf("queue-1", "queue-2"),
             queueConnectionFactory = null,
-            topics = listOf(),
+            topics = listOf("topic-1", "topic-2"),
             topicConnectionFactory = null
         )
 
         assertThrows<IllegalArgumentException> {
             reader.start(relaxedMockk())
         }
+    }
+
+    companion object {
+        @JvmField
+        @RegisterExtension
+        val testDispatcherProvider = TestDispatcherProvider()
     }
 }

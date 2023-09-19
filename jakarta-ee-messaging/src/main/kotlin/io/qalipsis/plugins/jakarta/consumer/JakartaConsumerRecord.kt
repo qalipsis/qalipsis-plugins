@@ -16,6 +16,7 @@
 
 package io.qalipsis.plugins.jakarta.consumer
 
+
 import jakarta.jms.Destination
 import jakarta.jms.Message
 
@@ -35,14 +36,14 @@ import jakarta.jms.Message
  * @property value of the record deserialized
  */
 data class JakartaConsumerRecord<T>(
-    val destination: Destination,
-    val offset: Long,
-    val messageId: String?,
-    val correlationId: String?,
-    val priority: Int?,
-    val expiration: Long?,
-    val deliveredTime: Long?,
-    val timestamp: Long?,
+    val destination: Destination?,
+    val offset: Long?,
+    val messageId: String? = null,
+    val correlationId: String? = null,
+    val priority: Int? = null,
+    val expiration: Long? = null,
+    val deliveredTime: Long? = null,
+    val timestamp: Long? = null,
     val value: T
 ) {
     internal constructor(

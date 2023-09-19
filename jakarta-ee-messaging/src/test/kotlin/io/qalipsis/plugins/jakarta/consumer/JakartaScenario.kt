@@ -19,19 +19,23 @@ package io.qalipsis.plugins.jakarta.consumer
 import io.qalipsis.api.annotations.Scenario
 import io.qalipsis.api.executionprofile.regular
 import io.qalipsis.api.scenario.scenario
-import io.qalipsis.api.steps.*
+import io.qalipsis.api.steps.blackHole
+import io.qalipsis.api.steps.filterNotNull
+import io.qalipsis.api.steps.innerJoin
+import io.qalipsis.api.steps.map
+import io.qalipsis.api.steps.onEach
 import io.qalipsis.plugins.jakarta.deserializer.JakartaJsonDeserializer
 import io.qalipsis.plugins.jakarta.deserializer.JakartaStringDeserializer
 import io.qalipsis.plugins.jakarta.jakarta
-import jakarta.jms.QueueConnection
+import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory
 import java.beans.ConstructorProperties
 import java.util.concurrent.LinkedBlockingDeque
 
 internal object JakartaScenario {
 
-    internal lateinit var queueConnection : QueueConnection
+    internal lateinit var queueConnectionFactory : ActiveMQConnectionFactory
 
-    internal const val minions = 2
+    private const val minions = 2
 
     internal val receivedMessages = LinkedBlockingDeque<String>(10)
 
@@ -46,7 +50,7 @@ internal object JakartaScenario {
         }.start().jakarta()
             .consume {
                 queues("queue-1")
-                queueConnection { queueConnection }
+                queueConnection { queueConnectionFactory.createQueueConnection() }
             }.deserialize(JakartaJsonDeserializer(User::class))
             .innerJoin(
                 using = { it.value.record.value.id },
@@ -54,7 +58,7 @@ internal object JakartaScenario {
                     it.jakarta()
                         .consume {
                             queues("queue-2")
-                            queueConnection { queueConnection }
+                            queueConnection { queueConnectionFactory.createQueueConnection() }
                         }.deserialize(JakartaJsonDeserializer(User::class))
                 },
                 having = { it.value.record.value.id }
@@ -78,7 +82,7 @@ internal object JakartaScenario {
         }.start().jakarta()
             .consume {
                 queues("queue-3")
-                queueConnection { queueConnection }
+                queueConnection { queueConnectionFactory.createQueueConnection() }
             }.deserialize(JakartaStringDeserializer::class)
             .onEach {
                 receivedMessages.add(it.record.value)

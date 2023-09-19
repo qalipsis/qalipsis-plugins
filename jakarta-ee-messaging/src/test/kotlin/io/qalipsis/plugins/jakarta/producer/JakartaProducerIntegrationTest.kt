@@ -23,6 +23,7 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.prop
 import io.mockk.confirmVerified
 import io.mockk.every
+import io.mockk.excludeRecords
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.verify
 import io.qalipsis.api.context.StepStartStopContext
@@ -31,17 +32,17 @@ import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.meters.Counter
 import io.qalipsis.api.meters.Meter
 import io.qalipsis.plugins.jakarta.Constants
+import io.qalipsis.plugins.jakarta.destination.Queue
+import io.qalipsis.plugins.jakarta.destination.Topic
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import jakarta.jms.BytesMessage
 import jakarta.jms.Connection
-import jakarta.jms.MessageConsumer
 import jakarta.jms.Session
 import jakarta.jms.TextMessage
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory
-import org.apache.activemq.artemis.jms.client.ActiveMQDestination
-import org.apache.activemq.artemis.jms.client.ActiveMQQueue
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
@@ -58,10 +59,6 @@ import kotlin.math.pow
 @WithMockk
 internal class JakartaProducerIntegrationTest {
 
-    @JvmField
-    @RegisterExtension
-    val testDispatcherProvider = TestDispatcherProvider()
-
     @RelaxedMockK
     private lateinit var bytesCounter: Counter
 
@@ -71,12 +68,14 @@ internal class JakartaProducerIntegrationTest {
     @RelaxedMockK
     private lateinit var recordsToProduceCounter: Counter
 
+    @RelaxedMockK
+    private lateinit var errorsCounter: Counter
+
     private lateinit var connectionFactory: ActiveMQConnectionFactory
 
     private lateinit var consumerConnection: Connection
 
     private lateinit var consumerSession: Session
-
 
     @BeforeEach
     fun initGlobal() {
@@ -91,12 +90,13 @@ internal class JakartaProducerIntegrationTest {
     fun setUp() {
         consumerConnection = connectionFactory.createConnection()
         consumerConnection.start()
-
         consumerSession = consumerConnection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     }
 
-    private fun prepareQueueConsumer(queueName: String): MessageConsumer {
-        return consumerSession.createConsumer(consumerSession.createQueue(queueName))
+    @AfterEach
+    fun stop(){
+        consumerSession.close()
+        consumerConnection.close()
     }
 
     @Timeout(10)
@@ -114,29 +114,40 @@ internal class JakartaProducerIntegrationTest {
             every { counter("scenario-name", "step-name","jakarta-produce-producing-records", refEq(tags)) } returns recordsToProduceCounter
             every { counter("scenario-name", "step-name", "jakarta-produce-produced-value-bytes", refEq(tags)) } returns bytesCounter
             every { counter("scenario-name", "step-name","jakarta-produce-produced-records", refEq(tags)) } returns producedRecordsCounter
+            every { counter("scenario-name", "step-name","jakarta-produce-produced-errors", refEq(tags)) } returns errorsCounter
             every { recordsToProduceCounter.report(any()) } returns recordsToProduceCounter
             every { bytesCounter.report(any()) } returns bytesCounter
             every { producedRecordsCounter.report(any()) } returns producedRecordsCounter
         }
+
+        val connection = connectionFactory.createConnection()
+
         val produceClient = JakartaProducer(
-            connectionFactory = { connectionFactory.createConnection() },
+            stepName = "step1",
+            connectionFactory = { connection },
+            sessionFactory =  { connection.createSession()},
             converter = JakartaProducerConverter(),
+            producersCount = 1,
             eventsLogger,
-            meterRegistry
+            meterRegistry,
         )
 
         produceClient.start(context)
+
+        excludeRecords {
+            eventsLogger.toString()
+        }
 
         // when
         val result = produceClient.execute(
             listOf(
                 JakartaProducerRecord(
-                    destination = ActiveMQQueue.createDestination("queue-1", ActiveMQDestination.TYPE.QUEUE),
+                    destination = Queue("queue-1"),
                     messageType = JakartaMessageType.TEXT,
                     value = "hello-queue"
                 ),
                 JakartaProducerRecord(
-                    destination = ActiveMQQueue.createDestination("queue-1", ActiveMQDestination.TYPE.QUEUE),
+                    destination = Queue("queue-1"),
                     messageType = JakartaMessageType.BYTES,
                     value = "another message".toByteArray()
                 )
@@ -162,10 +173,10 @@ internal class JakartaProducerIntegrationTest {
             eventsLogger.info("jakarta.produce.produced.records", 2, any(), tags = refEq(tags))
             eventsLogger.info("jakarta.produce.produced.bytes", 26, any(), tags = refEq(tags))
         }
-        confirmVerified(bytesCounter, recordsToProduceCounter, producedRecordsCounter, eventsLogger)
+        confirmVerified(bytesCounter, recordsToProduceCounter, producedRecordsCounter, errorsCounter, eventsLogger)
 
         // when
-        val queueConsumer = prepareQueueConsumer("queue-1")
+        val queueConsumer = consumerSession.createConsumer(consumerSession.createQueue("queue-1"))
         val message1 = queueConsumer.receive()
         val message2 = queueConsumer.receive()
         queueConsumer.close()
@@ -184,6 +195,103 @@ internal class JakartaProducerIntegrationTest {
         }
     }
 
+    @Timeout(10)
+    @Test
+    internal fun `should produce all the data to topic`(): Unit = testDispatcherProvider.run {
+        // given
+        val tags: Map<String, String> = emptyMap()
+        val topicConsumer = consumerSession.createConsumer(consumerSession.createTopic("topic-1"))
+        val eventsLogger = relaxedMockk<EventsLogger>()
+        val startStopContext = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns emptyMap()
+            every { scenarioName } returns "scenario-name"
+            every { stepName } returns "step-name"
+        }
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
+            every { counter("scenario-name", "step-name","jakarta-produce-producing-records", refEq(tags)) } returns recordsToProduceCounter
+            every { counter("scenario-name", "step-name","jakarta-produce-produced-value-bytes", refEq(tags)) } returns bytesCounter
+            every { counter("scenario-name", "step-name","jakarta-produce-produced-records", refEq(tags)) } returns producedRecordsCounter
+            every { counter("scenario-name", "step-name","jakarta-produce-produced-errors", refEq(tags)) } returns errorsCounter
+            every { recordsToProduceCounter.report(any()) } returns recordsToProduceCounter
+            every { bytesCounter.report(any()) } returns bytesCounter
+            every { producedRecordsCounter.report(any()) } returns producedRecordsCounter
+        }
+
+        val connection = connectionFactory.createConnection()
+
+        val produceClient = JakartaProducer(
+            stepName = "step1",
+            connectionFactory = { connection },
+            sessionFactory =  { connection.createSession()},
+            converter = JakartaProducerConverter(),
+            producersCount = 1,
+            eventsLogger,
+            meterRegistry
+        )
+
+        produceClient.start(startStopContext)
+
+        excludeRecords {
+            eventsLogger.toString()
+        }
+
+        // when
+        val result = produceClient.execute(
+            listOf(
+                JakartaProducerRecord(
+                    destination = Topic("topic-1"),
+                    messageType = JakartaMessageType.TEXT,
+                    value = "hello-topic"
+                ),
+                JakartaProducerRecord(
+                    destination = Topic("topic-1"),
+                    messageType = JakartaMessageType.BYTES,
+                    value = "another message".toByteArray()
+                )
+            ),
+            tags
+        )
+        produceClient.stop()
+
+        // then
+        assertThat(result).all {
+            prop(JakartaProducerMeters::recordsToProduce).isEqualTo(2)
+            prop(JakartaProducerMeters::producedRecords).isEqualTo(2)
+            prop(JakartaProducerMeters::producedBytes).isEqualTo(26)
+        }
+        verify {
+            recordsToProduceCounter.increment(2.0)
+            producedRecordsCounter.increment(2.0)
+            bytesCounter.increment(26.0)
+            bytesCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
+            recordsToProduceCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
+            producedRecordsCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
+            eventsLogger.debug("jakarta.produce.producing.records", 2, any(), tags = refEq(tags))
+            eventsLogger.info("jakarta.produce.produced.records", 2, any(), tags = refEq(tags))
+            eventsLogger.info("jakarta.produce.produced.bytes", 26, any(), tags = refEq(tags))
+        }
+        confirmVerified(bytesCounter, recordsToProduceCounter, producedRecordsCounter, errorsCounter, eventsLogger)
+
+        // when
+        val message1 = topicConsumer.receive()
+        val message2 = topicConsumer.receive()
+        topicConsumer.close()
+
+        // then
+        assertThat(message1).isInstanceOf(TextMessage::class).all {
+            transform("text") { it.text }.isEqualTo("hello-topic")
+        }
+        assertThat(message2).isInstanceOf(BytesMessage::class).all {
+            transform("body") {
+                val byteArray = ByteArray(it.bodyLength.toInt())
+                it.reset()
+                it.readBytes(byteArray)
+                byteArray.toString(Charsets.UTF_8)
+            }.isEqualTo("another message")
+        }
+    }
+
+
     companion object {
 
         @Container
@@ -197,6 +305,9 @@ internal class JakartaProducerIntegrationTest {
             withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY, Constants.CONTAINER_PASSWORD)
         }
 
-    }
+        @JvmField
+        @RegisterExtension
+        val testDispatcherProvider = TestDispatcherProvider()
 
+    }
 }

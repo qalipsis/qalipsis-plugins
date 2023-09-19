@@ -44,12 +44,15 @@ internal class JakartaProducerStepSpecificationConverter(
     override suspend fun <I, O> convert(creationContext: StepCreationContext<JakartaProducerStepSpecificationImpl<*>>) {
         val spec = creationContext.stepSpecification
         val stepId = spec.name
-        val producer = JakartaProducer(spec.connectionFactory, JakartaProducerConverter(),
+        val producer = JakartaProducer(
+            stepName = stepId,
+            connectionFactory = spec.connectionFactory,
+            sessionFactory = spec.sessionFactory, converter = JakartaProducerConverter(),
+            producersCount = spec.producersCount,
             eventsLogger = eventsLogger.takeIf { spec.monitoringConfig.events },
             meterRegistry = meterRegistry.takeIf { spec.monitoringConfig.meters }
         )
 
-        @Suppress("UNCHECKED_CAST")
         val step = JakartaProducerStep(
             stepId = stepId,
             retryPolicy = spec.retryPolicy,
