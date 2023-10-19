@@ -40,6 +40,13 @@ kapt.useBuildCache = false
 
 val pluginPlatformVersion: String by project
 
+repositories {
+    maven {
+        name = "jitpack-dependencies"
+        setUrl("https://jitpack.io")
+    }
+}
+
 dependencies {
     implementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
     compileOnly("io.aeris-consulting:catadioptre-annotations")
