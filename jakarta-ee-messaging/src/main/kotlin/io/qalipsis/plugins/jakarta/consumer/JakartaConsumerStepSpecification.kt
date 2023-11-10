@@ -29,7 +29,9 @@ import io.qalipsis.api.steps.UnicastSpecification
 import io.qalipsis.plugins.jakarta.JakartaDeserializer
 import io.qalipsis.plugins.jakarta.JakartaScenarioSpecification
 import io.qalipsis.plugins.jakarta.deserializer.JakartaStringDeserializer
+import jakarta.jms.Connection
 import jakarta.jms.QueueConnection
+import jakarta.jms.Session
 import jakarta.jms.TopicConnection
 import java.time.Duration
 import javax.validation.constraints.NotBlank
@@ -50,6 +52,11 @@ interface JakartaConsumerSpecification<O> : UnicastSpecification,
     fun topicConnection(topicConnectionFactory: () -> TopicConnection)
 
     /**
+     * Configures the session to the Jakarta server.
+     */
+    fun session(sessionFactory: (connection: Connection) -> Session)
+
+    /**
      * Defines the list of topics to consume.
      */
     fun topics(vararg topics: String)
@@ -58,11 +65,6 @@ interface JakartaConsumerSpecification<O> : UnicastSpecification,
      * Defines the list of queues to consume.
      */
     fun queues(vararg queues: String)
-
-    /**
-     * Configuration of the metrics to apply, default to none.
-     */
-    fun metrics(metricsConfiguration: JakartaConsumerMetricsConfiguration.() -> Unit)
 
     /**
      * Uses an instance of [valueDeserializer] to deserialize the message of Jakarta.
@@ -102,8 +104,6 @@ internal class JakartaConsumerStepSpecification<O : Any> internal constructor(
 
     internal val configuration = JakartaConsumerConfiguration()
 
-    internal val metrics = JakartaConsumerMetricsConfiguration()
-
     internal val monitoringConfig = StepMonitoringConfiguration()
 
     override val singletonConfiguration: SingletonConfiguration = SingletonConfiguration(SingletonType.UNICAST)
@@ -116,6 +116,10 @@ internal class JakartaConsumerStepSpecification<O : Any> internal constructor(
     override fun queueConnection(queueConnectionFactory: () -> QueueConnection) {
         configuration.queueConnectionFactory = queueConnectionFactory
         configuration.topicConnectionFactory = null
+    }
+
+    override fun session(sessionFactory: (connection: Connection) -> Session) {
+        configuration.sessionFactory = sessionFactory
     }
 
     override fun topics(vararg topics: String) {
@@ -132,12 +136,6 @@ internal class JakartaConsumerStepSpecification<O : Any> internal constructor(
 
     override fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit) {
         this.monitoringConfig.monitoringConfig()
-    }
-
-    override fun metrics(
-        metricsConfiguration: JakartaConsumerMetricsConfiguration.() -> Unit
-    ) {
-        metrics.metricsConfiguration()
     }
 
     override fun unicast(bufferSize: Int, idleTimeout: Duration) {
@@ -174,41 +172,21 @@ internal class JakartaConsumerStepSpecification<O : Any> internal constructor(
 }
 
 @Spec
-internal data class JakartaConsumerConfiguration(
-    internal var topicConnectionFactory: (() -> TopicConnection)? = null,
-    internal var queueConnectionFactory: (() -> QueueConnection)? = null,
-    internal var topics: MutableList<@NotBlank String> = mutableListOf(),
-    internal var queues: MutableList<@NotBlank String> = mutableListOf(),
+internal class JakartaConsumerConfiguration {
+
+    internal var sessionFactory: (connection: Connection) -> Session = { connection -> connection.createSession() }
+
+    internal var topicConnectionFactory: (() -> TopicConnection)? = null
+
+    internal var queueConnectionFactory: (() -> QueueConnection)? = null
+
+    internal var topics: MutableList<@NotBlank String> = mutableListOf()
+
+    internal var queues: MutableList<@NotBlank String> = mutableListOf()
+
     internal var properties: MutableMap<@NotBlank String, Any> = mutableMapOf()
-)
 
-/**
- * Configuration of the metrics to record for the Jakarta consumer.
- *
- * @property bytesCount when true, records the number of bytes consumed for the serialized keys.
- * @property recordsCount when true, records the number of consumed messages.
- *
- * @author Krawist Ngoben
- */
-@Spec
-data class JakartaConsumerMetricsConfiguration(
-    var bytesCount: Boolean = false,
-    var recordsCount: Boolean = false,
-)
-
-/**
- * Configuration of the monitoring to record for the Jakarta producer step.
- *
- * @property events when true, records the events.
- * @property meters when true, records metrics.
- *
- * @author Krawist Ngoben
- */
-@Spec
-data class JakartaConsumerMonitoringConfiguration(
-    var events: Boolean = false,
-    var meters: Boolean = false,
-)
+}
 
 /**
  * Creates a Jakarta consumers to poll data from topics or queues of Jakarta cluster and forward each message to the next step individually.

@@ -27,6 +27,7 @@ import assertk.assertions.isNull
 import assertk.assertions.isSameAs
 import io.aerisconsulting.catadioptre.invokeInvisible
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.spyk
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepCreationContextImpl
@@ -39,8 +40,10 @@ import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.assertk.typedProp
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import jakarta.jms.Connection
 import jakarta.jms.Message
 import jakarta.jms.QueueConnection
+import jakarta.jms.Session
 import jakarta.jms.TopicConnection
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions
@@ -71,10 +74,12 @@ internal class JakartaConsumerStepSpecificationConverterTest :
     internal fun `should convert spec with name and list of queues and generate an output`() {
         val deserializer = JakartaStringDeserializer()
         val spec = JakartaConsumerStepSpecification(deserializer)
+        val sessionFactory: ((Connection) -> Session) = { mockk() }
         spec.apply {
             name = "my-step"
             queueConnection(queueConnectionFactory)
             queues("queue-1", "queue-2")
+            session(sessionFactory)
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
         val spiedConverter = spyk(converter, recordPrivateCalls = true)
@@ -102,6 +107,7 @@ internal class JakartaConsumerStepSpecificationConverterTest :
                     prop("stepId").isEqualTo("my-step")
                     prop("topicConnectionFactory").isNull()
                     prop("queueConnectionFactory").isSameAs(queueConnectionFactory)
+                    prop("sessionFactory").isSameAs(sessionFactory)
                     typedProp<Collection<String>>("queues").containsOnly("queue-1", "queue-2")
                     typedProp<Collection<String>>("topics").isEmpty()
                 }
@@ -115,10 +121,12 @@ internal class JakartaConsumerStepSpecificationConverterTest :
     internal fun `should convert spec with name and list of topics and generate an output`() {
         val deserializer = JakartaStringDeserializer()
         val spec = JakartaConsumerStepSpecification(deserializer)
+        val sessionFactory: ((Connection) -> Session) = { mockk() }
         spec.apply {
             name = "my-step"
             topicConnection(topicConnectionFactory)
             topics("topic-1", "topic-2")
+            session(sessionFactory)
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
         val spiedConverter = spyk(converter, recordPrivateCalls = true)
@@ -145,6 +153,7 @@ internal class JakartaConsumerStepSpecificationConverterTest :
                 prop("reader").isNotNull().isInstanceOf(JakartaConsumerIterativeReader::class).all {
                     prop("stepId").isEqualTo("my-step")
                     prop("topicConnectionFactory").isSameAs(topicConnectionFactory)
+                    prop("sessionFactory").isSameAs(sessionFactory)
                     prop("queueConnectionFactory").isNull()
                     typedProp<Collection<String>>("topics").containsOnly("topic-1", "topic-2")
                     typedProp<Collection<String>>("queues").isEmpty()

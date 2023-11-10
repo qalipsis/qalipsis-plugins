@@ -59,11 +59,6 @@ interface JakartaProducerStepSpecification<I> :
     fun records(recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JakartaProducerRecord>)
 
     /**
-     * Configures the metrics of the step.
-     */
-    fun metrics(metricsConfiguration: JakartaProducerMetricsConfiguration.() -> Unit)
-
-    /**
      * Configures the monitoring of the produce step.
      */
     fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit)
@@ -82,14 +77,13 @@ internal class JakartaProducerStepSpecificationImpl<I> :
 
     internal lateinit var connectionFactory: () -> Connection
 
-    internal lateinit var sessionFactory: (connection: Connection) -> Session
+    internal var sessionFactory: (connection: Connection) -> Session = { connection -> connection.createSession() }
 
     internal var producersCount = 1
 
     internal var recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JakartaProducerRecord> =
         { _, _ -> listOf() }
 
-    internal val metrics = JakartaProducerMetricsConfiguration()
     internal var monitoringConfig = StepMonitoringConfiguration()
 
     override fun connect(connectionFactory: () -> Connection) {
@@ -108,43 +102,12 @@ internal class JakartaProducerStepSpecificationImpl<I> :
         this.recordsFactory = recordsFactory
     }
 
-    override fun metrics(metricsConfiguration: JakartaProducerMetricsConfiguration.() -> Unit) {
-        metrics.metricsConfiguration()
-    }
-
     override fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit) {
         this.monitoringConfig.monitoringConfig()
     }
 
 }
 
-/**
- * Configuration of the metrics to record for the Jakarta producer.
- *
- * @property bytesCount when true, records the number of bytes produced messages.
- * @property recordsCount when true, records the number of produced messages.
- *
- * @author Alexander Sosnovsky
- */
-@Spec
-data class JakartaProducerMetricsConfiguration(
-    var bytesCount: Boolean = false,
-    var recordsCount: Boolean = false
-)
-
-/**
- * Configuration of the monitoring to record for the Jakarta producer step.
- *
- * @property events when true, records the events.
- * @property meters when true, records metrics.
- *
- * @author Alex Averianov
- */
-@Spec
-data class JakartaProducerMonitoringConfiguration(
-    var events: Boolean = false,
-    var meters: Boolean = false,
-)
 
 /**
  * Provides [jakarta.jms.Message] to JMS server using an io.qalipsis.plugins.jakarta.producer query.

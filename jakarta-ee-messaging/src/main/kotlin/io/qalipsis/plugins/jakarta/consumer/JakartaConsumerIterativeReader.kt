@@ -25,7 +25,6 @@ import jakarta.jms.Connection
 import jakarta.jms.Message
 import jakarta.jms.QueueConnection
 import jakarta.jms.Session
-import jakarta.jms.Session.AUTO_ACKNOWLEDGE
 import jakarta.jms.TopicConnection
 import kotlinx.coroutines.channels.Channel
 import java.util.concurrent.CompletableFuture
@@ -43,7 +42,8 @@ internal class JakartaConsumerIterativeReader(
     private val topics: Collection<String>,
     private val queues: Collection<String>,
     private val topicConnectionFactory: (() -> TopicConnection)?,
-    private val queueConnectionFactory: (() -> QueueConnection)?
+    private val queueConnectionFactory: (() -> QueueConnection)?,
+    private val sessionFactory: ((Connection) -> Session) = Connection::createSession,
 ) : DatasourceIterativeReader<Message> {
 
     private var channel: Channel<Message>? = null
@@ -96,7 +96,7 @@ internal class JakartaConsumerIterativeReader(
                     val connection = requireNotNull(topicConnectionFactory).invoke()
                     connections += connection
                     connection.clientID = "qalipsis-jakarta-ee-messaging-topic-consumer-$stepId"
-                    val session = connection.createSession(false, AUTO_ACKNOWLEDGE)
+                    val session = sessionFactory(connection)
                     topics.forEach { topicName ->
                         log.debug { "Creating a consumer for the topic $topicName" }
                         session.createConsumer(session.createTopic(topicName)).also {
@@ -110,7 +110,7 @@ internal class JakartaConsumerIterativeReader(
                     val connection = requireNotNull(queueConnectionFactory).invoke()
                     connections += connection
                     connection.clientID = "qalipsis-jakarta-ee-messaging-queue-consumer-$stepId"
-                    val session = connection.createSession(false, AUTO_ACKNOWLEDGE)
+                    val session = sessionFactory(connection)
                     queues.forEach { queueName ->
                         log.debug { "Creating a consumer for the queue $queueName" }
                         session.createConsumer(session.createQueue(queueName)).also {

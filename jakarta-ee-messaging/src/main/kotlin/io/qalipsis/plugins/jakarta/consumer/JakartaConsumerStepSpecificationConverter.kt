@@ -55,6 +55,7 @@ internal class JakartaConsumerStepSpecificationConverter(
             configuration.queues,
             configuration.topicConnectionFactory,
             configuration.queueConnectionFactory,
+            configuration.sessionFactory,
         )
 
         val step = IterativeDatasourceStep(

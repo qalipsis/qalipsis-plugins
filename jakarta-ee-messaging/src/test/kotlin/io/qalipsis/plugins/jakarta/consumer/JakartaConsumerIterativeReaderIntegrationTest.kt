@@ -126,7 +126,8 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
             queues = listOf("queue-1", "queue-2"),
             queueConnectionFactory = { connectionFactory.createQueueConnection() },
             topics = listOf(),
-            topicConnectionFactory = null
+            topicConnectionFactory = null,
+            sessionFactory = Connection::createSession
         )
 
         reader.start(relaxedMockk())
@@ -181,7 +182,8 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
             queues = listOf(),
             queueConnectionFactory = null,
             topics = listOf("topic-1", "topic-3"),
-            topicConnectionFactory = { connectionFactory.createTopicConnection() }
+            topicConnectionFactory = { connectionFactory.createTopicConnection() },
+            sessionFactory = Connection::createSession
         )
 
         reader.start(relaxedMockk())
@@ -231,7 +233,8 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
             queues = listOf(),
             queueConnectionFactory = null,
             topics = listOf("topic-1", "topic-2"),
-            topicConnectionFactory = { connectionFactory.createTopicConnection() }
+            topicConnectionFactory = { connectionFactory.createTopicConnection() },
+            sessionFactory = Connection::createSession
         )
 
         reader.start(relaxedMockk())
@@ -252,7 +255,8 @@ internal class JakartaConsumerIterativeReaderIntegrationTest {
             queues = listOf(),
             queueConnectionFactory = null,
             topics = listOf("topic-1", "topic-2"),
-            topicConnectionFactory = { connectionFactory.createTopicConnection() }
+            topicConnectionFactory = { connectionFactory.createTopicConnection() },
+            sessionFactory = Connection::createSession
         )
 
         reader.start(relaxedMockk())
