@@ -21,7 +21,6 @@ import io.qalipsis.plugins.graphite.poll.model.events.GraphiteEventsClient
 import io.qalipsis.plugins.graphite.poll.model.events.model.GraphiteProtocol
 import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsRequestBuilder
 import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTime
-import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTimeSignUnit
 import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTimeUnit
 import io.qalipsis.plugins.graphite.render.model.GraphiteRenderAggregationFuncName
 import io.qalipsis.plugins.graphite.render.model.GraphiteRenderApiJsonResponse
@@ -42,6 +41,7 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
 import java.time.Duration
+import java.time.Instant
 
 /**
  * @author rklymenko
@@ -102,7 +102,7 @@ internal class GraphiteRenderApiServiceIntegrationTest {
 
         //then
         val requestBuilder = GraphiteMetricsRequestBuilder(messageKey)
-            .from(GraphiteMetricsTime(1, GraphiteMetricsTimeSignUnit.MINUS, GraphiteMetricsTimeUnit.MINUTES))
+            .from(GraphiteMetricsTime(-1, GraphiteMetricsTimeUnit.MINUTES))
             .noNullPoints(true)
         val result = renderApiService.getAsJson(requestBuilder)
         assertThat(result).all {
@@ -131,7 +131,7 @@ internal class GraphiteRenderApiServiceIntegrationTest {
 
         //then
         val requestBuilder = GraphiteMetricsRequestBuilder(messageKey + wildcard)
-            .from(GraphiteMetricsTime(1, GraphiteMetricsTimeSignUnit.MINUS, GraphiteMetricsTimeUnit.MINUTES))
+            .from(GraphiteMetricsTime(-1, GraphiteMetricsTimeUnit.MINUTES))
             .noNullPoints(true)
         val result = renderApiService.getAsJson(requestBuilder)
         assertThat(result).hasSize(10)
@@ -144,13 +144,22 @@ internal class GraphiteRenderApiServiceIntegrationTest {
         val messageKey = "exact.key.interval.1"
 
         //when
-        graphiteEventsClient.publish(listOf(Event(messageKey, EventLevel.INFO, value = 123)))
+        graphiteEventsClient.publish(
+            listOf(
+                Event(
+                    messageKey,
+                    EventLevel.INFO,
+                    value = 123,
+                    timestamp = Instant.now().minusSeconds(30)
+                )
+            )
+        )
         delay(1_000)
 
         //then
         val requestBuilder = GraphiteMetricsRequestBuilder(messageKey)
-            .from(GraphiteMetricsTime(1, GraphiteMetricsTimeSignUnit.MINUS, GraphiteMetricsTimeUnit.MINUTES))
-            .until(GraphiteMetricsTime(0, GraphiteMetricsTimeSignUnit.MINUS, GraphiteMetricsTimeUnit.MINUTES))
+            .from(GraphiteMetricsTime(-1, GraphiteMetricsTimeUnit.MINUTES))
+            .until(GraphiteMetricsTime(-1, GraphiteMetricsTimeUnit.SECONDS))
             .noNullPoints(true)
         val result = renderApiService.getAsJson(requestBuilder)
         assertThat(result).all {
@@ -198,8 +207,8 @@ internal class GraphiteRenderApiServiceIntegrationTest {
 
             //then
             val requestBuilder = GraphiteMetricsRequestBuilder(messageKey)
-                .from(GraphiteMetricsTime(3, GraphiteMetricsTimeSignUnit.MINUS, GraphiteMetricsTimeUnit.MINUTES))
-                .until(GraphiteMetricsTime(2, GraphiteMetricsTimeSignUnit.MINUS, GraphiteMetricsTimeUnit.MINUTES))
+                .from(GraphiteMetricsTime(-3, GraphiteMetricsTimeUnit.MINUTES))
+                .until(GraphiteMetricsTime(-2, GraphiteMetricsTimeUnit.MINUTES))
                 .noNullPoints(true)
 
             val result = renderApiService.getAsJson(requestBuilder)
@@ -219,7 +228,7 @@ internal class GraphiteRenderApiServiceIntegrationTest {
         //then
         val requestBuilder = GraphiteMetricsRequestBuilder(messageKey)
             .aggregateFunction(GraphiteRenderAggregationFuncName.TOTAL)
-            .from(GraphiteMetricsTime(1, GraphiteMetricsTimeSignUnit.MINUS, GraphiteMetricsTimeUnit.MINUTES))
+            .from(GraphiteMetricsTime(-1, GraphiteMetricsTimeUnit.MINUTES))
             .noNullPoints(true)
         val result = renderApiService.getAsJson(requestBuilder)
         assertThat(result).all {
@@ -247,7 +256,7 @@ internal class GraphiteRenderApiServiceIntegrationTest {
         //then
         val requestBuilder = GraphiteMetricsRequestBuilder(messageKey)
             .aggregateFunction(GraphiteRenderAggregationFuncName.SUM)
-            .from(GraphiteMetricsTime(1, GraphiteMetricsTimeSignUnit.MINUS, GraphiteMetricsTimeUnit.MINUTES))
+            .from(GraphiteMetricsTime(-1, GraphiteMetricsTimeUnit.MINUTES))
             .noNullPoints(true)
         val result = renderApiService.getAsJson(requestBuilder)
         assertThat(result).all {
@@ -275,7 +284,7 @@ internal class GraphiteRenderApiServiceIntegrationTest {
         //then
         val requestBuilder = GraphiteMetricsRequestBuilder(messageKey)
             .aggregateFunction(GraphiteRenderAggregationFuncName.MAX)
-            .from(GraphiteMetricsTime(1, GraphiteMetricsTimeSignUnit.MINUS, GraphiteMetricsTimeUnit.MINUTES))
+            .from(GraphiteMetricsTime(-1, GraphiteMetricsTimeUnit.MINUTES))
             .noNullPoints(true)
 
         val result = renderApiService.getAsJson(requestBuilder)
@@ -304,7 +313,7 @@ internal class GraphiteRenderApiServiceIntegrationTest {
         //then
         val requestBuilder = GraphiteMetricsRequestBuilder(messageKey)
             .aggregateFunction(GraphiteRenderAggregationFuncName.MIN)
-            .from(GraphiteMetricsTime(1, GraphiteMetricsTimeSignUnit.MINUS, GraphiteMetricsTimeUnit.MINUTES))
+            .from(GraphiteMetricsTime(-1, GraphiteMetricsTimeUnit.MINUTES))
             .noNullPoints(true)
         val result = renderApiService.getAsJson(requestBuilder)
         assertThat(result).all {

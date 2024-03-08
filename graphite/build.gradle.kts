@@ -61,6 +61,8 @@ dependencies {
     compileOnly("io.micronaut:micronaut-runtime")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core")
 
+    api("io.qalipsis:qalipsis-api-common")
+
     implementation("io.netty:netty-handler")
     implementation("io.netty:netty-transport")
     implementation(group = "io.netty", name = "netty-transport-native-epoll", classifier = "linux-x86_64")

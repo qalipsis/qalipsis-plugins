@@ -4,7 +4,6 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import io.qalipsis.plugins.graphite.poll.model.GraphiteQuery
 import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTime
-import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTimeSignUnit
 import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTimeUnit
 import io.qalipsis.plugins.graphite.render.model.GraphiteRenderApiJsonPairResponse
 import io.qalipsis.plugins.graphite.render.model.GraphiteRenderApiJsonResponse
@@ -34,9 +33,15 @@ internal class GraphitePollStatementTest {
 
         // when
         val statement = GraphitePollStatement(graphiteQuery)
-        statement.saveTiebreaker(listOf(
-            GraphiteRenderApiJsonResponse(graphiteQuery.target, emptyMap(), listOf(GraphiteRenderApiJsonPairResponse(1.0, 123123L)))
-        ))
+        statement.saveTiebreaker(
+            listOf(
+                GraphiteRenderApiJsonResponse(
+                    graphiteQuery.target,
+                    emptyMap(),
+                    listOf(GraphiteRenderApiJsonPairResponse(1.0, 123123L))
+                )
+            )
+        )
 
         // then
         assertThat(statement.getNextQuery().build()).isEqualTo(query)
@@ -49,9 +54,15 @@ internal class GraphitePollStatementTest {
 
         // when
         val statement = GraphitePollStatement(graphiteQuery)
-        statement.saveTiebreaker(listOf(
-            GraphiteRenderApiJsonResponse(graphiteQuery.target, emptyMap(), listOf(GraphiteRenderApiJsonPairResponse(1.0, 123123L)))
-        ))
+        statement.saveTiebreaker(
+            listOf(
+                GraphiteRenderApiJsonResponse(
+                    graphiteQuery.target,
+                    emptyMap(),
+                    listOf(GraphiteRenderApiJsonPairResponse(1.0, 123123L))
+                )
+            )
+        )
         statement.reset()
 
         // then
@@ -66,7 +77,7 @@ internal class GraphitePollStatementTest {
         val graphiteQuery = GraphiteQuery("exact.key.1")
 
         //when
-        graphiteQuery.from(GraphiteMetricsTime(50, GraphiteMetricsTimeSignUnit.MINUS, GraphiteMetricsTimeUnit.SECONDS))
+        graphiteQuery.from(GraphiteMetricsTime(-50, GraphiteMetricsTimeUnit.SECONDS))
         val statement = GraphitePollStatement(graphiteQuery)
 
         //then

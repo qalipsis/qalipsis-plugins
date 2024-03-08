@@ -17,6 +17,7 @@
 package io.qalipsis.plugins.graphite.poll.model
 
 import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTime
+import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTimeUnit
 import io.qalipsis.plugins.graphite.render.model.GraphiteRenderAggregationFuncName
 
 /**
@@ -33,7 +34,7 @@ data class GraphiteQuery(val target: String) {
     /**
      * method to specify the time point from which to poll data
      *
-     * @param from which specifies the particular time point from which to start a poll
+     * @param from which specifies the particular time point from which to search data
      */
     fun from(from: Long): GraphiteQuery {
         this.from = from.toString()
@@ -41,9 +42,30 @@ data class GraphiteQuery(val target: String) {
     }
 
     /**
+     * method to specify the time point from which to poll data
+     *
+     * @param from which specifies the particular time point from which to search data, which should be negative for values in the past
+     * @param unit unit
+     */
+    fun from(from: Long, unit: GraphiteMetricsTimeUnit): GraphiteQuery {
+        this.from = GraphiteMetricsTime(from, unit).toString()
+        return this
+    }
+
+    /**
+     * method to specify the time point from which to poll data
+     *
+     * @param from which specifies the particular time point from which to search data, as expected by the Graphite server
+     */
+    fun from(from: String): GraphiteQuery {
+        this.from = from
+        return this
+    }
+
+    /**
      * method to specify the time from which to poll data
      *
-     * @param from which specifies the particular time point from which to start a poll
+     * @param from which specifies the particular time point from which to search data
      */
     fun from(from: GraphiteMetricsTime): GraphiteQuery {
         this.from = from.toQueryString()

@@ -21,11 +21,10 @@ import io.qalipsis.api.events.Event
 import io.qalipsis.api.events.EventLevel
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.plugins.graphite.Constants
+import io.qalipsis.plugins.graphite.poll.model.GraphiteQuery
 import io.qalipsis.plugins.graphite.poll.model.events.GraphiteEventsClient
 import io.qalipsis.plugins.graphite.poll.model.events.model.GraphiteProtocol
-import io.qalipsis.plugins.graphite.poll.model.GraphiteQuery
 import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTime
-import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTimeSignUnit
 import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTimeUnit
 import io.qalipsis.plugins.graphite.render.service.GraphiteRenderApiService
 import io.qalipsis.test.coroutines.TestDispatcherProvider
@@ -105,8 +104,7 @@ internal class GraphiteIterativeReaderIntegrationTest {
         // given
         val graphiteQuery = GraphiteQuery("exact.key.*").from(
             GraphiteMetricsTime(
-                amount = 1,
-                sign = GraphiteMetricsTimeSignUnit.MINUS,
+                amount = -1,
                 unit = GraphiteMetricsTimeUnit.MINUTES
             )
         ).noNullPoints(true)

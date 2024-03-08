@@ -39,7 +39,7 @@ internal data class GraphiteMetricsRequestBuilder(
     private var format: GraphiteRenderFormat = GraphiteRenderFormat.JSON
 ) {
 
-        constructor(query: GraphiteQuery) : this(
+    constructor(query: GraphiteQuery) : this(
         target = query.target,
         from = query.from,
         aggregateFunction = query.aggregateFunction
@@ -113,14 +113,9 @@ internal data class GraphiteMetricsRequestBuilder(
  */
 data class GraphiteMetricsTime(
     val amount: Long,
-    val sign: GraphiteMetricsTimeSignUnit,
     val unit: GraphiteMetricsTimeUnit
 ) {
-    fun toQueryString() = "${sign.sign}$amount${unit.getGraphiteTimeUnitCode()}"
-}
-
-enum class GraphiteMetricsTimeSignUnit(val sign : String)  {
-    MINUS("-"), PLUS("+");
+    fun toQueryString() = "$amount${unit.getGraphiteTimeUnitCode()}"
 }
 
 enum class GraphiteMetricsTimeUnit {
