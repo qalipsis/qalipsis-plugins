@@ -17,6 +17,7 @@
 package io.qalipsis.plugins.r2dbc.jasync.poll
 
 import com.github.jasync.sql.db.ResultSet
+import io.qalipsis.api.context.MonitoringTags
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
@@ -50,11 +51,9 @@ internal class ResultSetBatchConverter(
 
     private var failureCounter: Counter? = null
 
-    private lateinit var eventTags: Map<String, String>
-
     override fun start(context: StepStartStopContext) {
         meterRegistry?.apply {
-            val tags = context.toEventTags()
+            val tags = context.toMetersTags()
             recordsCounter = counter(context.scenarioName, context.stepName, "$meterPrefix-records", tags).report {
                 display(
                     format = "attempted req %,.0f",
@@ -83,7 +82,6 @@ internal class ResultSetBatchConverter(
                 )
             }
         }
-        eventTags = context.toEventTags()
     }
 
     override fun stop(context: StepStartStopContext) {
@@ -99,17 +97,18 @@ internal class ResultSetBatchConverter(
         value: ResultSet,
         output: StepOutput<JasyncPollResults<*>>
     ) {
-        eventsLogger?.info("${eventPrefix}.records", value.size, tags = eventTags)
+        val eventsTags = (output as? MonitoringTags)?.toEventTags().orEmpty()
+        eventsLogger?.info("${eventPrefix}.records", value.size, tags = eventsTags)
         recordsCounter?.increment(value.size.toDouble())
         val jasyncPollMeters = JasyncPollMeters(value.size)
 
         val jasyncPollResultsList: List<DatasourceRecord<Map<String, Any?>>> = value.map { row ->
-                DatasourceRecord(
-                    offset.getAndIncrement(),
-                    value.columnNames().map { column ->
-                        column to resultValuesConverter.process(row[column])
-                    }.toMap()
-                )
+            DatasourceRecord(
+                offset.getAndIncrement(),
+                value.columnNames().map { column ->
+                    column to resultValuesConverter.process(row[column])
+                }.toMap()
+            )
         }
         try {
             output.send(

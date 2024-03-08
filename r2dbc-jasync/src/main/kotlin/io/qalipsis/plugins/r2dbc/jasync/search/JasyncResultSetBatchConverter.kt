@@ -48,11 +48,9 @@ internal class JasyncResultSetBatchConverter<I>(
 
     private var failureCounter: Counter? = null
 
-    private lateinit var eventTags: Map<String, String>
-
     override fun start(context: StepStartStopContext) {
         meterRegistry?.apply {
-            val tags = context.toEventTags()
+            val tags = context.toMetersTags()
             recordsCounter = counter(context.scenarioName, context.stepName, "$meterPrefix-records", tags).report {
                 display(
                     format = "attempted req %,.0f",
@@ -81,7 +79,6 @@ internal class JasyncResultSetBatchConverter<I>(
                 )
             }
         }
-        eventTags = context.toEventTags()
     }
 
     override fun stop(context: StepStartStopContext) {
@@ -96,9 +93,10 @@ internal class JasyncResultSetBatchConverter<I>(
         offset: AtomicLong,
         value: ResultSetWrapper,
         input: I,
-        output: StepOutput<JasyncSearchBatchResults<I, *>>
+        output: StepOutput<JasyncSearchBatchResults<I, *>>,
+        eventsTags: Map<String, String>
     ) {
-        eventsLogger?.info("${eventPrefix}.records", value.resultSet.size, tags = eventTags)
+        eventsLogger?.info("${eventPrefix}.records", value.resultSet.size, tags = eventsTags)
         recordsCounter?.increment(value.resultSet.size.toDouble())
 
         val jasyncSearchResultsList: List<JasyncSearchRecord<Map<String, Any?>>> = value.resultSet.map{ row ->

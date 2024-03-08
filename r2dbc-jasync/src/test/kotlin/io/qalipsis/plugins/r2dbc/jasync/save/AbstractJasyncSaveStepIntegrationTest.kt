@@ -88,18 +88,46 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         val recordsList = listOf(JasyncSaveRecord(listOf("2020-10-20T12:34:21", "IN", "alice", true)))
         val columns = listOf("timestamp", "action", "username", "enabled")
         val tableName = "buildingentries"
-        val tags = mapOf("kit" to "kat")
+        val metersTags = mapOf("kit" to "kat")
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("scenario-test", "step-test", "r2dbc-jasync-save-records", refEq(tags)) } returns recordsCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-save-records",
+                    refEq(metersTags)
+                )
+            } returns recordsCounter
             every { recordsCounter.report(any()) } returns recordsCounter
-            every { counter("scenario-test", "step-test", "r2dbc-jasync-save-records-success", refEq(tags)) } returns successCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-save-records-success",
+                    refEq(metersTags)
+                )
+            } returns successCounter
             every { successCounter.report(any()) } returns successCounter
-            every { counter("scenario-test", "step-test", "r2dbc-jasync-save-records-failures", refEq(tags)) } returns failureCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-save-records-failures",
+                    refEq(metersTags)
+                )
+            } returns failureCounter
             every { failureCounter.report(any()) } returns failureCounter
-            every { timer("scenario-test", "step-test", "r2dbc-jasync-save-records-time-to-response", refEq(tags)) } returns timeToResponse
+            every {
+                timer(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-save-records-time-to-response",
+                    refEq(metersTags)
+                )
+            } returns timeToResponse
         }
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toMetersTags() } returns metersTags
             every { scenarioName } returns "scenario-test"
             every { stepName } returns "step-test"
         }
@@ -153,18 +181,46 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         val columns = listOf("timestamp", "action", "username", "enabled")
         val tableName = "buildingentries"
 
-        val tags = mapOf("kit" to "kat")
+        val metersTags = mapOf("kit" to "kat")
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("scenario-test", "step-test", "r2dbc-jasync-save-records", refEq(tags)) } returns recordsCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-save-records",
+                    refEq(metersTags)
+                )
+            } returns recordsCounter
             every { recordsCounter.report(any()) } returns recordsCounter
-            every { counter("scenario-test", "step-test", "r2dbc-jasync-save-records-success", refEq(tags)) } returns successCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-save-records-success",
+                    refEq(metersTags)
+                )
+            } returns successCounter
             every { successCounter.report(any()) } returns successCounter
-            every { timer("scenario-test", "step-test", "r2dbc-jasync-save-records-time-to-response", refEq(tags)) } returns timeToResponse
-            every { counter("scenario-test", "step-test", "r2dbc-jasync-save-records-failures", refEq(tags)) } returns failureCounter
+            every {
+                timer(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-save-records-time-to-response",
+                    refEq(metersTags)
+                )
+            } returns timeToResponse
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-save-records-failures",
+                    refEq(metersTags)
+                )
+            } returns failureCounter
             every { failureCounter.report(any()) } returns failureCounter
         }
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toMetersTags() } returns metersTags
             every { scenarioName } returns "scenario-test"
             every { stepName } returns "step-test"
         }
@@ -217,18 +273,39 @@ internal abstract class AbstractJasyncSaveStepIntegrationTest(
         val columns = listOf("timestamp", "action", "username", "enabled")
         val tableName = "buildingentries"
 
-        val tags = mapOf("kit" to "kat")
+        val metersTags = mapOf("kit" to "kat")
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("scenario-test", "step-test", "r2dbc-jasync-save-records", refEq(tags)) } returns recordsCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-save-records",
+                    refEq(metersTags)
+                )
+            } returns recordsCounter
             every { recordsCounter.report(any()) } returns recordsCounter
-            every { counter("scenario-test", "step-test", "r2dbc-jasync-save-records-success", refEq(tags)) } returns successCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-save-records-success",
+                    refEq(metersTags)
+                )
+            } returns successCounter
             every { successCounter.report(any()) } returns successCounter
-            every { counter("scenario-test", "step-test","r2dbc-jasync-save-records-failures", refEq(tags)) } returns failureCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-save-records-failures",
+                    refEq(metersTags)
+                )
+            } returns failureCounter
             every { failureCounter.report(any()) } returns failureCounter
         }
 
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toMetersTags() } returns metersTags
             every { scenarioName } returns "scenario-test"
             every { stepName } returns "step-test"
         }

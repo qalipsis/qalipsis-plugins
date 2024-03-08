@@ -42,7 +42,7 @@ internal class MySqlJasyncIterativeReaderIntegrationTest : AbstractJasyncIterati
 
         @Container
         @JvmStatic
-        private val db = MySQLContainerProvider().newInstance()
+        private val db = MySQLContainerProvider().newInstance("latest")
 
     }
 }

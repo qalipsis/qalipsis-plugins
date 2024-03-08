@@ -40,7 +40,7 @@ internal class MySqlJasyncSearchStepIntegrationTest : AbstractJasyncSearchStepIn
 
         @Container
         @JvmStatic
-        private val db = MySQLContainerProvider().newInstance()
+        private val db = MySQLContainerProvider().newInstance("latest")
 
     }
 }

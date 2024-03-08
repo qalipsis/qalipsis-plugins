@@ -40,6 +40,6 @@ internal class MariaDbJasyncSaveStepIntegrationTest : AbstractJasyncSaveStepInte
     companion object {
         @Container
         @JvmStatic
-        private val db = MariaDBContainerProvider().newInstance()
+        private val db = MariaDBContainerProvider().newInstance("latest")
     }
 }

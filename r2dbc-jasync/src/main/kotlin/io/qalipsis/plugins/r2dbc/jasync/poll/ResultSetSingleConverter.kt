@@ -17,6 +17,7 @@
 package io.qalipsis.plugins.r2dbc.jasync.poll
 
 import com.github.jasync.sql.db.ResultSet
+import io.qalipsis.api.context.MonitoringTags
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
@@ -49,12 +50,11 @@ internal class ResultSetSingleConverter(
 
     private var failureCounter: Counter? = null
 
-    private lateinit var eventTags: Map<String, String>
-
     override fun start(context: StepStartStopContext) {
         meterRegistry?.apply {
-            val tags = context.toEventTags()
-            recordsCounter = counter(context.scenarioName, context.stepName, "$meterPrefix-records", tags).report {
+            val metersTags = context.toMetersTags()
+            recordsCounter =
+                counter(context.scenarioName, context.stepName, "$meterPrefix-records", metersTags).report {
                 display(
                     format = "attempted req %,.0f",
                     severity = ReportMessageSeverity.INFO,
@@ -63,7 +63,8 @@ internal class ResultSetSingleConverter(
                     Counter::count
                 )
             }
-            failureCounter = counter(context.scenarioName, context.stepName, "$meterPrefix-failures", tags).report {
+            failureCounter =
+                counter(context.scenarioName, context.stepName, "$meterPrefix-failures", metersTags).report {
                 display(
                     format = "\u2716 %,.0f failures",
                     severity = ReportMessageSeverity.ERROR,
@@ -72,7 +73,8 @@ internal class ResultSetSingleConverter(
                     Counter::count
                 )
             }
-            successCounter = counter(context.scenarioName, context.stepName, "$meterPrefix-successes", tags).report {
+            successCounter =
+                counter(context.scenarioName, context.stepName, "$meterPrefix-successes", metersTags).report {
                 display(
                     format = "\u2713 %,.0f successes",
                     severity = ReportMessageSeverity.INFO,
@@ -82,7 +84,6 @@ internal class ResultSetSingleConverter(
                 )
             }
         }
-        eventTags = context.toEventTags()
     }
 
     override fun stop(context: StepStartStopContext) {
@@ -98,7 +99,8 @@ internal class ResultSetSingleConverter(
         value: ResultSet,
         output: StepOutput<DatasourceRecord<Map<String, Any?>>>
     ) {
-        eventsLogger?.info("${eventPrefix}.records", value.size, tags = eventTags)
+        val eventsTags = (output as? MonitoringTags)?.toEventTags().orEmpty()
+        eventsLogger?.info("${eventPrefix}.records", value.size, tags = eventsTags)
         recordsCounter?.increment(value.size.toDouble())
         try {
             value.map { row ->

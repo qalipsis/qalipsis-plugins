@@ -34,12 +34,13 @@ interface JasyncResultSetConverter<R, O, I> {
     /**
      * Sends [value] to the [output] channel in any form.
      *
-     * @param offset an reference to the offset, it is up to the implementation to increment it
+     * @param offset a reference to the offset, it is up to the implementation to increment it
      * @param value input value to send after any conversion to the output
-     * @param input received in the channel to be send along with the data after conversion
+     * @param input received in the channel to be sent along with the data after conversion
      * @param output channel to received the data after conversion
+     * @param eventsTags tags to use for the events
      */
-    suspend fun supply(offset: AtomicLong, value: R, input: I, output: StepOutput<O>)
+    suspend fun supply(offset: AtomicLong, value: R, input: I, output: StepOutput<O>, eventsTags: Map<String, String>)
 
     fun start(context: StepStartStopContext) = Unit
 

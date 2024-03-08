@@ -71,11 +71,9 @@ internal class JasyncSaveStep<I>(
 
     private var failureCounter: Counter? = null
 
-    private lateinit var eventTags: Map<String, String>
-
     override suspend fun start(context: StepStartStopContext) {
         meterRegistry?.apply {
-            val tags = context.toEventTags()
+            val tags = context.toMetersTags()
             val scenarioName = context.scenarioName
             val stepName = context.stepName
             recordsCounter = counter(scenarioName, stepName, "$meterPrefix-records", tags).report {
@@ -108,7 +106,6 @@ internal class JasyncSaveStep<I>(
             timeToResponse = timer(scenarioName, stepName, "$meterPrefix-records-time-to-response", tags)
 
         }
-        eventTags = context.toEventTags()
         connection = connectionPoolBuilder()
         connection.connect()
     }
@@ -132,7 +129,7 @@ internal class JasyncSaveStep<I>(
 
         var successSavedDocuments = 0
         var failedSavedDocuments = 0
-        eventsLogger?.info("${eventPrefix}.records", records.size, tags = eventTags)
+        eventsLogger?.info("${eventPrefix}.records", records.size, tags = context.toEventTags())
         recordsCounter?.increment(records.size.toDouble())
         val requestStart = System.nanoTime()
         records.forEach {
@@ -151,14 +148,14 @@ internal class JasyncSaveStep<I>(
             }
         }
         val timeToResponse = Duration.ofNanos(System.nanoTime() - requestStart)
-        eventsLogger?.info("${eventPrefix}.records.time-to-response", timeToResponse, tags = eventTags)
+        eventsLogger?.info("${eventPrefix}.records.time-to-response", timeToResponse, tags = context.toEventTags())
         this.timeToResponse?.record(timeToResponse.toNanos(), TimeUnit.NANOSECONDS)
         if (successSavedDocuments > 0) {
             successCounter?.increment(successSavedDocuments.toDouble())
-            eventsLogger?.info("${eventPrefix}.records.success", successSavedDocuments, tags = eventTags)
+            eventsLogger?.info("${eventPrefix}.records.success", successSavedDocuments, tags = context.toEventTags())
         }
         if (failedSavedDocuments > 0) {
-            eventsLogger?.info("${eventPrefix}.records.failure", failedSavedDocuments, tags = eventTags)
+            eventsLogger?.info("${eventPrefix}.records.failure", failedSavedDocuments, tags = context.toEventTags())
             failureCounter?.increment(failedSavedDocuments.toDouble())
         }
 

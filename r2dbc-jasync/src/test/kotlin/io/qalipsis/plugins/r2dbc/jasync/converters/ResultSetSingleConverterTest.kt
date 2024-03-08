@@ -30,6 +30,8 @@ import io.mockk.coEvery
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
+import io.mockk.mockk
+import io.qalipsis.api.context.MonitoringTags
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
@@ -89,10 +91,7 @@ internal class ResultSetSingleConverterTest {
             )
         )
         val channel = Channel<DatasourceRecord<Map<String, Any?>>>(2)
-        val tags = emptyMap<String, String>()
-        val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
-        }
+        val startStopContext = relaxedMockk<StepStartStopContext>()
         val converter = ResultSetSingleConverter(
             resultValuesConverter, null, null
         )
@@ -153,25 +152,47 @@ internal class ResultSetSingleConverterTest {
             )
         )
         val channel = Channel<DatasourceRecord<Map<String, Any?>>>(2)
-        val tags: Map<String, String> = emptyMap()
+        val metersTags: Map<String, String> = mockk()
 
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("scenario-test", "step-test","r2dbc-jasync-poll-records", refEq(tags)) } returns counter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-poll-records",
+                    refEq(metersTags)
+                )
+            } returns counter
             every { counter.report(any()) } returns counter
-            every { counter("scenario-test", "step-test", "r2dbc-jasync-poll-successes", refEq(tags)) } returns successCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-poll-successes",
+                    refEq(metersTags)
+                )
+            } returns successCounter
             every { successCounter.report(any()) } returns successCounter
-            every { counter("scenario-test", "step-test", "r2dbc-jasync-poll-failures", refEq(tags)) } returns failureCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-poll-failures",
+                    refEq(metersTags)
+                )
+            } returns failureCounter
             every { failureCounter.report(any()) } returns failureCounter
         }
 
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toMetersTags() } returns metersTags
             every { scenarioName } returns "scenario-test"
             every { stepName } returns "step-test"
         }
         val converter = ResultSetSingleConverter(
             resultValuesConverter, meterRegistry, eventsLogger
         )
+        val eventsTags: Map<String, String> = mockk()
 
         // when
         val converted = mutableListOf<DatasourceRecord<Map<String, Any?>>>()
@@ -179,7 +200,10 @@ internal class ResultSetSingleConverterTest {
         converter.supply(
             AtomicLong(123),
             resultSet,
-            relaxedMockk { coEvery { send(any()) } coAnswers { channel.send(firstArg()) } })
+            relaxedMockk(moreInterfaces = *arrayOf(MonitoringTags::class)) {
+                coEvery { send(any()) } coAnswers { channel.send(firstArg()) }
+                every { (this@relaxedMockk as MonitoringTags).toEventTags() } returns eventsTags
+            })
         converted.add(channel.receive())
         converted.add(channel.receive())
 
@@ -206,7 +230,7 @@ internal class ResultSetSingleConverterTest {
         verifyOnce {
             counter.increment(2.0)
             counter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
-            eventsLogger.info("r2dbc.jasync.poll.records", 2, any(), tags = tags)
+            eventsLogger.info("r2dbc.jasync.poll.records", 2, any(), tags = refEq(eventsTags))
         }
         confirmVerified(counter, eventsLogger)
     }

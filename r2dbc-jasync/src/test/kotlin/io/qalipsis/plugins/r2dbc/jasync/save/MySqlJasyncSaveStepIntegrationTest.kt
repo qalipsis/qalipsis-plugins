@@ -40,6 +40,6 @@ internal class MySqlJasyncSaveStepIntegrationTest : AbstractJasyncSaveStepIntegr
     companion object {
         @Container
         @JvmStatic
-        private val db = MySQLContainerProvider().newInstance()
+        private val db = MySQLContainerProvider().newInstance("latest")
     }
 }

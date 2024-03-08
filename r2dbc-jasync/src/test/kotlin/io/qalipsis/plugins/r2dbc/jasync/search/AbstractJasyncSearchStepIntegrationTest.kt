@@ -91,17 +91,38 @@ internal abstract class AbstractJasyncSearchStepIntegrationTest(
         val query =
             "select username, timestamp from buildingentries where action = ? and enabled = ? order by timestamp"
         val parameters = listOf("IN", false)
-        val tags = mapOf("kit" to "kat")
+        val metersTags = mapOf("kit" to "kat")
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("scenario-test", "step-test", "r2dbc-jasync-search-records", refEq(tags)) } returns recordsCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-search-records",
+                    refEq(metersTags)
+                )
+            } returns recordsCounter
             every { recordsCounter.report(any()) } returns recordsCounter
-            every { counter("scenario-test", "step-test", "r2dbc-jasync-search-successes", refEq(tags)) } returns successCounter
-            every { counter("scenario-test", "step-test", "r2dbc-jasync-search-failures", refEq(tags)) } returns successCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-search-successes",
+                    refEq(metersTags)
+                )
+            } returns successCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "r2dbc-jasync-search-failures",
+                    refEq(metersTags)
+                )
+            } returns successCounter
             every { successCounter.report(any()) } returns successCounter
             every { failureCounter.report(any()) } returns failureCounter
         }
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toMetersTags() } returns metersTags
             every { scenarioName } returns "scenario-test"
             every { stepName } returns "step-test"
         }

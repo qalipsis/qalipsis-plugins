@@ -42,7 +42,7 @@ internal class MariaDbJasyncIterativeReaderIntegrationTest : AbstractJasyncItera
 
         @Container
         @JvmStatic
-        private val db = MariaDBContainerProvider().newInstance()
+        private val db = MariaDBContainerProvider().newInstance("latest")
 
     }
 }

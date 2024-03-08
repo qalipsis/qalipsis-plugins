@@ -76,7 +76,7 @@ internal class JasyncSearchStep<I>(
 
         try {
             @Suppress("UNCHECKED_CAST")
-            converter.supply(rowIndex, result, input, context as StepOutput<Any?>)
+            converter.supply(rowIndex, result, input, context as StepOutput<Any?>, context.toEventTags())
         } catch (e: Exception) {
             context.addError(StepError(DatasourceException(rowIndex.get() - 1, e.message)))
         }
