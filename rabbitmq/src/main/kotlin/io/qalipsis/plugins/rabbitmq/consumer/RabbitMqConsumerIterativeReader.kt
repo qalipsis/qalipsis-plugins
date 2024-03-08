@@ -83,9 +83,11 @@ internal class RabbitMqConsumerIterativeReader(
 
     private lateinit var eventTags: Map<String, String>
 
-    override fun start(context: StepStartStopContext) {
+    private lateinit var metersTags: Map<String, String>
 
+    override fun start(context: StepStartStopContext) {
         eventTags = context.toEventTags()
+        metersTags = context.toMetersTags()
         val scenarioName = context.scenarioName
         val stepName = context.stepName
         initMonitoringMetrics(scenarioName, stepName)
@@ -108,8 +110,9 @@ internal class RabbitMqConsumerIterativeReader(
 
     private fun initMonitoringMetrics(scenarioName: ScenarioName, stepName: StepName) {
         meterRegistry?.apply {
-            meterBytesCounter = meterRegistry.counter(scenarioName, stepName, "${meterPrefix}-bytes", eventTags)
-            meterRecordsCounter = meterRegistry.counter(scenarioName, stepName, "${meterPrefix}-records", eventTags).report {
+            meterBytesCounter = meterRegistry.counter(scenarioName, stepName, "${meterPrefix}-bytes", metersTags)
+            meterRecordsCounter =
+                meterRegistry.counter(scenarioName, stepName, "${meterPrefix}-records", metersTags).report {
                 display(
                     format = "attempted req: %,.0f",
                     severity = ReportMessageSeverity.INFO,
@@ -118,7 +121,8 @@ internal class RabbitMqConsumerIterativeReader(
                     Counter::count
                 )
             }
-            successCounter = meterRegistry.counter(scenarioName, stepName, "${meterPrefix}-successes", eventTags).report {
+            successCounter =
+                meterRegistry.counter(scenarioName, stepName, "${meterPrefix}-successes", metersTags).report {
                 display(
                     format = "\u2713 %,.0f req",
                     severity = ReportMessageSeverity.INFO,
@@ -127,7 +131,8 @@ internal class RabbitMqConsumerIterativeReader(
                     Counter::count
                 )
             }
-            failureCounter = meterRegistry.counter(scenarioName, stepName, "${meterPrefix}-failures", eventTags).report {
+            failureCounter =
+                meterRegistry.counter(scenarioName, stepName, "${meterPrefix}-failures", metersTags).report {
                 display(
                     format = "\u2716 %,.0f failures",
                     severity = ReportMessageSeverity.ERROR,

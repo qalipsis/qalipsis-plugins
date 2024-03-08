@@ -25,6 +25,7 @@ import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
+import io.mockk.mockk
 import io.mockk.slot
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepStartStopContext
@@ -87,9 +88,11 @@ internal class RabbitMqProducerStepTest {
     @Test
     fun `should start and stop the step`() = testDispatcherProvider.runTest {
         // given
-        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val eventsTags: Map<String, String> = mockk()
+        val metersTags: Map<String, String> = mockk()
         val stepStartStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toEventTags() } returns eventsTags
+            every { toMetersTags() } returns metersTags
             every { scenarioName } returns "test-scenario"
             every { stepName } returns "test-step"
         }
@@ -99,7 +102,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns recordsCount
             every { recordsCount.report(any()) } returns recordsCount
@@ -108,7 +111,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-bytes",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns recordsByteCount
             every { recordsByteCount.report(any()) } returns recordsByteCount
@@ -118,7 +121,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-failed-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns failureCounter
             every { failureCounter.report(any()) } returns failureCounter
@@ -128,7 +131,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-success-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns successCounter
             every { successCounter.report(any()) } returns successCounter
@@ -137,7 +140,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-success-bytes",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns successByteCounter
             every { successByteCounter.report(any()) } returns successByteCounter
@@ -155,12 +158,12 @@ internal class RabbitMqProducerStepTest {
         rabbitMqProducerStep.start(stepStartStopContext)
 
         verifyOnce {
-            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-bytes", tags)
-            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-records", tags)
-            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-failed-bytes", tags)
-            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-success-bytes", tags)
-            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-success-records", tags)
-            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-failed-records", tags)
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-bytes", refEq(metersTags))
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-records", refEq(metersTags))
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-failed-bytes", refEq(metersTags))
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-success-bytes", refEq(metersTags))
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-success-records", refEq(metersTags))
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-produce-failed-records", refEq(metersTags))
         }
 
         rabbitMqProducerStep.stop(stepStartStopContext)
@@ -169,9 +172,11 @@ internal class RabbitMqProducerStepTest {
     @Test
     fun `should execute the step`() = testDispatcherProvider.runTest {
         // given
-        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val eventsTags: Map<String, String> = mockk()
+        val metersTags: Map<String, String> = mockk()
         val stepStartStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toEventTags() } returns eventsTags
+            every { toMetersTags() } returns metersTags
             every { scenarioName } returns "test-scenario"
             every { stepName } returns "test-step"
         }
@@ -181,7 +186,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns recordsCount
             every { recordsCount.report(any()) } returns recordsCount
@@ -190,7 +195,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-bytes",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns recordsByteCount
             every { recordsByteCount.report(any()) } returns recordsByteCount
@@ -200,7 +205,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-failed-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns failureCounter
             every { failureCounter.report(any()) } returns failureCounter
@@ -210,7 +215,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-success-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns successCounter
             every { successCounter.report(any()) } returns successCounter
@@ -219,7 +224,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-success-bytes",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns successByteCounter
             every { successByteCounter.report(any()) } returns successByteCounter
@@ -261,9 +266,11 @@ internal class RabbitMqProducerStepTest {
     @Test
     fun `should produce failed message`() = testDispatcherProvider.runTest {
         // given
-        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val eventsTags: Map<String, String> = mockk()
+        val metersTags: Map<String, String> = mockk()
         val stepStartStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toEventTags() } returns eventsTags
+            every { toMetersTags() } returns metersTags
             every { scenarioName } returns "test-scenario"
             every { stepName } returns "test-step"
         }
@@ -273,7 +280,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns recordsCount
             every { recordsCount.report(any()) } returns recordsCount
@@ -282,7 +289,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-bytes",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns recordsByteCount
             every { recordsByteCount.report(any()) } returns recordsByteCount
@@ -292,7 +299,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-failed-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns failureCounter
             every { failureCounter.report(any()) } returns failureCounter
@@ -302,7 +309,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-success-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns successCounter
             every { successCounter.report(any()) } returns successCounter
@@ -311,7 +318,7 @@ internal class RabbitMqProducerStepTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-produce-success-bytes",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns successByteCounter
             every { successByteCounter.report(any()) } returns successByteCounter

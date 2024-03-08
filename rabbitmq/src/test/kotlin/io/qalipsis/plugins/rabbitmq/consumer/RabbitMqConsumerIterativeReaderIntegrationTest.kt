@@ -34,6 +34,7 @@ import com.rabbitmq.client.MessageProperties
 import io.aerisconsulting.catadioptre.getProperty
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
+import io.mockk.mockk
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
@@ -140,9 +141,11 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     @Test
     @Timeout(10)
     internal fun `should always have next at start but not at stop`() = testDispatcherProvider.run {
-        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val eventsTags: Map<String, String> = mockk()
+        val metersTags: Map<String, String> = mockk()
         val stepStartStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toEventTags() } returns eventsTags
+            every { toMetersTags() } returns metersTags
             every { scenarioName } returns "test-scenario"
             every { stepName } returns "test-step"
         }
@@ -152,7 +155,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns recordsCount
             every { recordsCount.report(any()) } returns recordsCount
@@ -162,7 +165,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-failures",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns failureCounter
             every { failureCounter.report(any()) } returns failureCounter
@@ -172,7 +175,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-successes",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns successCounter
             every { successCounter.report(any()) } returns successCounter
@@ -199,9 +202,11 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     @Test
     @Timeout(10)
     internal fun `should accept start after stop and consume`() = testDispatcherProvider.run {
-        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val eventsTags: Map<String, String> = mockk()
+        val metersTags: Map<String, String> = mockk()
         val stepStartStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toEventTags() } returns eventsTags
+            every { toMetersTags() } returns metersTags
             every { scenarioName } returns "test-scenario"
             every { stepName } returns "test-step"
         }
@@ -211,7 +216,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns recordsCount
             every { recordsCount.report(any()) } returns recordsCount
@@ -221,7 +226,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-failures",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns failureCounter
             every { failureCounter.report(any()) } returns failureCounter
@@ -231,7 +236,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-successes",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns successCounter
             every { successCounter.report(any()) } returns successCounter
@@ -344,9 +349,11 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     @Timeout(10)
     internal fun `should consume all the data from queue in a direct exchange type`() = testDispatcherProvider.run {
         val queueName = "test"
-        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val eventsTags: Map<String, String> = mockk()
+        val metersTags: Map<String, String> = mockk()
         val stepStartStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toEventTags() } returns eventsTags
+            every { toMetersTags() } returns metersTags
             every { scenarioName } returns "test-scenario"
             every { stepName } returns "test-step"
         }
@@ -356,7 +363,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns recordsCount
             every { recordsCount.report(any()) } returns recordsCount
@@ -366,7 +373,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-failures",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns failureCounter
             every { failureCounter.report(any()) } returns failureCounter
@@ -376,7 +383,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-successes",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns successCounter
             every { successCounter.report(any()) } returns successCounter
@@ -397,8 +404,8 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
         reader.start(stepStartStopContext)
 
         verifyOnce {
-            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-consume-bytes", tags)
-            meterRegistry.counter("test-scenario", "test-step","rabbitmq-consume-records", tags)
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-consume-bytes", metersTags)
+            meterRegistry.counter("test-scenario", "test-step", "rabbitmq-consume-records", metersTags)
         }
         // when
         val received = mutableListOf<Delivery>()
@@ -434,9 +441,11 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     internal fun `should consume all the data from queue in a fanout exchange type`() = testDispatcherProvider.run {
         val exchangeName = "test-fanout"
         val queueName = "test-fanout-queue"
-        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val eventsTags: Map<String, String> = mockk()
+        val metersTags: Map<String, String> = mockk()
         val stepStartStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toEventTags() } returns eventsTags
+            every { toMetersTags() } returns metersTags
             every { scenarioName } returns "test-scenario"
             every { stepName } returns "test-step"
         }
@@ -446,7 +455,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns recordsCount
             every { recordsCount.report(any()) } returns recordsCount
@@ -456,7 +465,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-failures",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns failureCounter
             every { failureCounter.report(any()) } returns failureCounter
@@ -466,7 +475,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-successes",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns successCounter
             every { successCounter.report(any()) } returns successCounter
@@ -524,9 +533,11 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
     internal fun `should consume all the data from queue in a topic exchange type`() = testDispatcherProvider.run {
         val exchangeName = "test-topic"
         val queueName = "test-topic-queue"
-        val tags: Map<String, String> = mapOf("kip" to "kap")
+        val eventsTags: Map<String, String> = mockk()
+        val metersTags: Map<String, String> = mockk()
         val stepStartStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toEventTags() } returns eventsTags
+            every { toMetersTags() } returns metersTags
             every { scenarioName } returns "test-scenario"
             every { stepName } returns "test-step"
         }
@@ -536,7 +547,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns recordsCount
             every { recordsCount.report(any()) } returns recordsCount
@@ -546,7 +557,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-failures",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns failureCounter
             every { failureCounter.report(any()) } returns failureCounter
@@ -556,7 +567,7 @@ internal class RabbitMqConsumerIterativeReaderIntegrationTest {
                     "test-scenario",
                     "test-step",
                     "rabbitmq-consume-successes",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns successCounter
             every { successCounter.report(any()) } returns successCounter

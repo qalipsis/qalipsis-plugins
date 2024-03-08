@@ -49,7 +49,7 @@ import kotlin.math.pow
  */
 @Testcontainers
 @WithMockk
-internal class RabbitMqProducerIterativeReaderIntegrationTest {
+internal class RabbitMqProducerIntegrationTest {
 
     @RegisterExtension
     val testDispatcherProvider = TestDispatcherProvider()
