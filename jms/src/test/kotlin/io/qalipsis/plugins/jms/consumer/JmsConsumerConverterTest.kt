@@ -25,6 +25,7 @@ import assertk.assertions.prop
 import io.mockk.coEvery
 import io.mockk.confirmVerified
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder
 import io.qalipsis.api.context.StepOutput
@@ -64,8 +65,14 @@ internal class JmsConsumerConverterTest {
     private val valueDeserializer: JmsDeserializer<String> = relaxedMockk {
         every { deserialize(any()) } answers { firstArg<TextMessage>().text }
     }
+
+    private val metersTags: Map<String, String> = mockk<Map<String, String>>()
+
+    private val eventsTags: Map<String, String> = mockk<Map<String, String>>()
+
     private val startStopContext = relaxedMockk<StepStartStopContext> {
-        every { toEventTags() } returns emptyMap()
+        every { toMetersTags() } returns metersTags
+        every { toEventTags() } returns eventsTags
         every { scenarioName } returns "scenario-name"
         every { stepName } returns "step-name"
     }
@@ -76,12 +83,24 @@ internal class JmsConsumerConverterTest {
 
     private val eventsLogger = relaxedMockk<EventsLogger>()
 
-    private val tags: Map<String, String> = startStopContext.toEventTags()
-
     private val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-        every { counter("scenario-name", "step-name", "jms-consume-value-bytes", refEq(tags)) } returns consumedBytesCounter
+        every {
+            counter(
+                "scenario-name",
+                "step-name",
+                "jms-consume-value-bytes",
+                refEq(metersTags)
+            )
+        } returns consumedBytesCounter
         every { consumedBytesCounter.report(any()) } returns consumedBytesCounter
-        every { counter("scenario-name", "step-name", "jms-consume-records", refEq(tags)) } returns consumedRecordsCounter
+        every {
+            counter(
+                "scenario-name",
+                "step-name",
+                "jms-consume-records",
+                refEq(metersTags)
+            )
+        } returns consumedRecordsCounter
         every { consumedRecordsCounter.report(any()) } returns consumedRecordsCounter
     }
 
@@ -116,37 +135,37 @@ internal class JmsConsumerConverterTest {
                 "jms.consume.received.records",
                 1,
                 timestamp = any(),
-                tags = tags
+                tags = refEq(eventsTags)
             )
             eventsLogger.info(
                 "jms.consume.received.value-bytes",
                 14,
                 timestamp = any(),
-                tags = tags
+                tags = refEq(eventsTags)
             )
             eventsLogger.info(
                 "jms.consume.received.records",
                 1,
                 timestamp = any(),
-                tags = tags
+                tags = refEq(eventsTags)
             )
             eventsLogger.info(
                 "jms.consume.received.value-bytes",
                 14,
                 timestamp = any(),
-                tags = tags
+                tags = refEq(eventsTags)
             )
             eventsLogger.info(
                 "jms.consume.received.records",
                 1,
                 timestamp = any(),
-                tags = tags
+                tags = refEq(eventsTags)
             )
             eventsLogger.info(
                 "jms.consume.received.value-bytes",
                 14,
                 timestamp = any(),
-                tags = tags
+                tags = refEq(eventsTags)
             )
         }
         confirmVerified(consumedBytesCounter, eventsLogger)

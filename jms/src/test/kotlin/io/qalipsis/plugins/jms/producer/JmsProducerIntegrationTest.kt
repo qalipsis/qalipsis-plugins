@@ -109,7 +109,7 @@ internal class JmsProducerIntegrationTest {
             every { producedRecordsCounter.report(any()) } returns producedRecordsCounter
         }
         val context = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toMetersTags() } returns tags
             every { scenarioName } returns "scenario-name"
             every { stepName } returns "step-name"
         }

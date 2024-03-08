@@ -49,11 +49,12 @@ internal class JmsConsumerConverter<O : Any?>(
     private lateinit var eventTags: Map<String, String>
 
     override fun start(context: StepStartStopContext) {
+        eventTags = context.toEventTags()
         meterRegistry?.apply {
-            eventTags = context.toEventTags()
             val scenarioName = context.scenarioName
             val stepName = context.stepName
-            consumedBytesCounter = counter(scenarioName, stepName,"$meterPrefix-value-bytes", eventTags).report {
+            consumedBytesCounter =
+                counter(scenarioName, stepName, "$meterPrefix-value-bytes", context.toMetersTags()).report {
                 display(
                     format = "received: %,.0f bytes",
                     severity = ReportMessageSeverity.INFO,
@@ -62,7 +63,8 @@ internal class JmsConsumerConverter<O : Any?>(
                     Counter::count
                 )
             }
-            consumedRecordsCounter = counter(scenarioName, stepName,"$meterPrefix-records", eventTags).report {
+            consumedRecordsCounter =
+                counter(scenarioName, stepName, "$meterPrefix-records", context.toMetersTags()).report {
                 display(
                     format = "received rec: %,.0f",
                     severity = ReportMessageSeverity.INFO,

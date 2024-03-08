@@ -67,11 +67,11 @@ internal class JmsProducer(
      * Prepares producer inside before execute.
      */
     fun start(context: StepStartStopContext) {
-        val contextEventTags = context.toEventTags()
         val scenarioName = context.scenarioName
         val stepName = context.stepName
         meterRegistry?.apply {
-            recordsToProduce = counter(scenarioName, stepName, "$meterPrefix-producing-records", contextEventTags).report {
+            val metersTags = context.toMetersTags()
+            recordsToProduce = counter(scenarioName, stepName, "$meterPrefix-producing-records", metersTags).report {
                 display(
                     format = "attempted rec: %,.0f",
                     severity = ReportMessageSeverity.INFO,
@@ -80,7 +80,8 @@ internal class JmsProducer(
                     Counter::count
                 )
             }
-            producedBytesCounter = counter(scenarioName, stepName, "$meterPrefix-produced-value-bytes", contextEventTags).report {
+            producedBytesCounter =
+                counter(scenarioName, stepName, "$meterPrefix-produced-value-bytes", metersTags).report {
                 display(
                     format = "produced: %,.0f bytes",
                     severity = ReportMessageSeverity.INFO,
@@ -89,7 +90,8 @@ internal class JmsProducer(
                     Counter::count
                 )
             }
-            producedRecordsCounter = counter(scenarioName, stepName, "$meterPrefix-produced-records", contextEventTags).report {
+            producedRecordsCounter =
+                counter(scenarioName, stepName, "$meterPrefix-produced-records", metersTags).report {
                 display(
                     format = "produced rec: %,.0f",
                     severity = ReportMessageSeverity.INFO,
