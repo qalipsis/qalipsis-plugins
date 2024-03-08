@@ -45,14 +45,15 @@ internal class JakartaConsumerConverter<O : Any?>(
     private val meterPrefix = "jakarta-consume"
     private var consumedBytesCounter: Counter? = null
     private var consumedRecordsCounter: Counter? = null
-    private lateinit var tags: Map<String, String>
+    private lateinit var eventTags: Map<String, String>
 
     override fun start(context: StepStartStopContext) {
-        tags = context.toEventTags()
+        eventTags = context.toEventTags()
         val scenarioName = context.scenarioName
         val stepName = context.stepName
         meterRegistry?.apply {
-            consumedBytesCounter = counter(scenarioName, stepName, "$meterPrefix-value-bytes", tags).report {
+            consumedBytesCounter =
+                counter(scenarioName, stepName, "$meterPrefix-value-bytes", context.toMetersTags()).report {
                 display(
                     format = "received: %,.0f bytes",
                     severity = ReportMessageSeverity.INFO,
@@ -61,7 +62,8 @@ internal class JakartaConsumerConverter<O : Any?>(
                     Counter::count
                 )
             }
-            consumedRecordsCounter = counter(scenarioName, stepName, "$meterPrefix-records", tags).report {
+            consumedRecordsCounter =
+                counter(scenarioName, stepName, "$meterPrefix-records", context.toMetersTags()).report {
                 display(
                     format = "received rec: %,.0f",
                     severity = ReportMessageSeverity.INFO,
@@ -85,7 +87,7 @@ internal class JakartaConsumerConverter<O : Any?>(
         output: StepOutput<JakartaConsumerResult<O>>
     ) {
         val jakartaConsumerMeters = JakartaConsumerMeters()
-        eventsLogger?.info("${eventPrefix}.received.records", 1, tags = tags)
+        eventsLogger?.info("${eventPrefix}.received.records", 1, tags = eventTags)
         consumedRecordsCounter?.increment()
 
         val bytesCount = when (value) {
@@ -105,7 +107,7 @@ internal class JakartaConsumerConverter<O : Any?>(
         consumedBytesCounter?.increment(bytesCount.toDouble())
         jakartaConsumerMeters.consumedBytes = bytesCount
 
-        eventsLogger?.info("${eventPrefix}.received.value-bytes", bytesCount, tags = tags)
+        eventsLogger?.info("${eventPrefix}.received.value-bytes", bytesCount, tags = eventTags)
         output.send(
             JakartaConsumerResult(
                 JakartaConsumerRecord(

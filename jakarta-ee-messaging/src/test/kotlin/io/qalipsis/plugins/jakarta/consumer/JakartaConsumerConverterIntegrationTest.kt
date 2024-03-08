@@ -70,10 +70,10 @@ internal class JakartaConsumerConverterIntegrationTest {
         every { deserialize(any()) } answers { firstArg<TextMessage>().text }
     }
 
-    private val eventTags: Map<String, String> = emptyMap()
+    private val metersTags: Map<String, String> = emptyMap()
 
     private val startStopContext = relaxedMockk<StepStartStopContext> {
-        every { toEventTags() } returns eventTags
+        every { toMetersTags() } returns metersTags
         every { scenarioName } returns "scenario-name"
         every { stepName } returns "step-name"
     }
@@ -88,7 +88,7 @@ internal class JakartaConsumerConverterIntegrationTest {
                 "scenario-name",
                 "step-name",
                 "jakarta-consume-value-bytes",
-                refEq(eventTags)
+                refEq(metersTags)
             )
         } returns consumedBytesCounter
         every { consumedBytesCounter.report(any()) } returns consumedBytesCounter
@@ -97,7 +97,7 @@ internal class JakartaConsumerConverterIntegrationTest {
                 "scenario-name",
                 "step-name",
                 "jakarta-consume-records",
-                refEq(eventTags)
+                refEq(metersTags)
             )
         } returns consumedRecordsCounter
         every { consumedRecordsCounter.report(any()) } returns consumedRecordsCounter
@@ -105,7 +105,7 @@ internal class JakartaConsumerConverterIntegrationTest {
 
     private val eventsLogger = relaxedMockk<EventsLogger>()
 
-    private val tags: Map<String, String> = eventTags
+    private val tags: Map<String, String> = metersTags
 
     private lateinit var connectionFactory: ActiveMQConnectionFactory
 

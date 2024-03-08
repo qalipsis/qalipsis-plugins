@@ -84,10 +84,10 @@ internal open class JakartaProducer(
     fun start(context: StepStartStopContext) {
         val scenarioName = context.scenarioName
         val stepName = context.stepName
-        val contextEventTags = context.toEventTags()
         meterRegistry?.apply {
+            val metersTags = context.toMetersTags()
             recordsToProduce =
-                counter(scenarioName, stepName, "$meterPrefix-producing-records", contextEventTags).report {
+                counter(scenarioName, stepName, "$meterPrefix-producing-records", metersTags).report {
                     display(
                         format = "attempted rec: %,.0f",
                         severity = ReportMessageSeverity.INFO,
@@ -97,7 +97,7 @@ internal open class JakartaProducer(
                     )
                 }
             producedBytesCounter =
-                counter(scenarioName, stepName, "$meterPrefix-produced-value-bytes", contextEventTags).report {
+                counter(scenarioName, stepName, "$meterPrefix-produced-value-bytes", metersTags).report {
                     display(
                         format = "produced: %,.0f bytes",
                         severity = ReportMessageSeverity.INFO,
@@ -107,7 +107,7 @@ internal open class JakartaProducer(
                     )
                 }
             producedRecordsCounter =
-                counter(scenarioName, stepName, "$meterPrefix-produced-records", contextEventTags).report {
+                counter(scenarioName, stepName, "$meterPrefix-produced-records", metersTags).report {
                     display(
                         format = "produced rec: %,.0f",
                         severity = ReportMessageSeverity.INFO,
@@ -116,7 +116,7 @@ internal open class JakartaProducer(
                         Counter::count
                     )
                 }
-            errorsCounter = counter(scenarioName, stepName, "$meterPrefix-produced-errors", contextEventTags)
+            errorsCounter = counter(scenarioName, stepName, "$meterPrefix-produced-errors", metersTags)
         }
         connection = connectionFactory()
         connection.start()

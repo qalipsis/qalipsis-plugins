@@ -106,7 +106,7 @@ internal class JakartaProducerIntegrationTest {
         val tags: Map<String, String> = emptyMap()
         val eventsLogger = relaxedMockk<EventsLogger>()
         val context = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toMetersTags() } returns tags
             every { scenarioName } returns "scenario-name"
             every { stepName } returns "step-name"
         }
@@ -203,7 +203,7 @@ internal class JakartaProducerIntegrationTest {
         val topicConsumer = consumerSession.createConsumer(consumerSession.createTopic("topic-1"))
         val eventsLogger = relaxedMockk<EventsLogger>()
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns emptyMap()
+            every { toMetersTags() } returns emptyMap()
             every { scenarioName } returns "scenario-name"
             every { stepName } returns "step-name"
         }
