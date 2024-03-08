@@ -86,7 +86,7 @@ internal class InfluxDbIterativeReader(
     override fun start(context: StepStartStopContext) {
         log.debug { "Starting the step with the context $context" }
         meterRegistry?.apply {
-            val tags = context.toEventTags()
+            val tags = context.toMetersTags()
             val scenarioName = context.scenarioName
             val stepName = context.stepName
             recordsCount = counter(scenarioName, stepName, "$meterPrefix-received-records", tags).report {

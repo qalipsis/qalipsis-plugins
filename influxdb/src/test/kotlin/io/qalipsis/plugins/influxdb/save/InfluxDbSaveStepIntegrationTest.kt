@@ -28,6 +28,7 @@ import com.influxdb.client.write.Point
 import com.influxdb.exceptions.UnprocessableEntityException
 import io.mockk.confirmVerified
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.verify
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
@@ -60,9 +61,9 @@ internal class InfluxDbSaveStepIntegrationTest : AbstractInfluxDbIntegrationTest
     @Timeout(10)
     fun `should successfully save a unique point`() = testDispatcherProvider.run {
         // given
-        val tags: Map<String, String> = emptyMap()
+        val tags: Map<String, String> = mockk()
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toMetersTags() } returns tags
         }
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every {
@@ -146,9 +147,9 @@ internal class InfluxDbSaveStepIntegrationTest : AbstractInfluxDbIntegrationTest
     fun `should fail when sending points with date earlier than retention policy allows`(): Unit =
         testDispatcherProvider.run {
             // given
-            val tags: Map<String, String> = emptyMap()
+            val tags: Map<String, String> = mockk()
             val startStopContext = relaxedMockk<StepStartStopContext> {
-                every { toEventTags() } returns tags
+                every { toMetersTags() } returns tags
             }
             val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
                 every {

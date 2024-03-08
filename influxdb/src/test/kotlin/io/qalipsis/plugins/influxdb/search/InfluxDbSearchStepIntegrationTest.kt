@@ -32,6 +32,7 @@ import com.influxdb.query.FluxRecord
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
+import io.mockk.mockk
 import io.mockk.verify
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepStartStopContext
@@ -84,14 +85,15 @@ internal class InfluxDbSearchStepIntegrationTest : AbstractInfluxDbIntegrationTe
         val clientFactory: () -> InfluxDBClientKotlin = relaxedMockk()
         every { clientFactory.invoke() } returns client
 
-        val tags: Map<String, String> = emptyMap()
+        val metersTags: Map<String, String> = mockk()
+        val eventsTags: Map<String, String> = mockk()
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every {
                 counter(
                     context.scenarioName,
                     context.stepName,
                     "influxdb-search-received-records",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns recordsCount
             every { recordsCount.report(any()) } returns recordsCount
@@ -100,7 +102,7 @@ internal class InfluxDbSearchStepIntegrationTest : AbstractInfluxDbIntegrationTe
                     context.scenarioName,
                     context.stepName,
                     "influxdb-search-success",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns successCounter
             every { successCounter.report(any()) } returns successCounter
@@ -109,7 +111,7 @@ internal class InfluxDbSearchStepIntegrationTest : AbstractInfluxDbIntegrationTe
                     context.scenarioName,
                     context.stepName,
                     "influxdb-search-time-to-response",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns timeToResponse
             every { timeToResponse.report { any() } } returns timeToResponse
@@ -118,13 +120,13 @@ internal class InfluxDbSearchStepIntegrationTest : AbstractInfluxDbIntegrationTe
                     context.scenarioName,
                     context.stepName,
                     "influxdb-search-failure",
-                    refEq(tags)
+                    refEq(metersTags)
                 )
             } returns failureCounter
             every { failureCounter.report(any()) } returns failureCounter
         }
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toMetersTags() } returns metersTags
         }
         val config = InfluxDbStepConnectionImpl()
         config.basic("user", "passpasspass")
@@ -140,7 +142,7 @@ internal class InfluxDbSearchStepIntegrationTest : AbstractInfluxDbIntegrationTe
         // when
         val query =
             "from(bucket: \"$BUCKET\") |> range(start: ${YESTERDAY}T12:36:09Z) |> filter(fn: (r) => (r._value == \"Driving\"))"
-        val results = searchClient.execute(query, context.toEventTags())
+        val results = searchClient.execute(query, eventsTags)
 
         // then
         assertThat(results.results).all {
@@ -169,8 +171,8 @@ internal class InfluxDbSearchStepIntegrationTest : AbstractInfluxDbIntegrationTe
             timeToResponse.record(more(0L), TimeUnit.NANOSECONDS)
             recordsCount.increment(3.0)
             recordsCount.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
-            eventsLogger.debug("influxdb.search.searching", any(), any(), tags = tags)
-            eventsLogger.info("influxdb.search.success", any(), any(), tags = tags)
+            eventsLogger.debug("influxdb.search.searching", any(), any(), tags = refEq(eventsTags))
+            eventsLogger.info("influxdb.search.success", any(), any(), tags = refEq(eventsTags))
         }
         confirmVerified(timeToResponse, recordsCount, eventsLogger)
     }
@@ -184,7 +186,7 @@ internal class InfluxDbSearchStepIntegrationTest : AbstractInfluxDbIntegrationTe
         val clientFactory: () -> InfluxDBClientKotlin = relaxedMockk()
         every { clientFactory.invoke() } returns client
 
-        val tags: Map<String, String> = emptyMap()
+        val tags: Map<String, String> = mockk()
 
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
             every {
@@ -224,7 +226,7 @@ internal class InfluxDbSearchStepIntegrationTest : AbstractInfluxDbIntegrationTe
             every { failureCounter.report(any()) } returns failureCounter
         }
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toMetersTags() } returns tags
         }
         val config = InfluxDbStepConnectionImpl()
         config.basic("user", "passpasspass")

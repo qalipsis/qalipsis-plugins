@@ -70,7 +70,7 @@ internal class InfluxDbQueryClientImpl(
         client = clientFactory()
         queryClient = client.getQueryKotlinApi()
         meterRegistry?.apply {
-            val tags = context.toEventTags()
+            val tags = context.toMetersTags()
             val scenarioName = context.scenarioName
             val stepName = context.stepName
             recordsCount = counter(scenarioName, stepName, "$meterPrefix-received-records", tags).report {

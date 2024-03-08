@@ -93,7 +93,7 @@ internal class InfluxDbIterativeReaderTest {
         // given
         val tags: Map<String, String> = emptyMap()
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toMetersTags() } returns tags
             every { scenarioName } returns "scenario-test"
             every { stepName } returns "step-test"
         }
@@ -213,7 +213,7 @@ internal class InfluxDbIterativeReaderTest {
         connectionConfig.bucket = "db"
         val tags: Map<String, String> = mapOf("kip" to "kap")
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toMetersTags() } returns tags
             every { scenarioName } returns "influx-scenario"
             every { stepName } returns "influx-step"
         }

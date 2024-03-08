@@ -68,7 +68,7 @@ internal class InfluxDbSavePointClientImpl(
         val failures = (pointsCounter?.count()?.minus(successCounter?.count()!!))
         failures?.let { failureCounter?.increment(it) }
         meterRegistry?.apply {
-            val tags = context.toEventTags()
+            val tags = context.toMetersTags()
             val scenarioName = context.scenarioName
             val stepName = context.stepName
             pointsCounter = counter(scenarioName, stepName, "$meterPrefix-saving-points", tags).report {
