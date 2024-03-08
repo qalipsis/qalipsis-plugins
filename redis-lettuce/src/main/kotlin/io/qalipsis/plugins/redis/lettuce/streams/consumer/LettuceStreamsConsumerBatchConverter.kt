@@ -45,7 +45,7 @@ internal class LettuceStreamsConsumerBatchConverter(
 
     override fun start(context: StepStartStopContext) {
         meterRegistry?.apply {
-            val tags = context.toEventTags()
+            val tags = context.toMetersTags()
             val scenarioName = context.scenarioName
             val stepName = context.stepName
             recordsCounter = counter(scenarioName, stepName,"$meterPrefix-records", tags).report {

@@ -69,7 +69,7 @@ internal class LettuceStreamsConsumerBatchConverterTest {
         }
 
         val startStopContext = relaxedMockk<StepStartStopContext> {
-            every { toEventTags() } returns tags
+            every { toMetersTags() } returns tags
             every { scenarioName } returns "scenario-name"
             every { stepName } returns "step-name"
         }

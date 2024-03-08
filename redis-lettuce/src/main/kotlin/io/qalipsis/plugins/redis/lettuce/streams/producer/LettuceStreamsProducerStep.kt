@@ -75,7 +75,7 @@ internal class LettuceStreamsProducerStep<I>(
 
     override suspend fun start(context: StepStartStopContext) {
         meterRegistry?.apply {
-            val tags = context.toEventTags()
+            val tags = context.toMetersTags()
             val scenarioName = context.scenarioName
             val stepName = context.stepName
             sendingBytes = counter(scenarioName, stepName, "$meterPrefix-sending-bytes", tags).report {

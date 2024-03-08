@@ -19,8 +19,6 @@ package io.qalipsis.plugins.redis.lettuce.streams.producer
 import assertk.all
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import io.micrometer.core.instrument.MeterRegistry
-import io.micrometer.core.instrument.Tags
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
@@ -43,7 +41,7 @@ import java.time.Duration
 internal class LettuceMonitoringCollectorTest {
 
     @RelaxedMockK
-    private lateinit var metersTags: Tags
+    private lateinit var metersTags: Map<String, String>
 
     @RelaxedMockK
     private lateinit var startStopContext: StepStartStopContext
@@ -60,9 +58,6 @@ internal class LettuceMonitoringCollectorTest {
     @RelaxedMockK
     private lateinit var eventsLogger: EventsLogger
 
-    @RelaxedMockK
-    private lateinit var meterRegistry: MeterRegistry
-
     private lateinit var stepContext: TestStepContext<String, LettuceStreamsProducerResult<String>>
 
     @BeforeEach
@@ -73,8 +68,6 @@ internal class LettuceMonitoringCollectorTest {
 
     @Test
     fun `should record sending data`() {
-
-        every { meterRegistry.counter("redis-lettuce-streams-sending-bytes", refEq(metersTags)) } returns sendingBytes
         val monitoringCollector =
             spyk(
                 LettuceMonitoringCollector(
@@ -113,8 +106,6 @@ internal class LettuceMonitoringCollectorTest {
 
     @Test
     fun `should record sending data with more than 1 record`() {
-
-        every { meterRegistry.counter("redis-lettuce-streams-sending-bytes", refEq(metersTags)) } returns sendingBytes
         val monitoringCollector =
             spyk(
                 LettuceMonitoringCollector(
@@ -154,7 +145,6 @@ internal class LettuceMonitoringCollectorTest {
 
     @Test
     fun `should record sent data success`() {
-        every { meterRegistry.counter("redis-lettuce-streams-sent-bytes", refEq(metersTags)) } returns sentBytesMeter
         val monitoringCollector =
             spyk(
                 LettuceMonitoringCollector(
@@ -194,7 +184,6 @@ internal class LettuceMonitoringCollectorTest {
 
     @Test
     fun `should record sent data failure`() {
-        every { meterRegistry.counter("redis-lettuce-streams-sending-failure", refEq(metersTags)) } returns sendingFailure
         val monitoringCollector =
             spyk(
                 LettuceMonitoringCollector(
