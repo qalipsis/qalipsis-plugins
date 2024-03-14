@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 AERIS IT Solutions GmbH
+ * Copyright 2024 AERIS IT Solutions GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,24 @@
 package io.qalipsis.plugins.influxdb.config
 
 import assertk.assertThat
-import assertk.assertions.hasSize
+import assertk.assertions.any
 import assertk.assertions.isEmpty
-import assertk.assertions.isNotEmpty
-import io.micrometer.core.instrument.MeterRegistry
-import io.micrometer.influx.InfluxMeterRegistry
+import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNotNull
+import assertk.assertions.prop
 import io.micronaut.context.ApplicationContext
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.micronaut.test.support.TestPropertyProvider
+import io.qalipsis.api.meters.MeasurementPublisherFactory
+import io.qalipsis.plugins.influxdb.meters.InfluxdbMeasurementPublisher
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 
-internal class InfluxDbMeterRegistryFactoryIntegrationTest {
+
+internal class InfluxDbMeasurementPublisherFactoryIntegrationTest {
 
     @Nested
     @MicronautTest(startApplication = false, environments = ["influxdb"])
@@ -48,9 +52,9 @@ internal class InfluxDbMeterRegistryFactoryIntegrationTest {
 
         @Test
         @Timeout(10)
-        internal fun `should start without influxdb meter registry`() {
-            assertThat(applicationContext.getBeansOfType(MeterRegistry::class.java)).isNotEmpty()
-            assertThat(applicationContext.getBeansOfType(InfluxMeterRegistry::class.java)).isEmpty()
+        internal fun `should not start without the influxdb measurement publisher factory`() {
+            assertThat(applicationContext.getBeansOfType(MeasurementPublisherFactory::class.java)).isEmpty()
+            assertThat(applicationContext.getBeansOfType(InfluxdbMeasurementPublisher::class.java)).isEmpty()
         }
     }
 
@@ -70,9 +74,9 @@ internal class InfluxDbMeterRegistryFactoryIntegrationTest {
 
         @Test
         @Timeout(10)
-        internal fun `should start without influxdb meter registry`() {
-            assertThat(applicationContext.getBeansOfType(MeterRegistry::class.java)).isNotEmpty()
-            assertThat(applicationContext.getBeansOfType(InfluxMeterRegistry::class.java)).isEmpty()
+        internal fun `should not start without the influxdb exporting enabled`() {
+            assertThat(applicationContext.getBeansOfType(MeasurementPublisherFactory::class.java)).isEmpty()
+            assertThat(applicationContext.getBeansOfType(InfluxdbMeasurementPublisher::class.java)).isEmpty()
         }
     }
 
@@ -92,9 +96,15 @@ internal class InfluxDbMeterRegistryFactoryIntegrationTest {
 
         @Test
         @Timeout(10)
-        internal fun `should start with influxdb meter registry`() {
-            assertThat(applicationContext.getBeansOfType(MeterRegistry::class.java)).isNotEmpty()
-            assertThat(applicationContext.getBeansOfType(InfluxMeterRegistry::class.java)).hasSize(1)
+        internal fun `should start with influxdb measurement publisher factory`() {
+            val publisherFactories = applicationContext.getBeansOfType(MeasurementPublisherFactory::class.java)
+            assertThat(publisherFactories.size).isEqualTo(1)
+            assertThat(publisherFactories).any {
+                it.isInstanceOf(InfluxDbMeasurementPublisherFactory::class)
+                    .prop(InfluxDbMeasurementPublisherFactory::getPublisher)
+                    .isNotNull()
+            }
+
         }
     }
 }

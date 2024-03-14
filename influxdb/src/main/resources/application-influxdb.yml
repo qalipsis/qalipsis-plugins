@@ -20,7 +20,6 @@ meters:
     influxdb:
       url: http://localhost:8086
       enabled: false
-      step: PT10S
       org: qalipsis
       bucket: qalipsis-meter
-
+      prefix: qalipsis

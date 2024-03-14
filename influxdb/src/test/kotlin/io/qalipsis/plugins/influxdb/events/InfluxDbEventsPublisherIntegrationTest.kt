@@ -20,7 +20,7 @@ import com.influxdb.client.InfluxDBClientOptions
 import com.influxdb.client.kotlin.InfluxDBClientKotlinFactory
 import com.influxdb.query.FluxRecord
 import io.aerisconsulting.catadioptre.coInvokeInvisible
-import io.micrometer.core.instrument.MeterRegistry
+import io.mockk.coJustRun
 import io.mockk.every
 import io.qalipsis.api.events.Event
 import io.qalipsis.api.events.EventGeoPoint
@@ -28,6 +28,7 @@ import io.qalipsis.api.events.EventLevel
 import io.qalipsis.api.events.EventRange
 import io.qalipsis.api.events.EventTag
 import io.qalipsis.api.lang.concurrentList
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.plugins.influxdb.AbstractInfluxDbIntegrationTest
 import io.qalipsis.test.mockk.relaxedMockk
 import kotlinx.coroutines.delay
@@ -56,9 +57,9 @@ internal class InfluxDbEventsPublisherIntegrationTest : AbstractInfluxDbIntegrat
     lateinit var configuration: InfluxDbEventsConfiguration
 
     // The meter registry should provide a timer that execute the expressions to record.
-    private val meterRegistry: MeterRegistry = relaxedMockk {
-        every { timer(any(), *anyVararg()) } returns relaxedMockk {
-            every { record(any<Runnable>()) } answers { (firstArg() as Runnable).run() }
+    private val meterRegistry: CampaignMeterRegistry = relaxedMockk {
+        every { timer(any<String>(), any<String>(), any<String>(), any<Map<String, String>>()) } returns relaxedMockk {
+            coJustRun { record(any<Duration>()) }
         }
     }
 

@@ -22,7 +22,6 @@ import com.influxdb.client.kotlin.InfluxDBClientKotlin
 import com.influxdb.client.kotlin.InfluxDBClientKotlinFactory
 import com.influxdb.client.kotlin.WriteKotlinApi
 import com.influxdb.client.write.Point
-import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Requires
 import io.qalipsis.api.Executors
 import io.qalipsis.api.events.AbstractBufferedEventsPublisher
@@ -32,6 +31,7 @@ import io.qalipsis.api.events.EventRange
 import io.qalipsis.api.lang.durationSinceNanos
 import io.qalipsis.api.lang.tryAndLogOrNull
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.sync.SuspendedCountLatch
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -54,7 +54,7 @@ internal class InfluxDbEventsPublisher(
     @Named(Executors.BACKGROUND_EXECUTOR_NAME) private val coroutineScope: CoroutineScope,
     @Named(Executors.BACKGROUND_EXECUTOR_NAME) private val coroutineContext: CoroutineContext,
     private val configuration: InfluxDbEventsConfiguration,
-    private val meterRegistry: MeterRegistry,
+    private val meterRegistry: CampaignMeterRegistry,
 ) : AbstractBufferedEventsPublisher(
     configuration.minLevel,
     configuration.lingerPeriod,
@@ -78,7 +78,7 @@ internal class InfluxDbEventsPublisher(
     }
 
     /**
-     * Creates a brand new client related to the configuration.
+     * Creates a brand-new client related to the configuration.
      *
      * @see InfluxDbEventsConfiguration
      */
@@ -131,17 +131,32 @@ internal class InfluxDbEventsPublisher(
             .map(this@InfluxDbEventsPublisher::createPoint)
             .toList()
 
-        meterRegistry.timer(EVENTS_CONVERSIONS_TIMER_NAME, "publisher", "influxdb")
+        meterRegistry.timer(
+            scenarioName = "",
+            stepName = "",
+            name = EVENTS_CONVERSIONS_TIMER_NAME,
+            tags = mapOf("publisher" to "influxdb")
+        )
             .record(conversionStart.durationSinceNanos())
         val numberOfSentItems = values.size
-        meterRegistry.counter(EVENTS_COUNT_TIMER_NAME, "publisher", "influxdb")
+        meterRegistry.counter(
+            scenarioName = "",
+            stepName = "",
+            name = EVENTS_COUNT_TIMER_NAME,
+            tags = mapOf("publisher" to "influxdb")
+        )
             .increment(numberOfSentItems.toDouble())
 
         val exportStart = System.nanoTime()
         try {
             savePoints(points, exportStart)
         } catch (e: Exception) {
-            meterRegistry.timer(EVENTS_EXPORT_TIMER_NAME, "publisher", "influxdb", "status", "error")
+            meterRegistry.timer(
+                scenarioName = "",
+                stepName = "",
+                name = EVENTS_EXPORT_TIMER_NAME,
+                tags = mapOf("publisher" to "influxdb", "status" to "error")
+            )
                 .record(exportStart.durationSinceNanos())
             log.error(e) { e.message }
         }
@@ -151,7 +166,12 @@ internal class InfluxDbEventsPublisher(
         try {
             writeClient.writePoints(points, configuration.bucket, configuration.org)
             val exportEnd = System.nanoTime()
-            meterRegistry.timer(EVENTS_EXPORT_TIMER_NAME, "publisher", "influxdb", "status", "success")
+            meterRegistry.timer(
+                scenarioName = "",
+                stepName = "",
+                name = EVENTS_EXPORT_TIMER_NAME,
+                tags = mapOf("publisher" to "influxdb", "status" to "success")
+            )
                 .record(Duration.ofNanos(exportEnd - exportStart))
             log.debug { "Successfully sent ${points.size} events to InfluxDb" }
             log.trace { "onSuccess totally processed" }
@@ -173,9 +193,11 @@ internal class InfluxDbEventsPublisher(
                 is Collection<*> -> {
                     (event.value as Collection<*>).forEach { defineFieldName(point, it) }
                 }
+
                 is Array<*> -> {
                     (event.value as Array<*>).forEach { defineFieldName(point, it) }
                 }
+
                 else -> {
                     defineFieldName(point, event.value)
                 }
@@ -195,6 +217,7 @@ internal class InfluxDbEventsPublisher(
             is Duration -> point.addField("duration", "$eventValue")
             is EventGeoPoint -> point.addField("latitude", "${eventValue.latitude}")
                 .addField("longitude", "${eventValue.longitude}")
+
             is EventRange<*> -> {
                 val leftBorder: String = if (eventValue.includeLower) "[" else "("
                 val rightBorder: String = if (eventValue.includeUpper) "]" else ")"
@@ -203,6 +226,7 @@ internal class InfluxDbEventsPublisher(
                     "$leftBorder${eventValue.lowerBound} : ${eventValue.upperBound}$rightBorder"
                 )
             }
+
             else -> point.addField("other", "$eventValue")
         }
     }

@@ -50,7 +50,6 @@ dependencies {
 
     api("io.qalipsis:qalipsis-api-common")
     api("io.qalipsis:qalipsis-api-dsl")
-    api("io.micronaut.micrometer:micronaut-micrometer-registry-influx")
 
     kapt("io.aeris-consulting:catadioptre-annotations")
     kapt(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
