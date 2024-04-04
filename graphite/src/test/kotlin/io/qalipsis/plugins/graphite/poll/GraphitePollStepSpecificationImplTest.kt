@@ -5,15 +5,18 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
+import assertk.assertions.isSameAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
+import io.mockk.mockk
 import io.qalipsis.api.scenario.StepSpecificationRegistry
 import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.api.steps.StepMonitoringConfiguration
+import io.qalipsis.plugins.graphite.GraphiteHttpConnectionSpecificationImpl
 import io.qalipsis.plugins.graphite.graphite
-import io.qalipsis.plugins.graphite.poll.model.GraphiteQuery
+import io.qalipsis.plugins.graphite.search.GraphiteQuery
 import org.junit.jupiter.api.Test
 import java.time.Duration
 
@@ -45,6 +48,7 @@ internal class GraphitePollStepSpecificationImplTest {
     @Test
     fun `should add a complete specification to the scenario as broadcast whit monitoring`() {
         val scenario = TestScenarioFactory.scenario("my-scenario") as StepSpecificationRegistry
+        val queryBuilder = mockk<GraphiteQuery.() -> Unit>()
         scenario.graphite().poll {
             name = "my-step"
             connect {
@@ -56,7 +60,7 @@ internal class GraphitePollStepSpecificationImplTest {
                 events = false
                 meters = true
             }
-            query(GraphiteQuery("target.key"))
+            query(queryBuilder)
             broadcast(123, Duration.ofSeconds(20))
         }
         assertThat(scenario.rootSteps.first()).isInstanceOf(GraphitePollStepSpecificationImpl::class).all {
@@ -68,21 +72,19 @@ internal class GraphitePollStepSpecificationImplTest {
                 prop(StepMonitoringConfiguration::meters).isTrue()
             }
             prop(GraphitePollStepSpecificationImpl::connectionConfiguration).isInstanceOf(
-                GraphiteSearchConnectionSpecificationImpl::class
+                GraphiteHttpConnectionSpecificationImpl::class
             )
                 .all {
-                    prop(GraphiteSearchConnectionSpecificationImpl::url).isEqualTo("http://localhost:8086")
-                    prop(GraphiteSearchConnectionSpecificationImpl::username).isEqualTo("myUser")
-                    prop(GraphiteSearchConnectionSpecificationImpl::password).isEqualTo("password")
+                    prop(GraphiteHttpConnectionSpecificationImpl::url).isEqualTo("http://localhost:8086")
+                    prop(GraphiteHttpConnectionSpecificationImpl::username).isEqualTo("myUser")
+                    prop(GraphiteHttpConnectionSpecificationImpl::password).isEqualTo("password")
                 }
             prop(GraphitePollStepSpecificationImpl::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.BROADCAST)
                 prop(SingletonConfiguration::bufferSize).isEqualTo(123)
                 prop(SingletonConfiguration::idleTimeout).isEqualTo(Duration.ofSeconds(20))
             }
-            prop(GraphitePollStepSpecificationImpl::queryBuilder).all {
-                prop(GraphiteQuery::target).isEqualTo("target.key")
-            }
+            prop(GraphitePollStepSpecificationImpl::queryBuilder).isSameAs(queryBuilder)
         }
     }
 }

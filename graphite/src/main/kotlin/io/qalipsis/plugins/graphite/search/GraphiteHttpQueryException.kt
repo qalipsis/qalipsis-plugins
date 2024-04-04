@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 AERIS IT Solutions GmbH
+ * Copyright 2024 AERIS IT Solutions GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,10 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.graphite.poll
+package io.qalipsis.plugins.graphite.search
 
-import io.qalipsis.plugins.graphite.search.DataPoints
+class GraphiteHttpQueryException(message: String? = null, cause: Throwable? = null) : RuntimeException(message, cause) {
+    constructor(cause: Throwable) : this(message = cause.message, cause = cause)
 
-/**
- * A wrapper for meters and documents.
- *
- * @property results result of search query procedure in Graphite
- * @property meters meters of the query
- *
- * @author Sandro Mamukelashvili
- */
-class GraphiteQueryResult(
-    val results: List<DataPoints>,
-    val meters: GraphiteQueryMeters
-)
+    constructor(message: String) : this(message = message, cause = null)
+}

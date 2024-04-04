@@ -2,6 +2,7 @@ package io.qalipsis.plugins.graphite.poll
 
 import assertk.all
 import assertk.assertThat
+import assertk.assertions.containsOnly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
@@ -12,6 +13,7 @@ import assertk.assertions.isTrue
 import io.aerisconsulting.catadioptre.getProperty
 import io.aerisconsulting.catadioptre.invokeInvisible
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.spyk
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepCreationContextImpl
@@ -19,8 +21,9 @@ import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
 import io.qalipsis.plugins.graphite.poll.converters.GraphitePollBatchConverter
-import io.qalipsis.plugins.graphite.poll.model.GraphiteQuery
+import io.qalipsis.plugins.graphite.search.GraphiteQuery
 import io.qalipsis.test.assertk.prop
+import io.qalipsis.test.assertk.typedProp
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
@@ -60,12 +63,15 @@ internal class GraphitePollStepSpecificationConverterTest :
     fun `should convert with name and metrics`() = testDispatcherProvider.runTest {
         // given
         val spec = GraphitePollStepSpecificationImpl()
+        val queryBuilder = mockk<GraphiteQuery.() -> Unit>()
         spec.apply {
             this.name = "my-step"
             connect {
                 server("http://localhost:2003")
             }
-            query(GraphiteQuery("target.key"))
+            query {
+                withTarget("target.key")
+            }
 
             monitoring {
                 meters = true
@@ -93,7 +99,7 @@ internal class GraphitePollStepSpecificationConverterTest :
                 prop("converter").isSameAs(recordsConverter)
                 prop("reader").isNotNull().isInstanceOf(GraphiteIterativeReader::class).all {
                     prop("pollStatement").isNotNull().isInstanceOf(GraphitePollStatement::class).all {
-                        prop("graphiteQuery").prop("target").isEqualTo("target.key")
+                        prop("graphiteQuery").typedProp<List<String>>("targets").containsOnly("target.key")
                     }
                     prop("meterRegistry").isEqualTo(meterRegistry)
                     prop("eventsLogger").isNull()
@@ -123,7 +129,9 @@ internal class GraphitePollStepSpecificationConverterTest :
             connect {
                 server("http://localhost:2003")
             }
-            query(GraphiteQuery("target.key"))
+            query {
+                withTarget("target.key")
+            }
 
             monitoring {
                 meters = false
@@ -152,7 +160,7 @@ internal class GraphitePollStepSpecificationConverterTest :
                 prop("converter").isSameAs(recordsConverter)
                 prop("reader").isNotNull().isInstanceOf(GraphiteIterativeReader::class).all {
                     prop("pollStatement").isNotNull().isInstanceOf(GraphitePollStatement::class).all {
-                        prop("graphiteQuery").prop("target").isEqualTo("target.key")
+                        prop("graphiteQuery").typedProp<List<String>>("targets").containsOnly("target.key")
                     }
                     prop("meterRegistry").isNull()
                     prop("eventsLogger").isNull()

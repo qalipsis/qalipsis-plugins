@@ -25,7 +25,7 @@ import io.qalipsis.api.meters.Counter
 import io.qalipsis.api.meters.Timer
 import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.steps.datasource.DatasourceIterativeReader
-import io.qalipsis.plugins.graphite.render.service.GraphiteRenderApiService
+import io.qalipsis.plugins.graphite.search.GraphiteRenderApiService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -55,8 +55,8 @@ internal class GraphiteIterativeReader(
     private val pollStatement: GraphitePollStatement,
     private val pollDelay: Duration,
     private val resultsChannelFactory: () -> Channel<GraphiteQueryResult> = { Channel(Channel.UNLIMITED) },
-    private val eventsLogger: EventsLogger?,
-    private val meterRegistry: CampaignMeterRegistry?
+    private val eventsLogger: EventsLogger? = null,
+    private val meterRegistry: CampaignMeterRegistry? = null
 ) : DatasourceIterativeReader<GraphiteQueryResult> {
 
     private val eventPrefix = "graphite.poll"
@@ -112,7 +112,7 @@ internal class GraphiteIterativeReader(
             log.debug { "Polling job just started for context $context" }
             try {
                 while (running) {
-                    poll(client)
+                    poll()
                     if (running) {
                         delay(pollDelay.toMillis())
                     }
@@ -124,36 +124,22 @@ internal class GraphiteIterativeReader(
         }
     }
 
-    override fun stop(context: StepStartStopContext) {
-        meterRegistry?.apply {
-            recordsCount = null
-            timeToResponse = null
-            failureCounter = null
-        }
-        running = false
-        runCatching {
-            runBlocking {
-                pollingJob.cancelAndJoin()
-            }
-        }
-        resultsChannel.cancel()
-        pollStatement.reset()
-        client.close()
-    }
-
     @KTestable
     fun init() {
         resultsChannel = resultsChannelFactory()
         client = clientFactory()
     }
 
-    private suspend fun poll(client: GraphiteRenderApiService) {
+    @KTestable
+    private suspend fun poll() {
         eventsLogger?.debug("$eventPrefix.polling", tags = context.toEventTags())
         val requestStart = System.nanoTime()
         try {
             val query = pollStatement.getNextQuery()
             log.info("Query : $query")
-            val records = client.getAsJson(query)
+            val records = runBlocking {
+                client.execute(query)
+            }
             val timeToSuccess = Duration.ofNanos(System.nanoTime() - requestStart)
             recordsCount?.increment(records.size.toDouble())
             eventsLogger?.info(
@@ -183,6 +169,23 @@ internal class GraphiteIterativeReader(
     override suspend fun hasNext(): Boolean = running
 
     override suspend fun next(): GraphiteQueryResult = resultsChannel.receive()
+
+    override fun stop(context: StepStartStopContext) {
+        meterRegistry?.apply {
+            recordsCount = null
+            timeToResponse = null
+            failureCounter = null
+        }
+        running = false
+        runCatching {
+            runBlocking {
+                pollingJob.cancelAndJoin()
+            }
+        }
+        resultsChannel.cancel()
+        pollStatement.reset()
+        client.close()
+    }
 
     private companion object {
         val log = logger()

@@ -1,23 +1,24 @@
 events:
   export:
     graphite:
-      enabled: true
-      min-level: INFO
+      enabled: false
+      min-level: TRACE
       host: localhost
       port: 2004
       protocol: pickle
-      batch-size: 2
+      batch-size: 100
       linger-period: 10s
       publishers: 2
-
-# Disables the native micronaut registry.
-micronaut.metrics.export.graphite.enabled: false
+      prefix: qalipsis.
 
 meters:
   export:
     graphite:
+      enabled: false
       host: localhost
       port: 2004
-      enabled: false
-      step: PT10S
+      protocol: pickle
+      batch-size: 100
+      prefix: qalipsis.
+      publishers: 1
 

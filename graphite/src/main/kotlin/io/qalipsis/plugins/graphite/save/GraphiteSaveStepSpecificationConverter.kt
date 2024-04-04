@@ -16,7 +16,6 @@
 
 package io.qalipsis.plugins.graphite.save
 
-import io.qalipsis.api.Executors
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.supplyIf
@@ -24,8 +23,11 @@ import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
-import jakarta.inject.Named
-import kotlinx.coroutines.CoroutineScope
+import io.qalipsis.plugins.graphite.GraphiteProtocol
+import io.qalipsis.plugins.graphite.client.GraphiteRecord
+import io.qalipsis.plugins.graphite.client.GraphiteTcpClient
+import io.qalipsis.plugins.graphite.client.codecs.PickleEncoder
+import io.qalipsis.plugins.graphite.client.codecs.PlaintextEncoder
 
 /**
  * [StepSpecificationConverter] from [GraphiteSaveStepSpecificationImpl] to [GraphiteSaveStep]
@@ -36,8 +38,7 @@ import kotlinx.coroutines.CoroutineScope
 @StepConverter
 internal class GraphiteSaveStepSpecificationConverter(
     private val meterRegistry: CampaignMeterRegistry,
-    private val eventsLogger: EventsLogger,
-    @Named(Executors.IO_EXECUTOR_NAME) private val coroutineScope: CoroutineScope,
+    private val eventsLogger: EventsLogger
 ) : StepSpecificationConverter<GraphiteSaveStepSpecificationImpl<*>> {
 
     override fun support(stepSpecification: StepSpecification<*, *, *>): Boolean {
@@ -47,24 +48,26 @@ internal class GraphiteSaveStepSpecificationConverter(
     override suspend fun <I, O> convert(creationContext: StepCreationContext<GraphiteSaveStepSpecificationImpl<*>>) {
         val spec = creationContext.stepSpecification
         val stepId = spec.name
-        val workerGroup = spec.connectionConfig.workerGroup()
         val clientBuilder = {
-            GraphiteSaveClient(
+            val encoder = when (spec.connectionConfig.protocol) {
+                GraphiteProtocol.PLAINTEXT -> PlaintextEncoder()
+                GraphiteProtocol.PICKLE -> PickleEncoder()
+            }
+            GraphiteTcpClient<GraphiteRecord>(
                 host = spec.connectionConfig.host,
                 port = spec.connectionConfig.port,
-                workerGroup = workerGroup,
-                coroutineScope = coroutineScope
+                encoders = listOf(encoder),
+                workerGroup = spec.connectionConfig.nettyWorkerGroup(),
+                channelClass = spec.connectionConfig.nettyChannelClass
             )
         }
 
         val step = GraphiteSaveStep(
             id = stepId,
             retryPolicy = spec.retryPolicy,
-            graphiteSaveMessageClient = GraphiteSaveMessageClientImpl(
-                clientBuilder = clientBuilder,
-                eventsLogger = supplyIf(spec.monitoringConfig.events) { eventsLogger },
-                meterRegistry = supplyIf(spec.monitoringConfig.meters) { meterRegistry }
-            ),
+            clientBuilder = clientBuilder,
+            eventsLogger = supplyIf(spec.monitoringConfig.events) { eventsLogger },
+            meterRegistry = supplyIf(spec.monitoringConfig.meters) { meterRegistry },
             messageFactory = spec.records
         )
         creationContext.createdStep(step)

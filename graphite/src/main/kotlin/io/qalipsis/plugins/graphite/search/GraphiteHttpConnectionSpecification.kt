@@ -14,19 +14,21 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.graphite.poll
+package io.qalipsis.plugins.graphite.search
 
-import io.qalipsis.plugins.graphite.search.DataPoints
+import io.qalipsis.api.annotations.Spec
 
-/**
- * A wrapper for meters and documents.
- *
- * @property results result of search query procedure in Graphite
- * @property meters meters of the query
- *
- * @author Sandro Mamukelashvili
- */
-class GraphiteQueryResult(
-    val results: List<DataPoints>,
-    val meters: GraphiteQueryMeters
-)
+@Spec
+interface GraphiteHttpConnectionSpecification {
+
+    /**
+     * Configures the servers settings.
+     */
+    fun server(url: String)
+
+    /**
+     * Configures the basic authentication.
+     */
+    fun basicAuthentication(username: String, password: String)
+
+}

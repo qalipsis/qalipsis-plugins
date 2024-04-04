@@ -16,7 +16,10 @@
 
 package io.qalipsis.plugins.graphite.poll
 
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.kotlinModule
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.qalipsis.api.Executors
@@ -31,7 +34,8 @@ import io.qalipsis.api.steps.datasource.DatasourceObjectConverter
 import io.qalipsis.api.steps.datasource.IterativeDatasourceStep
 import io.qalipsis.api.steps.datasource.processors.NoopDatasourceObjectProcessor
 import io.qalipsis.plugins.graphite.poll.converters.GraphitePollBatchConverter
-import io.qalipsis.plugins.graphite.render.service.GraphiteRenderApiService
+import io.qalipsis.plugins.graphite.search.GraphiteQuery
+import io.qalipsis.plugins.graphite.search.GraphiteRenderApiService
 import jakarta.inject.Named
 import kotlinx.coroutines.CoroutineScope
 import java.util.Base64
@@ -61,13 +65,17 @@ internal class GraphitePollStepSpecificationConverter(
             clientFactory = {
                 GraphiteRenderApiService(
                     spec.connectionConfiguration.url,
-                    jacksonObjectMapper(),
+                    jacksonObjectMapper().registerModules(kotlinModule {
+                        configure(KotlinFeature.NullToEmptyCollection, true)
+                        configure(KotlinFeature.NullToEmptyMap, true)
+                        configure(KotlinFeature.NullIsSameAsDefault, true)
+                    }, JavaTimeModule()),
                     HttpClient(CIO),
                     Base64.getUrlEncoder().encodeToString(auth.toByteArray())
                 )
             },
             coroutineScope = coroutineScope,
-            pollStatement = GraphitePollStatement(spec.queryBuilder),
+            pollStatement = GraphitePollStatement(GraphiteQuery().also(spec.queryBuilder)),
             pollDelay = spec.pollPeriod,
             eventsLogger = supplyIf(spec.monitoringConfiguration.events) { eventsLogger },
             meterRegistry = supplyIf(spec.monitoringConfiguration.meters) { meterRegistry }

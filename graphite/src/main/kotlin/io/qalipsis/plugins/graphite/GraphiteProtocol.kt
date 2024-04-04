@@ -14,19 +14,13 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.graphite.poll
-
-import io.qalipsis.plugins.graphite.search.DataPoints
+package io.qalipsis.plugins.graphite
 
 /**
- * A wrapper for meters and documents.
+ * Enumerates supported [graphite][https://github.com/graphite-project] transport protocols.
  *
- * @property results result of search query procedure in Graphite
- * @property meters meters of the query
- *
- * @author Sandro Mamukelashvili
+ * @author rklymenko
  */
-class GraphiteQueryResult(
-    val results: List<DataPoints>,
-    val meters: GraphiteQueryMeters
-)
+enum class GraphiteProtocol {
+    PLAINTEXT, PICKLE
+}

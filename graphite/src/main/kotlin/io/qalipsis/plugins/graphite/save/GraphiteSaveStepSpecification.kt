@@ -25,6 +25,7 @@ import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.graphite.GraphiteConnectionSpecification
 import io.qalipsis.plugins.graphite.GraphiteConnectionSpecificationImpl
 import io.qalipsis.plugins.graphite.GraphiteStepSpecification
+import io.qalipsis.plugins.graphite.client.GraphiteRecord
 
 /**
  * Specification for a [io.qalipsis.plugins.graphite.save.GraphiteSaveStep] to save data to a Graphite.
@@ -44,7 +45,7 @@ interface GraphiteSaveStepSpecification<I> :
     /**
      * Defines the statement to execute when saving.
      */
-    fun records(recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<GraphiteRecord>)
+    fun records(recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> Collection<GraphiteRecord>)
 
     /**
      * Configures the monitoring of the save step.
@@ -64,7 +65,8 @@ internal class GraphiteSaveStepSpecificationImpl<I> :
 
     internal var connectionConfig = GraphiteConnectionSpecificationImpl()
 
-    internal var records: (suspend (ctx: StepContext<*, *>, input: I) -> List<GraphiteRecord>) =  { _, _ -> emptyList() }
+    internal var records: (suspend (ctx: StepContext<*, *>, input: I) -> Collection<GraphiteRecord>) =
+        { _, _ -> emptyList() }
 
     internal var monitoringConfig = StepMonitoringConfiguration()
 
@@ -72,7 +74,7 @@ internal class GraphiteSaveStepSpecificationImpl<I> :
         connectionConfig.connectionConfiguration()
     }
 
-    override fun records(recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<GraphiteRecord>) {
+    override fun records(recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> Collection<GraphiteRecord>) {
         this.records = recordsFactory
     }
 

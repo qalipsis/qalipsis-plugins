@@ -27,10 +27,11 @@ import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.UnicastSpecification
+import io.qalipsis.plugins.graphite.GraphiteHttpConnectionSpecificationImpl
 import io.qalipsis.plugins.graphite.GraphiteScenarioSpecification
 import io.qalipsis.plugins.graphite.GraphiteStepSpecification
-import io.qalipsis.plugins.graphite.poll.model.GraphiteQuery
-import io.qalipsis.plugins.graphite.render.GraphiteSearchConnectionSpecification
+import io.qalipsis.plugins.graphite.search.GraphiteHttpConnectionSpecification
+import io.qalipsis.plugins.graphite.search.GraphiteQuery
 import java.time.Duration
 import javax.validation.constraints.NotNull
 
@@ -48,13 +49,12 @@ interface GraphitePollStepSpecification :
     /**
      * Configures the connection to the Graphite Server.
      */
-    // Implement GraphiteSearchConnectionSpecification into a concrete class.
-    fun connect(connection: GraphiteSearchConnectionSpecification.() -> Unit) //this should be affected
+    fun connect(connection: GraphiteHttpConnectionSpecification.() -> Unit) //this should be affected
 
     /**
      * Creates query to poll the data.
      */
-    fun query(queryBuilder: GraphiteQuery)
+    fun query(queryBuilder: GraphiteQuery.() -> Unit)
 
     /**
      * Delay between two executions of poll.
@@ -77,22 +77,22 @@ internal class GraphitePollStepSpecificationImpl :
 
     override val singletonConfiguration: SingletonConfiguration = SingletonConfiguration(SingletonType.UNICAST)
 
-    val connectionConfiguration = GraphiteSearchConnectionSpecificationImpl()
+    val connectionConfiguration = GraphiteHttpConnectionSpecificationImpl()
 
     val monitoringConfiguration = StepMonitoringConfiguration()
 
     @field:NotNull
-    internal lateinit var queryBuilder: GraphiteQuery
+    internal var queryBuilder: GraphiteQuery.() -> Unit = {}
 
     @field:NotNull
     @field:PositiveDuration
     internal var pollPeriod: Duration = Duration.ofSeconds(10L)
 
-    override fun connect(connection: GraphiteSearchConnectionSpecification.() -> Unit) {
-        this.connectionConfiguration .connection()
+    override fun connect(connection: GraphiteHttpConnectionSpecification.() -> Unit) {
+        this.connectionConfiguration.connection()
     }
 
-    override fun query(queryBuilder: GraphiteQuery) {
+    override fun query(queryBuilder: GraphiteQuery.() -> Unit) {
         this.queryBuilder = queryBuilder
     }
 
@@ -123,22 +123,3 @@ fun GraphiteScenarioSpecification.poll(
 }
 
 
-/**
- * Implementation of [GraphiteSearchConnectionSpecification]
- */
-class GraphiteSearchConnectionSpecificationImpl: GraphiteSearchConnectionSpecification {
-
-    var url: String = "http://127.0.0.1:8086"
-
-    var username: String = ""
-
-    var password: String = ""
-    override fun server(url: String) {
-        this.url = url
-    }
-
-    override fun basicAuthentication(username: String, password: String) {
-        this.username = username
-        this.password = password
-    }
-}

@@ -16,9 +16,9 @@
 
 package io.qalipsis.plugins.graphite.poll
 
-import io.qalipsis.plugins.graphite.poll.model.GraphiteQuery
-import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsRequestBuilder
-import io.qalipsis.plugins.graphite.render.model.GraphiteRenderApiJsonResponse
+import io.qalipsis.plugins.graphite.search.DataPoints
+import io.qalipsis.plugins.graphite.search.GraphiteQuery
+import java.time.Instant
 
 /**
  * Graphite statement for polling, integrating the ability to be internally modified when a tie-breaker is set.
@@ -30,24 +30,16 @@ internal class GraphitePollStatement(
     private val graphiteQuery: GraphiteQuery
 ) {
 
-    private var tieBreaker: Long? = null
+    private var tieBreaker: Instant? = null
 
-    fun saveTiebreaker(records: List<GraphiteRenderApiJsonResponse>) {
-        // We assume that the records are ordered chronologically.
-        records.asSequence().flatMap { record -> record.dataPoints }
-            .mapNotNull { it.timestamp }
-            .sortedByDescending { it }
-            .firstOrNull()?.let { latestTimestamp ->
-                tieBreaker = latestTimestamp
-            }
+    fun saveTiebreaker(records: List<DataPoints>) {
+        records.asSequence().flatMap { record -> record.dataPoints }.maxOfOrNull { it.timestamp }
+            ?.let { latestTimestamp -> tieBreaker = latestTimestamp }
     }
 
-    fun getNextQuery(): GraphiteMetricsRequestBuilder {
-        return if (tieBreaker != null) {
-            GraphiteMetricsRequestBuilder(graphiteQuery).from(tieBreaker!!)
-        } else {
-            GraphiteMetricsRequestBuilder(graphiteQuery)
-        }
+    fun getNextQuery(): GraphiteQuery {
+        return tieBreaker?.let { graphiteQuery.copy().from(it) }
+            ?: graphiteQuery
     }
 
     fun reset() {

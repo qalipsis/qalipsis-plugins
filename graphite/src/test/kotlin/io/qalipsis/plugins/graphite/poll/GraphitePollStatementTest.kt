@@ -2,25 +2,26 @@ package io.qalipsis.plugins.graphite.poll
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import io.qalipsis.plugins.graphite.poll.model.GraphiteQuery
-import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTime
-import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTimeUnit
-import io.qalipsis.plugins.graphite.render.model.GraphiteRenderApiJsonPairResponse
-import io.qalipsis.plugins.graphite.render.model.GraphiteRenderApiJsonResponse
+import io.qalipsis.plugins.graphite.search.DataPoints
+import io.qalipsis.plugins.graphite.search.GraphiteMetricsTime
+import io.qalipsis.plugins.graphite.search.GraphiteMetricsTimeUnit
+import io.qalipsis.plugins.graphite.search.GraphiteQuery
 import org.junit.jupiter.api.Test
+import java.time.Instant
 
 internal class GraphitePollStatementTest {
 
     @Test
     fun `should return the default query if only target is set`() {
         // given
-        val graphiteQuery = GraphiteQuery("exact.key.1")
+        val target = "exact.key.1"
+        val graphiteQuery = GraphiteQuery(target)
 
         // when
         val statement = GraphitePollStatement(graphiteQuery)
 
         // then
-        val expectedQuery = "/render?target=${graphiteQuery.target}&format=json&noNullPoints=True"
+        val expectedQuery = "?target=$target&format=json&noNullPoints=True"
 
         assertThat(statement.getNextQuery().build()).isEqualTo(expectedQuery)
     }
@@ -28,17 +29,18 @@ internal class GraphitePollStatementTest {
     @Test
     fun `should return the query if tiebreaker is set`() {
         // given
+        val target = "exact.key.1"
         val graphiteQuery = GraphiteQuery("exact.key.1")
-        val query = "/render?target=${graphiteQuery.target}&format=json&from=123123&noNullPoints=True"
+        val query = "?target=$target&format=json&from=123123&noNullPoints=True"
 
         // when
         val statement = GraphitePollStatement(graphiteQuery)
         statement.saveTiebreaker(
             listOf(
-                GraphiteRenderApiJsonResponse(
-                    graphiteQuery.target,
+                DataPoints(
+                    target,
                     emptyMap(),
-                    listOf(GraphiteRenderApiJsonPairResponse(1.0, 123123L))
+                    listOf(DataPoints.DataPoint(1.0, Instant.ofEpochSecond(123123L)))
                 )
             )
         )
@@ -50,23 +52,24 @@ internal class GraphitePollStatementTest {
     @Test
     fun `should return the default query if statement is reset`() {
         // given
-        val graphiteQuery = GraphiteQuery("exact.key.1")
+        val target = "exact.key.1"
+        val graphiteQuery = GraphiteQuery(target)
 
         // when
         val statement = GraphitePollStatement(graphiteQuery)
         statement.saveTiebreaker(
             listOf(
-                GraphiteRenderApiJsonResponse(
-                    graphiteQuery.target,
+                DataPoints(
+                    target,
                     emptyMap(),
-                    listOf(GraphiteRenderApiJsonPairResponse(1.0, 123123L))
+                    listOf(DataPoints.DataPoint(1.0, Instant.ofEpochSecond(123123L)))
                 )
             )
         )
         statement.reset()
 
         // then
-        val expectedQuery = "/render?target=${graphiteQuery.target}&format=json&noNullPoints=True"
+        val expectedQuery = "?target=$target&format=json&noNullPoints=True"
         assertThat(statement.getNextQuery().build()).isEqualTo(expectedQuery)
     }
 
@@ -74,6 +77,7 @@ internal class GraphitePollStatementTest {
     fun `should return the right query if from is specified`() {
 
         //given
+        val target = "exact.key.1"
         val graphiteQuery = GraphiteQuery("exact.key.1")
 
         //when
@@ -81,7 +85,7 @@ internal class GraphitePollStatementTest {
         val statement = GraphitePollStatement(graphiteQuery)
 
         //then
-        val expectedQuery = "/render?target=${graphiteQuery.target}&format=json&from=-50s&noNullPoints=True"
+        val expectedQuery = "?target=$target&format=json&from=-50s&noNullPoints=True"
         assertThat(statement.getNextQuery().build()).isEqualTo(expectedQuery)
     }
 

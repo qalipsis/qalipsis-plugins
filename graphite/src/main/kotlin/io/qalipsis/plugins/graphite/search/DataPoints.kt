@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 AERIS IT Solutions GmbH
+ * Copyright 2024 AERIS IT Solutions GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,25 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.graphite.poll
+package io.qalipsis.plugins.graphite.search
 
-import io.qalipsis.plugins.graphite.search.DataPoints
+import com.fasterxml.jackson.annotation.JsonFormat
+import com.fasterxml.jackson.annotation.JsonProperty
+import java.time.Instant
 
 /**
- * A wrapper for meters and documents.
- *
- * @property results result of search query procedure in Graphite
- * @property meters meters of the query
- *
- * @author Sandro Mamukelashvili
+ * Represents Graphite data points under a single target.
  */
-class GraphiteQueryResult(
-    val results: List<DataPoints>,
-    val meters: GraphiteQueryMeters
-)
+data class DataPoints(
+    val target: String,
+    val tags: Map<String, String>,
+    @JsonProperty("datapoints")
+    @JsonFormat(shape = JsonFormat.Shape.ARRAY)
+    val dataPoints: List<DataPoint>
+) {
+
+    data class DataPoint(
+        val value: Number,
+        val timestamp: Instant
+    )
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 AERIS IT Solutions GmbH
+ * Copyright 2024 AERIS IT Solutions GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,21 @@
  * permissions and limitations under the License.
  */
 
-package io.qalipsis.plugins.graphite.poll
+package io.qalipsis.plugins.graphite.client
 
-import io.qalipsis.plugins.graphite.search.DataPoints
+import io.qalipsis.api.io.Closeable
 
 /**
- * A wrapper for meters and documents.
+ * Custom interface to manage exporting of records to a Graphite server, supporting either plaintext or pickle protocols.
  *
- * @property results result of search query procedure in Graphite
- * @property meters meters of the query
- *
- * @author Sandro Mamukelashvili
+ * @author Francisca Eze
  */
-class GraphiteQueryResult(
-    val results: List<DataPoints>,
-    val meters: GraphiteQueryMeters
-)
+interface GraphiteClient<T : Any> : Closeable {
+
+    val isOpen: Boolean
+
+    suspend fun open(): GraphiteClient<T>
+
+    suspend fun send(values: Collection<T>)
+
+}

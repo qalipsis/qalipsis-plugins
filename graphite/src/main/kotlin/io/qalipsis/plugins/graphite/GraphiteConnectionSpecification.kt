@@ -18,9 +18,12 @@ package io.qalipsis.plugins.graphite
 
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.socket.SocketChannel
+import io.netty.channel.socket.nio.NioSocketChannel
 import io.qalipsis.api.annotations.Spec
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotNull
+import kotlin.reflect.KClass
 
 /**
  * Interface to establish a connection with Graphite
@@ -29,12 +32,21 @@ interface GraphiteConnectionSpecification {
     /**
      * Configures the servers settings.
      */
-    fun server(host: String, port: Int)
+    fun server(host: String, port: Int): GraphiteConnectionSpecification
 
     /**
-     * Configures the basic connection.
+     * Configures the netty connection. The concrete types of the channel and the worker group should match.
+     * Leave the default value if you are not familiar with those settings.
      */
-    fun workerGroup(workerGroupConfigurer: () -> EventLoopGroup)
+    fun netty(
+        channelClass: KClass<out SocketChannel>,
+        workerGroupConfigurer: () -> EventLoopGroup
+    ): GraphiteConnectionSpecification
+
+    /**
+     * Defines the protocol to use.
+     */
+    fun protocol(protocol: GraphiteProtocol): GraphiteConnectionSpecification
 }
 
 @Spec
@@ -46,14 +58,29 @@ internal class GraphiteConnectionSpecificationImpl : GraphiteConnectionSpecifica
     @field:NotNull
     var port: Int = 2003
 
-    var workerGroup: () -> EventLoopGroup = { NioEventLoopGroup() }
+    var protocol: GraphiteProtocol = GraphiteProtocol.PLAINTEXT
 
-    override fun server(host: String, port: Int) {
+    var nettyWorkerGroup: () -> EventLoopGroup = { NioEventLoopGroup() }
+
+    var nettyChannelClass: KClass<out SocketChannel> = NioSocketChannel::class
+
+    override fun server(host: String, port: Int): GraphiteConnectionSpecification {
         this.host = host
         this.port = port
+        return this
     }
 
-    override fun workerGroup(workerGroupConfigurer: () -> EventLoopGroup) {
-        this.workerGroup = workerGroupConfigurer
+    override fun netty(
+        channelClass: KClass<out SocketChannel>,
+        workerGroupConfigurer: () -> EventLoopGroup
+    ): GraphiteConnectionSpecification {
+        this.nettyChannelClass = channelClass
+        this.nettyWorkerGroup = workerGroupConfigurer
+        return this
+    }
+
+    override fun protocol(protocol: GraphiteProtocol): GraphiteConnectionSpecification {
+        this.protocol = protocol
+        return this
     }
 }

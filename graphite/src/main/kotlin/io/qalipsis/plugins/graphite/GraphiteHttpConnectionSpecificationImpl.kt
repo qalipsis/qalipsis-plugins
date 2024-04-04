@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 AERIS IT Solutions GmbH
+ * Copyright 2024 AERIS IT Solutions GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,24 @@
 
 package io.qalipsis.plugins.graphite
 
+import io.qalipsis.plugins.graphite.search.GraphiteHttpConnectionSpecification
 
 /**
- * @author Joël Valère
+ * Implementation of [GraphiteHttpConnectionSpecification].
  */
-object Constants {
-    const val GRAPHITE_IMAGE_NAME = "graphiteapp/graphite-statsd:latest"
-    const val HTTP_PORT = 80
-    const val GRAPHITE_PLAINTEXT_PORT = 2003
-    const val GRAPHITE_PICKLE_PORT = 2004
-    const val CARBON_CONFIG_PATH = "/opt/graphite/conf/carbon.conf"
-    const val STORAGE_SCHEMA_CONFIG_PATH = "/opt/graphite/conf/storage-schemas.conf"
+internal class GraphiteHttpConnectionSpecificationImpl : GraphiteHttpConnectionSpecification {
+
+    var url: String = "http://127.0.0.1:8086"
+
+    var username: String = ""
+
+    var password: String = ""
+    override fun server(url: String) {
+        this.url = url
+    }
+
+    override fun basicAuthentication(username: String, password: String) {
+        this.username = username
+        this.password = password
+    }
 }

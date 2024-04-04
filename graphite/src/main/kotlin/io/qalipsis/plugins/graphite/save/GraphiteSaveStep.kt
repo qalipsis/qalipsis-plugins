@@ -19,13 +19,24 @@ package io.qalipsis.plugins.graphite.save
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
+import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.lang.tryAndLog
+import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Timer
+import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
+import io.qalipsis.plugins.graphite.client.GraphiteClient
+import io.qalipsis.plugins.graphite.client.GraphiteRecord
+import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 /**
  * Implementation of a [io.qalipsis.api.steps.Step] able to perform inserts into Graphite.
  *
- * @property GraphiteSaveMessageClient client to use to execute the io.qalipsis.plugins.graphite.save for the current step.
+ * @property clientBuilder builder for the client to send the records.
  * @property messageFactory closure to generate a list of messages.
  *
  * @author Palina Bril
@@ -33,24 +44,91 @@ import io.qalipsis.api.steps.AbstractStep
 internal class GraphiteSaveStep<I>(
     id: StepName,
     retryPolicy: RetryPolicy?,
-    private val graphiteSaveMessageClient: GraphiteSaveMessageClient,
-    private val messageFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<GraphiteRecord>)
+    private val clientBuilder: () -> GraphiteClient<GraphiteRecord>,
+    private val eventsLogger: EventsLogger?,
+    private val meterRegistry: CampaignMeterRegistry?,
+    private val messageFactory: (suspend (ctx: StepContext<*, *>, input: I) -> Collection<GraphiteRecord>)
 ) : AbstractStep<I, GraphiteSaveResult<I>>(id, retryPolicy) {
 
+    private lateinit var client: GraphiteClient<GraphiteRecord>
+
+    private val eventPrefix = "graphite.save"
+
+    private val meterPrefix = "graphite-save"
+
+    private var messageCounter: Counter? = null
+
+    private var timeToResponse: Timer? = null
+
+    private var successCounter: Counter? = null
+
     override suspend fun start(context: StepStartStopContext) {
-        graphiteSaveMessageClient.start(context)
+        client = clientBuilder()
+        client.open()
+        meterRegistry?.apply {
+            val tags = context.toEventTags()
+            val scenarioName = context.scenarioName
+            val stepName = context.stepName
+            messageCounter = counter(scenarioName, stepName, "$meterPrefix-saving-messages", tags).report {
+                display(
+                    format = "attempted req %,.0f",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 0,
+                    Counter::count
+                )
+            }
+            timeToResponse = timer(scenarioName, stepName, "$meterPrefix-time-to-response", tags)
+            successCounter = counter(scenarioName, stepName, "$meterPrefix-successes", tags).report {
+                display(
+                    format = "\u2713 %,.0f successes",
+                    severity = ReportMessageSeverity.INFO,
+                    row = 0,
+                    column = 2,
+                    Counter::count
+                )
+            }
+        }
     }
 
     override suspend fun execute(context: StepContext<I, GraphiteSaveResult<I>>) {
         val input = context.receive()
         val messages = messageFactory(context, input)
+        eventsLogger?.debug("$eventPrefix.saving-messages", messages.size, tags = context.toEventTags())
+        messageCounter?.increment(messages.size.toDouble())
 
-        val metrics = graphiteSaveMessageClient.execute(messages, context.toEventTags())
+        val requestStart = System.nanoTime()
+        client.send(messages)
+        val timeToResponseNano = System.nanoTime() - requestStart
+        val timeToResponse = Duration.ofNanos(timeToResponseNano)
 
-        context.send(GraphiteSaveResult(input, messages, metrics))
+        eventsLogger?.info("${eventPrefix}.time-to-response", timeToResponse, tags = context.toEventTags())
+        eventsLogger?.info("${eventPrefix}.successes", messages.size, tags = context.toEventTags())
+        successCounter?.increment(messages.size.toDouble())
+        this.timeToResponse?.record(timeToResponseNano, TimeUnit.NANOSECONDS)
+
+        context.send(
+            GraphiteSaveResult(
+                input, GraphiteSaveQueryMeters(
+                    timeToResult = timeToResponse,
+                    savedMessages = messages.size
+                )
+            )
+        )
     }
 
     override suspend fun stop(context: StepStartStopContext) {
-        graphiteSaveMessageClient.stop(context)
+        meterRegistry?.apply {
+            messageCounter = null
+            timeToResponse = null
+            successCounter = null
+        }
+        tryAndLog(log) {
+            client.close()
+        }
+    }
+
+    companion object {
+        private val log = logger()
     }
 }

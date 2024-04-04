@@ -2,38 +2,32 @@ package io.qalipsis.plugins.graphite.poll
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.each
+import assertk.assertions.containsAll
 import assertk.assertions.hasSize
-import assertk.assertions.isBetween
+import assertk.assertions.index
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
-import assertk.assertions.isNotNull
 import assertk.assertions.prop
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import io.aerisconsulting.catadioptre.coInvokeInvisible
+import com.fasterxml.jackson.module.kotlin.kotlinModule
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
-import io.ktor.client.request.get
-import io.ktor.http.HttpStatusCode
-import io.netty.channel.nio.NioEventLoopGroup
-import io.qalipsis.api.events.Event
-import io.qalipsis.api.events.EventLevel
-import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.plugins.graphite.Constants
-import io.qalipsis.plugins.graphite.poll.model.GraphiteQuery
-import io.qalipsis.plugins.graphite.poll.model.events.GraphiteEventsClient
-import io.qalipsis.plugins.graphite.poll.model.events.model.GraphiteProtocol
-import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTime
-import io.qalipsis.plugins.graphite.render.model.GraphiteMetricsTimeUnit
-import io.qalipsis.plugins.graphite.render.service.GraphiteRenderApiService
+import io.qalipsis.plugins.graphite.client.GraphiteClient
+import io.qalipsis.plugins.graphite.client.GraphiteRecord
+import io.qalipsis.plugins.graphite.client.GraphiteTcpClient
+import io.qalipsis.plugins.graphite.client.codecs.PlaintextEncoder
+import io.qalipsis.plugins.graphite.poll.catadioptre.poll
+import io.qalipsis.plugins.graphite.search.DataPoints
+import io.qalipsis.plugins.graphite.search.GraphiteQuery
+import io.qalipsis.plugins.graphite.search.GraphiteRenderApiService
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
+import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -41,11 +35,18 @@ import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.testcontainers.containers.BindMode
 import org.testcontainers.containers.GenericContainer
-import org.testcontainers.containers.wait.strategy.HostPortWaitStrategy
+import org.testcontainers.containers.wait.strategy.HttpWaitStrategy
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
+import java.net.URI
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Clock
 import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.util.concurrent.TimeUnit
 
 @WithMockk
 @Testcontainers
@@ -55,122 +56,183 @@ internal class GraphiteIterativeReaderIntegrationTest {
     @RegisterExtension
     val testDispatcherProvider = TestDispatcherProvider()
 
+    val blockingHttpClient =
+        java.net.http.HttpClient.newBuilder().version(java.net.http.HttpClient.Version.HTTP_1_1).build()
+
     private lateinit var renderApiService: GraphiteRenderApiService
 
-    private lateinit var graphiteEventsClient: GraphiteEventsClient
+    private lateinit var graphiteClient: GraphiteClient<GraphiteRecord>
 
     private lateinit var reader: GraphiteIterativeReader
 
-    private val httpClient = HttpClient(CIO)
+    private var graphitePlaintextPort: Int = -1
 
-    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var httpPort: Int = -1
 
     @BeforeAll
-    @Timeout(25)
     fun setUpAll() = testDispatcherProvider.run {
-        val serverUrl = "http://localhost:${CONTAINER.getMappedPort(Constants.HTTP_PORT)}"
-        while (httpClient.get("${serverUrl}/render").status != HttpStatusCode.OK) {
-            delay(500)
-        }
+        graphitePlaintextPort = CONTAINER.getMappedPort(Constants.GRAPHITE_PLAINTEXT_PORT)
+        httpPort = CONTAINER.getMappedPort(Constants.HTTP_PORT)
 
-        graphiteEventsClient = GraphiteEventsClient(
-            protocolType = GraphiteProtocol.PLAINTEXT,
-            host = "localhost",
-            port = CONTAINER.getMappedPort(Constants.GRAPHITE_PLAINTEXT_PORT),
-            coroutineScope = coroutineScope,
-            workerGroup = NioEventLoopGroup()
-        ).apply {
-            open()
-        }
-
-        log.info { "HTTP path for Graphite: $serverUrl" }
         renderApiService = GraphiteRenderApiService(
-            serverUrl = serverUrl,
-            objectMapper = jacksonObjectMapper(),
-            httpClient = httpClient,
-            baseAuth = null
+            serverUrl = "http://localhost:$httpPort/render",
+            objectMapper = jacksonObjectMapper().registerModules(kotlinModule {
+                configure(KotlinFeature.NullToEmptyCollection, true)
+                configure(KotlinFeature.NullToEmptyMap, true)
+                configure(KotlinFeature.NullIsSameAsDefault, true)
+            }, JavaTimeModule()),
+            httpClient = HttpClient(CIO)
         )
+
+        graphiteClient = GraphiteTcpClient(
+            host = "localhost",
+            port = graphitePlaintextPort,
+            encoders = listOf(PlaintextEncoder())
+        )
+        graphiteClient.open()
     }
 
     @AfterAll
     internal fun tearDownAll() = testDispatcherProvider.run {
-        graphiteEventsClient.close()
+        graphiteClient.close()
         renderApiService.close()
     }
 
     @Test
-    @Timeout(1000)
-    fun `should save data and poll them`() = testDispatcherProvider.run {
+    @Timeout(20)
+    fun `should save data with and without tags and poll them`() = testDispatcherProvider.run {
         // given
-        val graphiteQuery = GraphiteQuery("exact.key.*").from(
-            GraphiteMetricsTime(
-                amount = -1,
-                unit = GraphiteMetricsTimeUnit.MINUTES
-            )
-        ).noNullPoints(true)
+        val graphiteQuery = GraphiteQuery("qalipsis.test.key.**")
+            .withTargetFromSeriesByTag("name", "~qalipsis.test.key.*")
+            .from(Instant.now().minusSeconds(600))
+
         val pollStatement = GraphitePollStatement(graphiteQuery)
         reader = GraphiteIterativeReader(
             clientFactory = { renderApiService },
             pollStatement = pollStatement,
             pollDelay = Duration.ofMillis(300),
-            coroutineScope = this,
-            eventsLogger = null,
-            meterRegistry = null
+            coroutineScope = this
         )
         reader.init()
 
         // when
-        reader.coInvokeInvisible<Unit>("poll", renderApiService)
+        reader.poll()
 
         // then
         assertThat(reader.next()).prop(GraphiteQueryResult::results).isEmpty()
 
-
-
         // when
-        graphiteEventsClient.publish((1..50).map { Event("exact.key.$it", EventLevel.INFO, value = it) })
-        //FIXME Find a solution to remove the delay
-        //Here is a part of graphite documentation, describing the timestamp:
-        //https://graphite.readthedocs.io/en/latest/terminology.html
-        delay(10000)
-        reader.coInvokeInvisible<Unit>("poll", renderApiService) // Should only fetch the first record.
+        val start = Clock.tickSeconds(ZoneId.systemDefault()).instant().minusSeconds(400)
+        graphiteClient.send(((0L..50).map { index ->
+            val keyIndex = index / 3 // We save every 3 values on the same key.
+            GraphiteRecord("qalipsis.test.key.$keyIndex", start.plusSeconds(index), index)
+        }))
+        await.atMost(10, TimeUnit.SECONDS).until {
+            blockingHttpClient.send(
+                HttpRequest.newBuilder()
+                    .GET()
+                    .uri(URI.create("http://localhost:$httpPort/metrics/index.json"))
+                    .build(), HttpResponse.BodyHandlers.ofString()
+            ).body().run {
+                contains("qalipsis.test.key.16") && contains("qalipsis.test.key.0")
+            }
+        }
+
+        reader.poll()
 
         // then
         assertThat(reader.next()).all {
             prop(GraphiteQueryResult::results).all {
-                hasSize(50)
-                each { it -> it.transform { it.dataPoints[0].value }.isNotNull().isBetween(1.0, 50.0) }
+                hasSize(17)
+                (0L..16).sortedBy { "$it" } // The keys have to be sorted by string, not by numbers.
+                    .forEachIndexed { pointIndex, keyIndex ->
+                        index(pointIndex).all {
+                            prop(DataPoints::target).isEqualTo("qalipsis.test.key.$keyIndex")
+                            prop(DataPoints::tags).isEqualTo(mapOf("name" to "qalipsis.test.key.$keyIndex"))
+                            prop(DataPoints::dataPoints).all {
+                                hasSize(3)
+                                index(0).all {
+                                    prop(DataPoints.DataPoint::value).isEqualTo(keyIndex.toDouble() * 3)
+                                    prop(DataPoints.DataPoint::timestamp).isEqualTo(start.plusSeconds(keyIndex * 3))
+                                }
+                                index(1).all {
+                                    prop(DataPoints.DataPoint::value).isEqualTo(keyIndex.toDouble() * 3 + 1)
+                                    prop(DataPoints.DataPoint::timestamp)
+                                        .isEqualTo(start.plusSeconds(keyIndex * 3 + 1))
+                                }
+                                index(2).all {
+                                    prop(DataPoints.DataPoint::value).isEqualTo(keyIndex.toDouble() * 3 + 2)
+                                    prop(DataPoints.DataPoint::timestamp)
+                                        .isEqualTo(start.plusSeconds(keyIndex * 3 + 2))
+                                }
+                            }
+                        }
+                    }
             }
             prop(GraphiteQueryResult::meters).all {
-                prop(GraphiteQueryMeters::fetchedRecords).isEqualTo(50)
+                prop(GraphiteQueryMeters::fetchedRecords).isEqualTo(17)
                 prop(GraphiteQueryMeters::timeToResult).isGreaterThan(Duration.ZERO)
             }
         }
 
-        // when
-        graphiteEventsClient.publish((51..100).map { Event("exact.key.$it", EventLevel.INFO, value = it) })
-        delay(2000)
-        reader.coInvokeInvisible<Unit>("poll", renderApiService)
+        // when sending records with tags
+        graphiteClient.send(((51L..98).map { index ->
+            val keyIndex = index / 3 // We save every 3 values on the same key.
+            GraphiteRecord(
+                "qalipsis.test.key.$keyIndex",
+                start.plusSeconds(index),
+                index,
+                mapOf("tag-1" to "$keyIndex", "tag-2" to "${2 * keyIndex}")
+            )
+        }))
 
-        // then
-        assertThat(reader.next()).all {
-            prop(GraphiteQueryResult::results).hasSize(50)
-            prop(GraphiteQueryResult::meters).all {
-                prop(GraphiteQueryMeters::fetchedRecords).isEqualTo(50)
-                prop(GraphiteQueryMeters::timeToResult).isGreaterThan(Duration.ZERO)
-            }
+        // Wait until the tags are properly created, since the operation is asynchronous.
+        await.atMost(10, TimeUnit.SECONDS).until {
+            val savedTagsResponse = blockingHttpClient.send(
+                HttpRequest.newBuilder()
+                    .GET()
+                    .uri(URI.create("http://localhost:$httpPort/tags/findSeries?pretty=1&expr=name=~qalipsis.test.key.[17,34]"))
+                    .build(), HttpResponse.BodyHandlers.ofString()
+            )
+            savedTagsResponse.body() != "[]"
         }
-
-        // when
-        reader.coInvokeInvisible<Unit>("poll", renderApiService) // Should fetch no record.
+        reader.poll()
 
         // then
         assertThat(reader.next()).all {
             prop(GraphiteQueryResult::results).all {
-                hasSize(0)
+                hasSize(16)
+                (17L..32).forEachIndexed { pointIndex, keyIndex ->
+                    index(pointIndex).all {
+                        prop(DataPoints::target).isEqualTo("qalipsis.test.key.$keyIndex;tag-1=$keyIndex;tag-2=${2 * keyIndex}")
+                        prop(DataPoints::tags).all {
+                            hasSize(3)
+                            containsAll(
+                                "name" to "qalipsis.test.key.$keyIndex",
+                                "tag-1" to "$keyIndex",
+                                "tag-2" to "${2 * keyIndex}"
+                            )
+                        }
+                        prop(DataPoints::dataPoints).all {
+                            hasSize(3)
+                            index(0).all {
+                                prop(DataPoints.DataPoint::value).isEqualTo(keyIndex.toDouble() * 3)
+                                prop(DataPoints.DataPoint::timestamp).isEqualTo(start.plusSeconds(keyIndex * 3))
+                            }
+                            index(1).all {
+                                prop(DataPoints.DataPoint::value).isEqualTo(keyIndex.toDouble() * 3 + 1)
+                                prop(DataPoints.DataPoint::timestamp).isEqualTo(start.plusSeconds(keyIndex * 3 + 1))
+                            }
+                            index(2).all {
+                                prop(DataPoints.DataPoint::value).isEqualTo(keyIndex.toDouble() * 3 + 2)
+                                prop(DataPoints.DataPoint::timestamp).isEqualTo(start.plusSeconds(keyIndex * 3 + 2))
+                            }
+                        }
+                    }
+                }
             }
             prop(GraphiteQueryResult::meters).all {
-                prop(GraphiteQueryMeters::fetchedRecords).isEqualTo(0)
+                prop(GraphiteQueryMeters::fetchedRecords).isEqualTo(16)
                 prop(GraphiteQueryMeters::timeToResult).isGreaterThan(Duration.ZERO)
             }
         }
@@ -178,21 +240,25 @@ internal class GraphiteIterativeReaderIntegrationTest {
         reader.stop(relaxedMockk())
     }
 
-    private companion object {
 
-        val log = logger()
+    companion object {
 
         @Container
         @JvmStatic
-        val CONTAINER = GenericContainer<Nothing>(
+        private val CONTAINER = GenericContainer<Nothing>(
             DockerImageName.parse(Constants.GRAPHITE_IMAGE_NAME)
         ).apply {
-            setWaitStrategy(HostPortWaitStrategy())
             withExposedPorts(Constants.HTTP_PORT, Constants.GRAPHITE_PLAINTEXT_PORT, Constants.GRAPHITE_PICKLE_PORT)
-            withAccessToHost(true)
+            setWaitStrategy(HttpWaitStrategy().forPort(Constants.HTTP_PORT).forPath("/render").forStatusCode(200))
             withStartupTimeout(Duration.ofSeconds(60))
+
             withCreateContainerCmdModifier { it.hostConfig!!.withMemory((512 * 1e20).toLong()).withCpuCount(2) }
             withClasspathResourceMapping("carbon.conf", Constants.CARBON_CONFIG_PATH, BindMode.READ_ONLY)
+            withClasspathResourceMapping(
+                "storage-schemas.conf",
+                Constants.STORAGE_SCHEMA_CONFIG_PATH,
+                BindMode.READ_ONLY
+            )
         }
     }
 }

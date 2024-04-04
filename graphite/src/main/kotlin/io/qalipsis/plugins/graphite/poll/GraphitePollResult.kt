@@ -16,7 +16,7 @@
 
 package io.qalipsis.plugins.graphite.poll
 
-import io.qalipsis.plugins.graphite.render.model.GraphiteRenderApiJsonResponse
+import io.qalipsis.plugins.graphite.search.DataPoints
 
 /**
  * Wrapper for the result of poll from Graphite.
@@ -27,11 +27,11 @@ import io.qalipsis.plugins.graphite.render.model.GraphiteRenderApiJsonResponse
  * @author Teyyihan Aksu
  */
 class GraphitePollResult(
-    val results: List<GraphiteRenderApiJsonResponse>,
+    val results: List<DataPoints>,
     val meters: GraphiteQueryMeters
-): Iterable<GraphiteRenderApiJsonResponse> {
+) : Iterable<DataPoints> {
 
-    override fun iterator(): Iterator<GraphiteRenderApiJsonResponse> {
+    override fun iterator(): Iterator<DataPoints> {
         return results.iterator()
     }
 }
