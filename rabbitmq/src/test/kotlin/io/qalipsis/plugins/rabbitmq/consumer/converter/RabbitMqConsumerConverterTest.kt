@@ -25,13 +25,13 @@ import assertk.assertions.isNotNull
 import com.rabbitmq.client.AMQP
 import com.rabbitmq.client.Delivery
 import com.rabbitmq.client.Envelope
-import io.micrometer.core.instrument.Counter
 import io.mockk.coEvery
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.verify
 import io.qalipsis.api.context.StepOutput
 import io.qalipsis.api.messaging.deserializer.MessageDeserializer
+import io.qalipsis.api.meters.Counter
 import io.qalipsis.plugins.rabbitmq.consumer.RabbitMqConsumerRecord
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.coroutines.TestDispatcherProvider

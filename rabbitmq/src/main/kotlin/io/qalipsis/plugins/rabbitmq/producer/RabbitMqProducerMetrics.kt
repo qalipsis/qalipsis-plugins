@@ -16,7 +16,7 @@
 
 package io.qalipsis.plugins.rabbitmq.producer
 
-import io.micrometer.core.instrument.Counter
+import io.qalipsis.api.meters.Counter
 
 /**
  * Wrapper for the meters of the RabbitMQ producer operations.

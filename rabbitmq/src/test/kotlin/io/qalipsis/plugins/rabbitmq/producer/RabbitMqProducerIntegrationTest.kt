@@ -25,9 +25,9 @@ import com.rabbitmq.client.Channel
 import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.DeliverCallback
 import com.rabbitmq.client.Delivery
-import io.micrometer.core.instrument.Counter
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.slot
+import io.qalipsis.api.meters.Counter
 import io.qalipsis.plugins.rabbitmq.Constants.DOCKER_IMAGE
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
