@@ -16,7 +16,7 @@
 
 package io.qalipsis.plugins.jakarta.producer
 
-import io.micrometer.core.instrument.Counter
+import io.qalipsis.api.meters.Counter
 
 /**
  * Wrapper for the meters of the Jakarta producer operations.
