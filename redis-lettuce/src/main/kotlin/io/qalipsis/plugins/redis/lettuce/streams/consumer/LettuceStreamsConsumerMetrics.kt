@@ -16,7 +16,7 @@
 
 package io.qalipsis.plugins.redis.lettuce.streams.consumer
 
-import io.micrometer.core.instrument.Counter
+import io.qalipsis.api.meters.Counter
 
 /**
  * Records the metrics for the Lettuce streams consumer.
