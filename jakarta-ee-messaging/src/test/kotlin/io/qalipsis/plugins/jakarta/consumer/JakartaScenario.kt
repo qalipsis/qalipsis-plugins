@@ -52,17 +52,16 @@ internal object JakartaScenario {
                 queues("queue-1")
                 queueConnection { queueConnectionFactory.createQueueConnection() }
             }.deserialize(JakartaJsonDeserializer(User::class))
-            .innerJoin(
-                using = { it.value.record.value.id },
-                on = {
+            .innerJoin()
+            .using { it.value.record.value.id }
+            .on {
                     it.jakarta()
                         .consume {
                             queues("queue-2")
                             queueConnection { queueConnectionFactory.createQueueConnection() }
                         }.deserialize(JakartaJsonDeserializer(User::class))
-                },
-                having = { it.value.record.value.id }
-            )
+            }
+            .having { it.value.record.value.id }
             .filterNotNull()
             .map { joinResult -> joinResult.second.record }
             .onEach {

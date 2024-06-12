@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.qalipsis.plugins.jakarta.Constants
 import jakarta.jms.Message
@@ -110,7 +111,16 @@ internal class JakartaJsonDeserializerIntegrationTest {
 
 
     companion object {
-        private val mapper = JsonMapper().registerModule(JavaTimeModule()).registerModule(KotlinModule())
+        private val mapper = JsonMapper().registerModule(JavaTimeModule()).registerModule(
+            KotlinModule.Builder()
+                .withReflectionCacheSize(512)
+                .configure(KotlinFeature.NullToEmptyCollection, false)
+                .configure(KotlinFeature.NullToEmptyMap, false)
+                .configure(KotlinFeature.NullIsSameAsDefault, false)
+                .configure(KotlinFeature.SingletonSupport, false)
+                .configure(KotlinFeature.StrictNullChecks, false)
+                .build()
+        )
 
         @Container
         @JvmStatic

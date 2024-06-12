@@ -19,6 +19,7 @@ package io.qalipsis.plugins.jakarta.deserializer
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.micronaut.jackson.modules.BeanIntrospectionModule
 import io.qalipsis.plugins.jakarta.JakartaDeserializer
@@ -43,7 +44,16 @@ class JakartaJsonDeserializer<V : Any>(
     init {
         mapper.registerModule(BeanIntrospectionModule())
         mapper.registerModule(JavaTimeModule())
-        mapper.registerModule(KotlinModule())
+        mapper.registerModule(
+            KotlinModule.Builder()
+                .withReflectionCacheSize(512)
+                .configure(KotlinFeature.NullToEmptyCollection, false)
+                .configure(KotlinFeature.NullToEmptyMap, false)
+                .configure(KotlinFeature.NullIsSameAsDefault, false)
+                .configure(KotlinFeature.SingletonSupport, false)
+                .configure(KotlinFeature.StrictNullChecks, false)
+                .build()
+        )
         mapper.registerModule(Jdk8Module())
 
         mapperConfiguration?.let {
