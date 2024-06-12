@@ -23,6 +23,11 @@ plugins {
 
 description = "QALIPSIS plugin for the Jackson Project"
 
+kapt {
+    correctErrorTypes = true
+    useBuildCache = false
+}
+
 allOpen {
     annotations(
         "io.micronaut.aop.Around",

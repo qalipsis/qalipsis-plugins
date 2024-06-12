@@ -22,7 +22,6 @@ import assertk.assertions.*
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import io.qalipsis.api.scenario.StepSpecificationRegistry
 import io.qalipsis.api.scenario.TestScenarioFactory
-import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.Step
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepCreationContextImpl
