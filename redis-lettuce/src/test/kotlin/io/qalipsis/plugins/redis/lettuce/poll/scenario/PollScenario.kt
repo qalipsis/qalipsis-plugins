@@ -88,9 +88,9 @@ object PollScenario {
             }.flatten()
             .logErrors()
             .map { UserEvent(it.value, LocalDateTime.ofEpochSecond(it.recordTimestamp, 0, ZoneOffset.UTC)) }
-            .innerJoin(
-                using = { it.value.username },
-                on = {
+            .innerJoin()
+            .using { it.value.username }
+            .on {
                     it.redisLettuce()
                         .pollSscan {
                             name = "poll.sscan.out"
@@ -108,9 +108,8 @@ object PollScenario {
                         }
                         .flatten()
                         .map { UserEvent(it.value, LocalDateTime.ofEpochSecond(it.recordTimestamp, 0, ZoneOffset.UTC)) }
-                },
-                having = { it.value.username }
-            )
+            }
+            .having { it.value.username }
             .logErrors()
             .onEach { receivedMessages.add(it!!.second.username) }
             .onEach { println(it) }

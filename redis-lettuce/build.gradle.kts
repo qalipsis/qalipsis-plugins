@@ -31,6 +31,11 @@ tasks.withType<KotlinCompile> {
     }
 }
 
+kapt {
+    correctErrorTypes = true
+    useBuildCache = false
+}
+
 allOpen {
     annotations(
         "io.micronaut.aop.Around",
