@@ -57,9 +57,9 @@ internal object RabbitMqScenario {
             }
             concurrency(2)
         }.deserialize(MessageJsonDeserializer(User::class))
-            .innerJoin(
-                using = { it.value.value?.id },
-                on = {
+            .innerJoin()
+            .using { it.value.value?.id }
+            .on {
                     it.rabbitmq().consume {
                         queue("user-deserializer")
                         connection {
@@ -70,9 +70,8 @@ internal object RabbitMqScenario {
                         }
                         concurrency(2)
                     }.deserialize(MessageJsonDeserializer(User::class))
-                },
-                having = { it.value.value?.id }
-            )
+            }
+            .having { it.value.value?.id }
             .filterNotNull()
             .map { joinResult -> joinResult.second.value }
             .onEach {
