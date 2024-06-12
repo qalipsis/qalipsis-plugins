@@ -22,6 +22,11 @@ plugins {
 
 description = "QALIPSIS plugin for R2DBC using jasync-SQL"
 
+kapt {
+    correctErrorTypes = true
+    useBuildCache = false
+}
+
 allOpen {
     annotations(
         "io.micronaut.aop.Around",

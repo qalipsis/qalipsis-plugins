@@ -81,34 +81,33 @@ object PollScenario {
             }.flatten()
             .logErrors()
             .map { UserEvent(it.value["username"] as String, it.value["timestamp"] as LocalDateTime) }
-            .innerJoin(
-                    using = { it.value.username },
-                    on = {
-                        it.r2dbcJasync()
-                            .poll {
-                                name = "poll.out"
-                                protocol(protocol)
-                                connection {
-                                    port = dbPort
-                                    username = dbUsername
-                                    password = dbPassword
-                                    database = dbName
-                                }
-                                query("""select username, "timestamp" from buildingentries where action = ? order by "timestamp"""")
-                                parameters("OUT")
-                                pollDelay(Duration.ofSeconds(1))
-                            }
-                            .flatten()
-                            .logErrors()
-                            .map {
-                                UserEvent(it.value["username"] as String, it.value["timestamp"] as LocalDateTime)
-                            }
-                            .configure {
-                                name = "poll.out.output"
-                            }
-                    },
-                    having = { it.value.username }
-            )
+            .innerJoin()
+            .using { it.value.username }
+            .on {
+                it.r2dbcJasync()
+                    .poll {
+                        name = "poll.out"
+                        protocol(protocol)
+                        connection {
+                            port = dbPort
+                            username = dbUsername
+                            password = dbPassword
+                            database = dbName
+                        }
+                        query("""select username, "timestamp" from buildingentries where action = ? order by "timestamp"""")
+                        parameters("OUT")
+                        pollDelay(Duration.ofSeconds(1))
+                    }
+                    .flatten()
+                    .logErrors()
+                    .map {
+                        UserEvent(it.value["username"] as String, it.value["timestamp"] as LocalDateTime)
+                    }
+                    .configure {
+                        name = "poll.out.output"
+                    }
+            }
+            .having { it.value.username }
             .filterNotNull()
             .map {
                 it.first.username to Duration.between(it.first.timestamp, it.second.timestamp)
