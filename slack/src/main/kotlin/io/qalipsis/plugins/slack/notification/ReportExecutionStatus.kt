@@ -17,6 +17,11 @@
 package io.qalipsis.plugins.slack.notification
 
 import io.qalipsis.api.report.ExecutionStatus
+import io.qalipsis.plugins.slack.notification.ReportExecutionStatus.ABORTED
+import io.qalipsis.plugins.slack.notification.ReportExecutionStatus.ALL
+import io.qalipsis.plugins.slack.notification.ReportExecutionStatus.FAILED
+import io.qalipsis.plugins.slack.notification.ReportExecutionStatus.SUCCESSFUL
+import io.qalipsis.plugins.slack.notification.ReportExecutionStatus.WARNING
 
 /**
  * Report Status for when to trigger notifications.

@@ -38,9 +38,9 @@ import io.mockk.spyk
 import io.qalipsis.api.report.CampaignReport
 import io.qalipsis.api.report.ExecutionStatus
 import io.qalipsis.api.sync.asSuspended
+import io.qalipsis.plugins.slack.notification.ReportExecutionStatus
 import io.qalipsis.plugins.slack.notification.SlackNotificationConfiguration
 import io.qalipsis.plugins.slack.notification.SlackNotificationPublisher
-import io.qalipsis.plugins.slack.notification.ReportExecutionStatus
 import io.qalipsis.plugins.slack.notification.catadioptre.asyncSlackMethodsClient
 import io.qalipsis.plugins.slack.notification.catadioptre.postChatMessageRequest
 import io.qalipsis.test.coroutines.TestDispatcherProvider
