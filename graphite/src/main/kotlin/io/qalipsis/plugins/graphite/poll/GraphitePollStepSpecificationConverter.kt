@@ -20,8 +20,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.kotlinModule
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
 import io.qalipsis.api.Executors
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.events.EventsLogger
@@ -38,7 +38,7 @@ import io.qalipsis.plugins.graphite.search.GraphiteQuery
 import io.qalipsis.plugins.graphite.search.GraphiteRenderApiService
 import jakarta.inject.Named
 import kotlinx.coroutines.CoroutineScope
-import java.util.Base64
+import java.util.*
 
 /**
  * [StepSpecificationConverter] from [GraphitePollStepSpecificationImpl] to [GraphiteIterativeReader] for a data source.

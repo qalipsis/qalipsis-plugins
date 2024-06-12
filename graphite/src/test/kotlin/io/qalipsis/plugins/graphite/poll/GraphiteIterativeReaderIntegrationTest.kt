@@ -13,8 +13,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.kotlinModule
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
 import io.qalipsis.plugins.graphite.Constants
 import io.qalipsis.plugins.graphite.client.GraphiteClient
 import io.qalipsis.plugins.graphite.client.GraphiteRecord
