@@ -23,10 +23,10 @@ import io.qalipsis.test.mockk.WithMockk
 import org.apache.activemq.command.ActiveMQTopic
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.assertThrows
 import java.beans.ConstructorProperties
 import java.io.Serializable
 import javax.jms.Session
-import org.junit.jupiter.api.assertThrows
 
 
 /**

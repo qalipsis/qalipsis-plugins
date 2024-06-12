@@ -22,7 +22,6 @@ import assertk.assertions.*
 import io.aerisconsulting.catadioptre.getProperty
 import io.qalipsis.api.scenario.StepSpecificationRegistry
 import io.qalipsis.api.scenario.TestScenarioFactory
-import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.plugins.jms.jms

@@ -52,17 +52,16 @@ internal object JmsScenario {
                 queues("queue-1")
                 queueConnection { queueConnection }
             }.deserialize(JmsJsonDeserializer(User::class))
-            .innerJoin(
-                using = { it.value.record.value.id },
-                on = {
+            .innerJoin()
+            .using { it.value.record.value.id }
+            .on {
                     it.jms()
                         .consume {
                             queues("queue-2")
                             queueConnection { queueConnection }
                         }.deserialize(JmsJsonDeserializer(User::class))
-                },
-                having = { it.value.record.value.id }
-            )
+            }
+            .having { it.value.record.value.id }
             .filterNotNull()
             .map { joinResult -> joinResult.second.record }
             .onEach {
