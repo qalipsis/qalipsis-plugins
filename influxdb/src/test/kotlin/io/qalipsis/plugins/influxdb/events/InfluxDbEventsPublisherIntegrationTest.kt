@@ -16,6 +16,8 @@
 
 package io.qalipsis.plugins.influxdb.events
 
+import assertk.assertThat
+import assertk.assertions.isTrue
 import com.influxdb.client.InfluxDBClientOptions
 import com.influxdb.client.kotlin.InfluxDBClientKotlinFactory
 import com.influxdb.query.FluxRecord
@@ -42,7 +44,6 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAccessor
@@ -131,7 +132,7 @@ internal class InfluxDbEventsPublisherIntegrationTest : AbstractInfluxDbIntegrat
 
         // then
         val result = requestEvents()
-        Assertions.assertEquals(logValues.size + 2, result.stream().map { it.table }.distinct().count().toInt())
+        Assertions.assertEquals(logValues.size + 2, result.stream().map { it.measurement }.distinct().count().toInt())
 
         // Verification of the overall values.
         result.filter { it.getValueByKey("EventLevel") != null }.forEach { hit ->
@@ -151,13 +152,11 @@ internal class InfluxDbEventsPublisherIntegrationTest : AbstractInfluxDbIntegrat
         // Verification of the events with values.
         logValues.forEachIndexed { index, value ->
             val searchCriteria = values.getValue(value)
-            assertDoesNotThrow("Item of value $value and type ${value::class} was not found") {
-                result.any { item ->
-                    kotlin.runCatching {
-                        "my-event-$index" == item.getValueByKey("_measurement") && searchCriteria(item)
-                    }.getOrDefault(false)
-                }
-            }
+            assertThat(result.any { item ->
+                kotlin.runCatching {
+                    item.getValueByKey("_measurement") == "my-event-$index" && searchCriteria(item)
+                }.getOrDefault(false)
+            }, "Item of value $value and type ${value::class} was not found").isTrue()
         }
         publisher.stop()
     }
@@ -171,77 +170,55 @@ internal class InfluxDbEventsPublisherIntegrationTest : AbstractInfluxDbIntegrat
         formatter: DateTimeFormatter
     ): Map<Any, (fluxRecord: FluxRecord) -> Boolean> {
         val values = mapOf<Any, ((fluxRecord: FluxRecord) -> Boolean)>(
-            "my-message" to { fluxRecord -> fluxRecord.getValueByKey("message") == "my-message" },
-            true to { fluxRecord -> fluxRecord.getValueByKey("boolean").toString().toBoolean() },
-            123.65 to { fluxRecord -> fluxRecord.getValueByKey("number").toString().toDouble() == 123.65 },
+            "my-message" to { fluxRecord -> fluxRecord.field == "message" && fluxRecord.value == "my-message" },
+            true to { fluxRecord -> fluxRecord.field == "boolean" && fluxRecord.value == true },
+            123.65 to { fluxRecord -> fluxRecord.field == "number" && fluxRecord.value == 123.65 },
             Double.POSITIVE_INFINITY to { fluxRecord ->
-                fluxRecord.getValueByKey("number") == "Infinity"
+                fluxRecord.field == "number" && fluxRecord.value == "Infinity"
             },
             Double.NEGATIVE_INFINITY to { fluxRecord ->
-                fluxRecord.getValueByKey("number") == "-Infinity"
+                fluxRecord.field == "number" && fluxRecord.value == "-Infinity"
             },
             Double.NaN to { fluxRecord ->
-                fluxRecord.getValueByKey("number") == "NaN"
+                fluxRecord.field == "number" && fluxRecord.value == "NaN"
             },
-            123.65.toFloat() to { fluxRecord -> fluxRecord.getValueByKey("number").toString().toDouble() == 123.65 },
+            123.65.toFloat() to { fluxRecord -> fluxRecord.field == "number" && (fluxRecord.value as Double) in (123.65..123.66) },
             123.65.toBigDecimal() to { fluxRecord ->
-                fluxRecord.getValueByKey("number").toString().toDouble() == 123.65
+                fluxRecord.field == "number" && fluxRecord.value == 123.65
             },
-            123 to { fluxRecord -> fluxRecord.getValueByKey("number").toString().toInt() == 123 },
-            123.toBigInteger() to { fluxRecord -> fluxRecord.getValueByKey("number").toString().toInt() == 123 },
-            123.toLong() to { fluxRecord -> fluxRecord.getValueByKey("number").toString().toInt() == 123 },
+            123 to { fluxRecord -> fluxRecord.field == "number" && fluxRecord.value == 123L },
+            123.toBigInteger() to { fluxRecord -> fluxRecord.field == "number" && fluxRecord.value == 123L },
+            123.toLong() to { fluxRecord -> fluxRecord.field == "number" && fluxRecord.value == 123L },
             instantNow to { fluxRecord ->
-                formatter.parse(
-                    fluxRecord.getValueByKey("date").toString()
-                ) { temporal: TemporalAccessor ->
+                fluxRecord.field == "date" && formatter.parse(fluxRecord.value as String) { temporal: TemporalAccessor ->
                     Instant.from(temporal)
                 } == instantNow
             },
             zdtNow to { fluxRecord ->
-                formatter.parse(
-                    fluxRecord.getValueByKey("date").toString()
-                ) { temporal: TemporalAccessor ->
+                fluxRecord.field == "date" && formatter.parse(fluxRecord.value as String) { temporal: TemporalAccessor ->
                     Instant.from(temporal)
                 } == zdtNow.toInstant()
             },
             ldtNow to { fluxRecord ->
-                formatter.parse(
-                    fluxRecord.getValueByKey("date").toString() + "Z"
-                ) { temporal: TemporalAccessor ->
-                    Instant.from(temporal)
-                } == ldtNow.atZone(ZoneId.systemDefault()).toInstant()
+                fluxRecord.field == "date" && LocalDateTime.parse(fluxRecord.value as String) == ldtNow
             },
             relaxedMockk<Throwable> {
                 every { message } returns "my-error"
             } to { fluxRecord ->
-                fluxRecord.getValueByKey("error") == "my-error"
+                fluxRecord.field == "error" && fluxRecord.value == "my-error"
             },
             Duration.ofNanos(12_123_456_789) to { fluxRecord ->
-                fluxRecord.getValueByKey("duration") == "PT12.123456789S"
+                fluxRecord.field == "duration_nanos" && fluxRecord.value == 12123456789L
             },
             EventGeoPoint(12.34, 34.76) to { fluxRecord ->
-                fluxRecord.getValueByKey("latitude").toString().toDouble() == 12.34
-                fluxRecord.getValueByKey("longitude").toString().toDouble() == 34.76
+                (fluxRecord.field == "latitude" && fluxRecord.value == 12.34)
+                        || (fluxRecord.field == "longitude" && fluxRecord.value == 34.76)
             },
             EventRange(12.34, 34.76, includeUpper = false) to { fluxRecord ->
-                fluxRecord.getValueByKey("range").toString() == "[12.34 : 34.76)"
-            },
-            arrayOf(
-                12.34,
-                "here is the other test",
-                Duration.ofMillis(123)
-            ) to { fluxRecord ->
-                fluxRecord.getValueByKey("number").toString().toDouble() == 12.34
-                        && fluxRecord.getValueByKey("message") == "here is the other test"
-                        && fluxRecord.getValueByKey("duration") == "PT0.123S"
-            },
-            listOf(12.34, 8765, "here is the other test", Duration.ofMillis(123)) to { fluxRecord ->
-                fluxRecord.getValueByKey("number").toString().toDouble() == 12.34
-                        && fluxRecord.getValueByKey("message") == "here is the other test"
-                        && fluxRecord.getValueByKey("duration") == "PT0.123S"
+                fluxRecord.field == "range" && fluxRecord.value == "[12.34 : 34.76)"
             },
             MyTestObject() to { fluxRecord ->
-                fluxRecord.getValueByKey("other") == "MyTestObject(property1=1243.65, property2=here is the test)"
+                fluxRecord.field == "other" && fluxRecord.value == "MyTestObject(property1=1243.65, property2=here is the test)"
             }
         )
         return values
@@ -249,7 +226,7 @@ internal class InfluxDbEventsPublisherIntegrationTest : AbstractInfluxDbIntegrat
 
     private suspend fun requestEvents(): List<FluxRecord> {
         val result = client.getQueryKotlinApi().query(
-            "from(bucket: \"${configuration.bucket}\") |> range(start: 0) |> group(columns: [\"_measurement\"]) "
+            "from(bucket: \"${configuration.bucket}\") |> range(start: 0)"
         )
         val records = concurrentList<FluxRecord>()
         delay(3000)

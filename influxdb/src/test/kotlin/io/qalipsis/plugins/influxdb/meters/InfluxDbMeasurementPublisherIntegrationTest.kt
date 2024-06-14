@@ -110,7 +110,7 @@ internal class InfluxDbMeasurementPublisherIntegrationTest : AbstractInfluxDbInt
         val gaugeMock = mockk<Gauge> {
             every { id } returns mockk<Meter.Id> {
                 every { meterName } returns "my gauge"
-                every { tags } returns mapOf("foo" to "bar", "cafe" to "one")
+                every { tags } returns mapOf("foo" to "bar", "cafe" to "one cappuccino")
                 every { type } returns MeterType.GAUGE
                 every { scenarioName } returns "SCENARIO three"
                 every { campaignKey } returns "third CAMPAIGN 7624839"
@@ -167,7 +167,7 @@ internal class InfluxDbMeasurementPublisherIntegrationTest : AbstractInfluxDbInt
 
         //verification for counter
         val counterRecords =
-            result.filter { it.getValueByKey("_measurement") == "qalipsis.first-campaign-5473653.scenario-one.step-uno.my-counter" }
+            result.filter { it.getValueByKey("_measurement") == "qalipsis.my-counter" }
         assertEquals(counterRecords.size, 1)
         counterRecords.forEach { measurement ->
             assertThat(measurement.getValueByKey("metric_type")).isEqualTo("counter")
@@ -177,19 +177,19 @@ internal class InfluxDbMeasurementPublisherIntegrationTest : AbstractInfluxDbInt
 
         //verification for gauge
         val gaugeRecords =
-            result.filter { it.getValueByKey("_measurement") == "qalipsis.third-campaign-7624839.scenario-three.step-tres.my-gauge" }
+            result.filter { it.getValueByKey("_measurement") == "qalipsis.my-gauge" }
         assertEquals(gaugeRecords.size, 1)
         gaugeRecords.forEach { measurement ->
             assertThat(measurement.getValueByKey("metric_type")).isEqualTo("gauge")
             assertThat(measurement.getValueByKey("_field")).isEqualTo("value")
             assertThat(measurement.getValueByKey("_value")).isEqualTo(5.0)
-            assertThat(measurement.getValueByKey("cafe")).isEqualTo("\"one\"")
-            assertThat(measurement.getValueByKey("foo")).isEqualTo("\"bar\"")
+            assertThat(measurement.getValueByKey("cafe")).isEqualTo("one cappuccino")
+            assertThat(measurement.getValueByKey("foo")).isEqualTo("bar")
         }
 
         //verification for timer
         val timerRecords =
-            result.filter { it.getValueByKey("_measurement") == "qalipsis.second-campaign-47628233.scenario-two.step-dos.my-timer" }
+            result.filter { it.getValueByKey("_measurement") == "qalipsis.my-timer" }
         assertEquals(timerRecords.size, 5)
 
         assertThat(timerRecords[0].getValueByKey("_field")).isEqualTo("max")
@@ -208,7 +208,7 @@ internal class InfluxDbMeasurementPublisherIntegrationTest : AbstractInfluxDbInt
 
         //verification for summary
         val summaryRecords =
-            result.filter { it.getValueByKey("_measurement") == "qalipsis.fourth-campaign-283239.scenario-four.step-quart.my-final-summary" }
+            result.filter { it.getValueByKey("_measurement") == "qalipsis.my-final-summary" }
         assertEquals(summaryRecords.size, 5)
         assertThat(summaryRecords[0].getValueByKey("_field")).isEqualTo("count")
         assertThat(summaryRecords[0].getValueByKey("_value")).isEqualTo(70.0)
@@ -223,8 +223,8 @@ internal class InfluxDbMeasurementPublisherIntegrationTest : AbstractInfluxDbInt
 
         summaryRecords.forEach { measurement ->
             assertThat(measurement.getValueByKey("metric_type")).isEqualTo("summary")
-            assertThat(measurement.getValueByKey("dist")).isEqualTo("\"summary\"")
-            assertThat(measurement.getValueByKey("local")).isEqualTo("\"host\"")
+            assertThat(measurement.getValueByKey("dist")).isEqualTo("summary")
+            assertThat(measurement.getValueByKey("local")).isEqualTo("host")
         }
 
         publisher.stop()

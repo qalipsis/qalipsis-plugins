@@ -52,8 +52,6 @@ class InfluxdbMeasurementPublisher(
 
     private lateinit var publicationSemaphore: Semaphore
 
-    private val prefix: String = if (configuration.prefix.isNotEmpty()) "${configuration.prefix}." else ""
-
     override suspend fun init() {
         publicationLatch = SuspendedCountLatch(0)
         publicationSemaphore = Semaphore(1)
@@ -116,14 +114,11 @@ class InfluxdbMeasurementPublisher(
             }
         }
         val tags = if (meterId.tags.isNotEmpty()) {
-            meterId.tags.mapValues { (_, value) -> "\"$value\"" }
+            // Tags should be sanitized https://github.com/influxdata/influxdb/blob/master/tsdb/README.md
+            meterId.tags.mapValues { (_, value) -> value.replace(" ", "\\ ").replace(",", "\\,") }
                 .entries.joinToString(",") + ",metric_type=${meterId.type.value}"
         } else "metric_type=${meterId.type.value}"
-        return "${prefix}${meterId.campaignKey.format()}.${meterId.scenarioName.format()}.${meterId.stepName.format()}.${meterId.meterName.format()},$tags ${
-            fields.entries.joinToString(
-                ","
-            )
-        }"
+        return "${configuration.prefix}${meterId.meterName.format()},$tags ${fields.entries.joinToString(",")}"
     }
 
 

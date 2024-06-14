@@ -58,7 +58,7 @@ class InfluxDbMeasurementConfiguration {
     var bucket: String = "qalipsis-meter"
 
     @field:NotBlank
-    val prefix: String = "qalipsis"
+    val prefix: String = "qalipsis."
 
     companion object {
 

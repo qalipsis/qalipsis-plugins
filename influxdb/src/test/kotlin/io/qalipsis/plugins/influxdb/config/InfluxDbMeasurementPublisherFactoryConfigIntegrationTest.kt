@@ -74,7 +74,7 @@ internal class InfluxDbMeasurementPublisherFactoryConfigIntegrationTest {
                     prop(InfluxDbMeasurementConfiguration::org).isEqualTo("qalipsis")
                     prop(InfluxDbMeasurementConfiguration::userName).isEqualTo("")
                     prop(InfluxDbMeasurementConfiguration::password).isEqualTo("")
-                    prop(InfluxDbMeasurementConfiguration::prefix).isEqualTo("qalipsis")
+                    prop(InfluxDbMeasurementConfiguration::prefix).isEqualTo("qalipsis.")
                 }
         }
 
@@ -113,7 +113,7 @@ internal class InfluxDbMeasurementPublisherFactoryConfigIntegrationTest {
                     prop(InfluxDbMeasurementConfiguration::org).isEqualTo("qalipsis")
                     prop(InfluxDbMeasurementConfiguration::userName).isEqualTo("")
                     prop(InfluxDbMeasurementConfiguration::password).isEqualTo("")
-                    prop(InfluxDbMeasurementConfiguration::prefix).isEqualTo("qalipsis")
+                    prop(InfluxDbMeasurementConfiguration::prefix).isEqualTo("qalipsis.")
                 }
 
             val measurementPublisherFactory = applicationContext.getBean(MeasurementPublisherFactory::class.java)
@@ -125,7 +125,7 @@ internal class InfluxDbMeasurementPublisherFactoryConfigIntegrationTest {
                     prop(InfluxDbMeasurementConfiguration::org).isEqualTo("qalipsis")
                     prop(InfluxDbMeasurementConfiguration::userName).isEqualTo("")
                     prop(InfluxDbMeasurementConfiguration::password).isEqualTo("")
-                    prop(InfluxDbMeasurementConfiguration::prefix).isEqualTo("qalipsis")
+                    prop(InfluxDbMeasurementConfiguration::prefix).isEqualTo("qalipsis.")
                 }
 
             generatedMeterPublisherRegistry = measurementPublisherFactory.getPublisher()
@@ -136,7 +136,7 @@ internal class InfluxDbMeasurementPublisherFactoryConfigIntegrationTest {
                     prop(InfluxDbMeasurementConfiguration::org).isEqualTo("qalipsis")
                     prop(InfluxDbMeasurementConfiguration::userName).isEqualTo("")
                     prop(InfluxDbMeasurementConfiguration::password).isEqualTo("")
-                    prop(InfluxDbMeasurementConfiguration::prefix).isEqualTo("qalipsis")
+                    prop(InfluxDbMeasurementConfiguration::prefix).isEqualTo("qalipsis.")
                 }
         }
 

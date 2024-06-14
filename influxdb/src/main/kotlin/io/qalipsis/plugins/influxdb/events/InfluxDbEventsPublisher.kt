@@ -186,37 +186,37 @@ internal class InfluxDbEventsPublisher(
      **/
     private fun createPoint(event: Event): Point {
         val point = Point(event.name)
-            .time(event.timestamp.toEpochMilli() * 1000000, WritePrecision.NS)
-            .addField("level", "${event.level}".lowercase())
-        if (event.value != null) {
-            when (event.value) {
-                is Collection<*> -> {
-                    (event.value as Collection<*>).forEach { defineFieldName(point, it) }
-                }
-
-                is Array<*> -> {
-                    (event.value as Array<*>).forEach { defineFieldName(point, it) }
-                }
-
-                else -> {
-                    defineFieldName(point, event.value)
-                }
-            }
+            .time(event.timestamp.toEpochMilli(), WritePrecision.MS)
+            .addTag("level", "${event.level}".lowercase())
+        val value = event.value
+        when (value) {
+            null -> point.addField("_no-value_", "")
+            is Collection<*> -> (event.value as Collection<*>).forEach { addField(point, it) }
+            is Array<*> -> (event.value as Array<*>).forEach { addField(point, it) }
+            else -> addField(point, event.value)
         }
+
         event.tags.forEach { tag -> point.addTag(tag.key, tag.value) }
         return point
     }
 
-    private fun defineFieldName(point: Point, eventValue: Any?) {
+    private fun addField(point: Point, eventValue: Any?) {
         when (eventValue) {
             is String -> point.addField("message", eventValue)
-            is Boolean -> point.addField("boolean", "$eventValue")
-            is Number -> point.addField("number", "$eventValue")
+            is Boolean -> point.addField("boolean", eventValue)
+            is Number -> {
+                if (eventValue.toDouble().isFinite()) {
+                    point.addField("number", eventValue)
+                } else {
+                    point.addField("number", "$eventValue")
+                }
+            }
+
             is Temporal -> point.addField("date", "$eventValue")
             is Throwable -> point.addField("error", "${eventValue.message}")
-            is Duration -> point.addField("duration", "$eventValue")
-            is EventGeoPoint -> point.addField("latitude", "${eventValue.latitude}")
-                .addField("longitude", "${eventValue.longitude}")
+            is Duration -> point.addField("duration_nanos", eventValue.toNanos())
+            is EventGeoPoint -> point.addField("latitude", eventValue.latitude)
+                .addField("longitude", eventValue.longitude)
 
             is EventRange<*> -> {
                 val leftBorder: String = if (eventValue.includeLower) "[" else "("

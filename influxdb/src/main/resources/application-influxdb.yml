@@ -22,4 +22,4 @@ meters:
       enabled: false
       org: qalipsis
       bucket: qalipsis-meter
-      prefix: qalipsis
+      prefix: 'qalipsis.'
