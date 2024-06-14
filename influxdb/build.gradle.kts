@@ -22,6 +22,11 @@ plugins {
 
 description = "QALIPSIS plugin for InfluxDB"
 
+kapt {
+    correctErrorTypes = true
+    useBuildCache = false
+}
+
 allOpen {
     annotations(
         "io.micronaut.aop.Around",

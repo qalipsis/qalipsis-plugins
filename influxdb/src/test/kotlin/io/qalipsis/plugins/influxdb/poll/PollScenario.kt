@@ -74,32 +74,29 @@ object PollScenario {
             .map { it.results }
             .flatten()
             .logErrors()
-            .innerJoin(
-                using = {
-                    // The user's name is in the field _value.
-                    it.value.getValueByKey("_value")
-                },
-                on = {
-                    it.influxdb().poll {
-                        name = "poll.out"
-                        connect {
-                            server(influxDbUrl, BUCKET, ORGANIZATION)
-                            basic("user", "passpasspass")
-                        }
-                        query("from(bucket: \"$BUCKET\") |> range(start: 0) |> filter(fn: (r) => (r[\"action\"] == \"OUT\"))")
-                        pollDelay(Duration.ofSeconds(1))
+            .innerJoin()
+            .using {
+                // The user's name is in the field _value.
+                it.value.getValueByKey("_value")
+            }.on {
+                it.influxdb().poll {
+                    name = "poll.out"
+                    connect {
+                        server(influxDbUrl, BUCKET, ORGANIZATION)
+                        basic("user", "passpasspass")
                     }
-                        .logErrors()
-                        .map {
-                            log.trace { "Right record: $it" }
-                            it.results
-                        }
-                        .flatten()
-                },
-                having = {
-                    it.value.getValueByKey("_value")
+                    query("from(bucket: \"$BUCKET\") |> range(start: 0) |> filter(fn: (r) => (r[\"action\"] == \"OUT\"))")
+                    pollDelay(Duration.ofSeconds(1))
                 }
-            )
+                    .logErrors()
+                    .map {
+                        log.trace { "Right record: $it" }
+                        it.results
+                    }
+                    .flatten()
+            }.having {
+                it.value.getValueByKey("_value")
+            }
             .filterNotNull()
             .map { (inAction, outAction) ->
                 val user = inAction.values["_value"]
