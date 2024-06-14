@@ -48,7 +48,7 @@ jobs:
         run:
           echo "signing.keyId=$SIGNING_KEY_ID" >> $HOME/.gradle/gradle.properties ;
           echo "signing.password=$SIGNING_PASSWORD" >> $HOME/.gradle/gradle.properties ;
-          $SIGNING_PRIVATE_KEY | base64 --decode > /tmp/privateKey.txt ;
+          echo $SIGNING_PRIVATE_KEY | base64 --decode > /tmp/privateKey.txt ;
           echo "signing.secretKeyRingFile=/tmp/privateKey.txt" >> $HOME/.gradle/gradle.properties
 
       - name: Prepare publishing configuration
@@ -60,4 +60,4 @@ jobs:
           echo "ossrhPassword=$OSSRH_PASSWORD" >> $HOME/.gradle/gradle.properties ;
 
       - name: Publish artifacts
-        run: ./gradlew publish --no-daemon
+        run: ./gradlew publishQalipsisPlatformPublicationToSonatypeRepository publish --no-daemon
