@@ -137,14 +137,13 @@ internal class GraphiteIterativeReader(
         try {
             val query = pollStatement.getNextQuery()
             log.info("Query : $query")
-            val records = runBlocking {
-                client.execute(query)
-            }
+            val records = client.execute(query)
             val timeToSuccess = Duration.ofNanos(System.nanoTime() - requestStart)
             recordsCount?.increment(records.size.toDouble())
             eventsLogger?.info(
                 "$eventPrefix.successful-response", arrayOf(timeToSuccess, records.size), tags = context.toEventTags()
             )
+            log.debug { "Received ${records.size} records" }
             pollStatement.saveTiebreaker(records)
             resultsChannel.send(
                 GraphiteQueryResult(
