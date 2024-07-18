@@ -78,7 +78,7 @@ class InfluxdbMeasurementPublisher(
         writeClient = client.getWriteKotlinApi()
     }
 
-    override suspend fun publish(meters: Collection<MeterSnapshot<*>>) {
+    override suspend fun publish(meters: Collection<MeterSnapshot>) {
         publicationLatch.increment()
         coroutineScope.launch {
             try {
@@ -91,7 +91,7 @@ class InfluxdbMeasurementPublisher(
         }
     }
 
-    private suspend fun performPublish(snapshots: Collection<MeterSnapshot<*>>) {
+    private suspend fun performPublish(snapshots: Collection<MeterSnapshot>) {
         val records = snapshots.map(this::createRecord)
         logger.debug { "Exporting ${records.size} meters to InfluxDb" }
         try {
@@ -104,8 +104,8 @@ class InfluxdbMeasurementPublisher(
     /**
      * Generates a string record from a meter snapshot, structured in a format ideal for export to influxdb.
      */
-    private fun createRecord(snapshot: MeterSnapshot<*>): String {
-        val meterId = snapshot.meter.id
+    private fun createRecord(snapshot: MeterSnapshot): String {
+        val meterId = snapshot.meterId
         val fields = snapshot.measurements.associate {
             if (it !is DistributionMeasurementMetric) {
                 it.statistic.value to it.value
