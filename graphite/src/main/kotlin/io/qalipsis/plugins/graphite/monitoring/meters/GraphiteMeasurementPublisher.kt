@@ -41,7 +41,7 @@ internal class GraphiteMeasurementPublisher(
 
     private lateinit var workerGroup: EventLoopGroup
 
-    private lateinit var clients: FixedPool<GraphiteClient<MeterSnapshot<*>>>
+    private lateinit var clients: FixedPool<GraphiteClient<MeterSnapshot>>
 
     /**
      * Builds [FixedPool] of [GraphiteClient].
@@ -56,7 +56,7 @@ internal class GraphiteMeasurementPublisher(
             checkOnAcquire = false,
             checkOnRelease = true,
             healthCheck = { it.isOpen }) {
-            GraphiteTcpClient<MeterSnapshot<*>>(
+            GraphiteTcpClient<MeterSnapshot>(
                 host = configuration.host,
                 port = configuration.port,
                 encoders = listOf(encoder, MeterSnapshotsEncoder(configuration.prefix, configuration.batchSize))
@@ -77,7 +77,7 @@ internal class GraphiteMeasurementPublisher(
     /**
      * Publishes a collection of [MeterSnapshot] using [FixedPool] of [GraphiteClient]
      */
-    override suspend fun publish(meters: Collection<MeterSnapshot<*>>) {
+    override suspend fun publish(meters: Collection<MeterSnapshot>) {
         clients.withPoolItem { client ->
             client.send(meters)
         }

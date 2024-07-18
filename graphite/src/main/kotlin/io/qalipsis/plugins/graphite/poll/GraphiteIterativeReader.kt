@@ -130,8 +130,7 @@ internal class GraphiteIterativeReader(
         client = clientFactory()
     }
 
-    @KTestable
-    private suspend fun poll() {
+    internal suspend fun poll() {
         eventsLogger?.debug("$eventPrefix.polling", tags = context.toEventTags())
         val requestStart = System.nanoTime()
         try {

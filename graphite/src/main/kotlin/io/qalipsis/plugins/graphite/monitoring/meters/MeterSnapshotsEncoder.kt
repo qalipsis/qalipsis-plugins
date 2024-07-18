@@ -35,32 +35,25 @@ import io.qalipsis.plugins.graphite.client.GraphiteRecord
  */
 @Sharable
 internal class MeterSnapshotsEncoder(private val prefix: String, private val batchSize: Int = 100) :
-    MessageToMessageEncoder<List<MeterSnapshot<*>>>() {
+    MessageToMessageEncoder<List<MeterSnapshot>>() {
 
-    override fun encode(ctx: ChannelHandlerContext, msg: List<MeterSnapshot<*>>, out: MutableList<Any>) {
+    override fun encode(ctx: ChannelHandlerContext, msg: List<MeterSnapshot>, out: MutableList<Any>) {
         msg.windowed(batchSize, batchSize, true).forEach { snapshots ->
             out.add(
                 snapshots.flatMap { snapshot ->
-                    val tags = (snapshot.meter.id.tags + mapOf(
-                        "type" to snapshot.meter.id.type.value.lowercase(),
-                        "campaign" to snapshot.meter.id.campaignKey,
-                        "scenario" to snapshot.meter.id.scenarioName,
-                        "step" to snapshot.meter.id.stepName
+                    val tags = (snapshot.meterId.tags + mapOf(
+                        "type" to snapshot.meterId.type.value.lowercase()
                     )).toMutableMap()
 
                     snapshot.measurements.map { measurement ->
                         val measurementTags = tags.toMutableMap()
                         measurementTags["measurement"] = measurement.statistic.name
-                        if (measurement is DistributionMeasurementMetric) {
-                            when (measurement.statistic) {
-                                Statistic.PERCENTILE -> measurementTags["percentile"] =
-                                    measurement.observationPoint.toString()
-                                else -> {}
-                            }
+                        if (measurement is DistributionMeasurementMetric && measurement.statistic == Statistic.PERCENTILE) {
+                            measurementTags["percentile"] = measurement.observationPoint.toString()
                         }
 
                         GraphiteRecord(
-                            "${prefix}${snapshot.meter.id.meterName}",
+                            "${prefix}${snapshot.meterId.meterName}",
                             snapshot.timestamp,
                             measurement.value,
                             tags + measurementTags
