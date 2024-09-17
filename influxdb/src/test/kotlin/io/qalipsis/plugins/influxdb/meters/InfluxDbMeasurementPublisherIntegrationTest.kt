@@ -28,7 +28,6 @@ import com.influxdb.query.FluxRecord
 import io.aerisconsulting.catadioptre.coInvokeInvisible
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.qalipsis.api.lang.concurrentList
 import io.qalipsis.api.meters.DistributionMeasurementMetric
 import io.qalipsis.api.meters.MeasurementMetric
@@ -44,9 +43,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.time.Clock
 import java.time.Instant
-import java.time.ZoneId
 
 @WithMockk
 @Testcontainers
@@ -156,6 +153,43 @@ internal class InfluxDbMeasurementPublisherIntegrationTest : AbstractInfluxDbInt
                     DistributionMeasurementMetric(548.5, Statistic.PERCENTILE, 85.0),
                     DistributionMeasurementMetric(54328.5, Statistic.PERCENTILE, 50.0),
                 )
+            }, mockk<MeterSnapshot> {
+                every { timestamp } returns now
+                every { meterId } returns Meter.Id(
+                    "my Rate",
+                    MeterType.RATE,
+                    mapOf(
+                        "scenario" to "fifth scenario",
+                        "campaign" to "campaign 39",
+                        "step" to "step number five",
+                        "foo" to "bar",
+                        "local" to "host"
+                    )
+                )
+                every { measurements } returns listOf(
+                    MeasurementMetric(2.0, Statistic.VALUE)
+                )
+            }, mockk<MeterSnapshot> {
+                every { timestamp } returns now
+                every { meterId } returns Meter.Id(
+                    "throughput",
+                    MeterType.THROUGHPUT,
+                    mapOf(
+                        "scenario" to "sixth scenario",
+                        "campaign" to "CEAD@E28339",
+                        "step" to "step number six",
+                        "a" to "b",
+                        "c" to "d"
+                    )
+                )
+                every { measurements } returns listOf(
+                    MeasurementMetric(30.0, Statistic.VALUE),
+                    MeasurementMetric(22.0, Statistic.MEAN),
+                    MeasurementMetric(173.0, Statistic.TOTAL),
+                    MeasurementMetric(42.0, Statistic.MAX),
+                    DistributionMeasurementMetric(42.0, Statistic.PERCENTILE, 85.0),
+                    DistributionMeasurementMetric(30.0, Statistic.PERCENTILE, 50.0),
+                )
             })
 
         // when
@@ -163,7 +197,7 @@ internal class InfluxDbMeasurementPublisherIntegrationTest : AbstractInfluxDbInt
 
         // then
         val result = requestEvents()
-        assertEquals(4, result.map { it.table }.distinct().count())
+        assertEquals(6, result.map { it.table }.distinct().count())
 
         // verification for counter
         val counterRecords =
@@ -301,6 +335,74 @@ internal class InfluxDbMeasurementPublisherIntegrationTest : AbstractInfluxDbInt
             }
         }
 
+        // verification for rate
+        val rateRecords =
+            result.filter { it.getValueByKey("_measurement") == "qalipsis.my-rate" }
+        assertThat(rateRecords).all {
+            hasSize(1)
+            any {
+                it.all {
+                    it.transform { it.getValueByKey("metric_type") }.isEqualTo("rate")
+                    it.transform { it.getValueByKey("_field") }.isEqualTo("value")
+                    it.transform { it.getValueByKey("_value") }.isEqualTo(2.0)
+                    it.transform { it.getValueByKey("campaign") }.isEqualTo("campaign 39")
+                    it.transform { it.getValueByKey("scenario") }.isEqualTo("fifth scenario")
+                    it.transform { it.getValueByKey("step") }.isEqualTo("step number five")
+                }
+            }
+        }
+
+        // verification for throughput
+        val throughputRecords =
+            result.filter { it.getValueByKey("_measurement") == "qalipsis.throughput" }
+        assertThat(throughputRecords).all {
+            hasSize(6)
+            each {
+                it.transform { it.getValueByKey("metric_type") }.isEqualTo("throughput")
+                it.transform { it.getValueByKey("campaign") }.isEqualTo("CEAD@E28339")
+                it.transform { it.getValueByKey("scenario") }.isEqualTo("sixth scenario")
+                it.transform { it.getValueByKey("step") }.isEqualTo("step number six")
+                it.transform { it.getValueByKey("a") }.isEqualTo("b")
+                it.transform { it.getValueByKey("c") }.isEqualTo("d")
+            }
+            any {
+                it.all {
+                    it.transform { it.getValueByKey("_field") }.isEqualTo("max")
+                    it.transform { it.getValueByKey("_value") }.isEqualTo(42.0)
+                }
+            }
+            any {
+                it.all {
+                    it.transform { it.getValueByKey("_field") }.isEqualTo("mean")
+                    it.transform { it.getValueByKey("_value") }.isEqualTo(22.0)
+                }
+            }
+            any {
+                it.all {
+                    it.transform { it.getValueByKey("_field") }.isEqualTo("total")
+                    it.transform { it.getValueByKey("_value") }.isEqualTo(173.0)
+                }
+            }
+            any {
+                it.all {
+                    it.transform { it.getValueByKey("_field") }.isEqualTo("value")
+                    it.transform { it.getValueByKey("_value") }.isEqualTo(30.0)
+                }
+            }
+            any {
+                it.all {
+                    it.transform { it.getValueByKey("_field") }.isEqualTo("percentile_50.0")
+                    it.transform { it.getValueByKey("_value") }.isEqualTo(30.0)
+                }
+            }
+            any {
+                it.all {
+                    it.transform { it.getValueByKey("_field") }.isEqualTo("percentile_85.0")
+                    it.transform { it.getValueByKey("_value") }.isEqualTo(42.0)
+                }
+            }
+        }
+
         publisher.stop()
     }
 
@@ -315,14 +417,4 @@ internal class InfluxDbMeasurementPublisherIntegrationTest : AbstractInfluxDbInt
         }
         return records
     }
-
-    private fun getTimeMock(): Instant {
-        val now = Instant.now()
-        val fixedClock = Clock.fixed(now, ZoneId.systemDefault())
-        mockkStatic(Clock::class)
-        every { Clock.systemUTC() } returns fixedClock
-
-        return now
-    }
-
 }
