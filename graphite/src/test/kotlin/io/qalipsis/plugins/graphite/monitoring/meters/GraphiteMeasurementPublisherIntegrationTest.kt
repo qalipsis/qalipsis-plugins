@@ -43,6 +43,14 @@ import io.qalipsis.plugins.graphite.client.codecs.PickleEncoder
 import io.qalipsis.plugins.graphite.client.codecs.PlaintextEncoder
 import io.qalipsis.plugins.graphite.search.DataPoints
 import io.qalipsis.test.coroutines.TestDispatcherProvider
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeUnit
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -56,14 +64,6 @@ import org.testcontainers.containers.wait.strategy.HttpWaitStrategy
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.time.Duration
-import java.time.Instant
-import java.time.temporal.ChronoUnit
-import java.util.concurrent.TimeUnit
 
 
 @Testcontainers
@@ -132,7 +132,7 @@ internal class GraphiteMeasurementPublisherIntegrationTest {
             testDispatcherProvider.run {
                 //given
                 val meterKeyPrefix = "$protocolPathIdentifier.collection"
-                val keys = (1..4).map { "$meterKeyPrefix.item-$it" }
+                val keys = (1..6).map { "$meterKeyPrefix.item-$it" }
                 val now = Instant.now()
                 val countSnapshot = mockk<MeterSnapshot> {
                     every { timestamp } returns now
@@ -200,6 +200,45 @@ internal class GraphiteMeasurementPublisherIntegrationTest {
                         DistributionMeasurementMetric(548.5, Statistic.PERCENTILE, 74.5),
                     )
                 }
+                val rateSnapshot = mockk<MeterSnapshot> {
+                    every { timestamp } returns now
+                    every { meterId } returns Meter.Id(
+                        keys[4],
+                        MeterType.RATE,
+                        mapOf(
+                            "scenario" to "fifth scenario",
+                            "campaign" to "campaign 39",
+                            "step" to "step number five",
+                            "foo" to "bar",
+                            "local" to "host"
+                        )
+                    )
+                    every { measurements } returns listOf(
+                        MeasurementMetric(2.0, Statistic.VALUE)
+                    )
+                }
+                val throughputSnapshot = mockk<MeterSnapshot> {
+                    every { timestamp } returns now
+                    every { meterId } returns Meter.Id(
+                        keys[5],
+                        MeterType.THROUGHPUT,
+                        mapOf(
+                            "scenario" to "sixth scenario",
+                            "campaign" to "CEAD@E28339",
+                            "step" to "step number six",
+                            "a" to "b",
+                            "c" to "d"
+                        )
+                    )
+                    every { measurements } returns listOf(
+                        MeasurementMetric(30.0, Statistic.VALUE),
+                        MeasurementMetric(22.0, Statistic.MEAN),
+                        MeasurementMetric(173.0, Statistic.TOTAL),
+                        MeasurementMetric(42.0, Statistic.MAX),
+                        DistributionMeasurementMetric(42.0, Statistic.PERCENTILE, 85.0),
+                        DistributionMeasurementMetric(30.0, Statistic.PERCENTILE, 50.0),
+                    )
+                }
 
                 //when
                 graphiteMeasurementPublisher.publish(
@@ -207,7 +246,9 @@ internal class GraphiteMeasurementPublisherIntegrationTest {
                         countSnapshot,
                         gaugeSnapshot,
                         timerSnapshot,
-                        summarySnapshot
+                        summarySnapshot,
+                        rateSnapshot,
+                        throughputSnapshot
                     )
                 )
 
@@ -231,7 +272,7 @@ internal class GraphiteMeasurementPublisherIntegrationTest {
                 )
                 val dataPoints = objectMapper.readValue<List<DataPoints>>(savedMetersResponse.body())
                 assertThat(dataPoints).all {
-                    hasSize(10)
+                    hasSize(17)
                     any {
                         it.all {
                             prop(DataPoints::target).isEqualTo("$savedMetersKeyPrefix.item-1;campaign=campaign-1;measurement=count;scenario=sc-1;step=step-1;type=counter")
@@ -494,6 +535,199 @@ internal class GraphiteMeasurementPublisherIntegrationTest {
                                 }
                         }
                     }
+
+                    any {
+                        it.all {
+                            prop(DataPoints::target).isEqualTo("$savedMetersKeyPrefix.item-5;campaign=campaign-39;foo=bar;local=host;measurement=value;scenario=fifth-scenario;step=step-number-five;type=rate")
+                            prop(DataPoints::tags).isEqualTo(
+                                mapOf(
+                                    "type" to "rate",
+                                    "campaign" to "campaign-39",
+                                    "scenario" to "fifth-scenario",
+                                    "step" to "step-number-five",
+                                    "measurement" to "value",
+                                    "name" to "$savedMetersKeyPrefix.item-5",
+                                    "foo" to "bar",
+                                    "local" to "host"
+                                )
+                            )
+                            prop(DataPoints::dataPoints)
+                                .all {
+                                    hasSize(1)
+                                    containsOnly(
+                                        DataPoints.DataPoint(
+                                            2.0,
+                                            now.truncatedTo(ChronoUnit.SECONDS)
+                                        )
+                                    )
+                                }
+                        }
+                    }
+                    any {
+                        it.all {
+                            prop(DataPoints::target).isEqualTo("$savedMetersKeyPrefix.item-6;a=b;c=d;campaign=cead@e28339;measurement=percentile;percentile=50.0;scenario=sixth-scenario;step=step-number-six;type=throughput")
+                            prop(DataPoints::tags).isEqualTo(
+                                mapOf(
+                                    "type" to "throughput",
+                                    "campaign" to "cead@e28339",
+                                    "scenario" to "sixth-scenario",
+                                    "step" to "step-number-six",
+                                    "measurement" to "percentile",
+                                    "percentile" to "50.0",
+                                    "name" to "$savedMetersKeyPrefix.item-6",
+                                    "a" to "b",
+                                    "c" to "d"
+                                )
+                            )
+                            prop(DataPoints::dataPoints)
+                                .all {
+                                    hasSize(1)
+                                    containsOnly(
+                                        DataPoints.DataPoint(
+                                            30.0,
+                                            now.truncatedTo(ChronoUnit.SECONDS)
+                                        )
+                                    )
+                                }
+                        }
+                    }
+                    any {
+                        it.all {
+                            prop(DataPoints::target).isEqualTo("$savedMetersKeyPrefix.item-6;a=b;c=d;campaign=cead@e28339;measurement=percentile;percentile=85.0;scenario=sixth-scenario;step=step-number-six;type=throughput")
+                            prop(DataPoints::tags).isEqualTo(
+                                mapOf(
+                                    "type" to "throughput",
+                                    "campaign" to "cead@e28339",
+                                    "scenario" to "sixth-scenario",
+                                    "step" to "step-number-six",
+                                    "measurement" to "percentile",
+                                    "percentile" to "85.0",
+                                    "name" to "$savedMetersKeyPrefix.item-6",
+                                    "a" to "b",
+                                    "c" to "d"
+                                )
+                            )
+                            prop(DataPoints::dataPoints)
+                                .all {
+                                    hasSize(1)
+                                    containsOnly(
+                                        DataPoints.DataPoint(
+                                            42.0,
+                                            now.truncatedTo(ChronoUnit.SECONDS)
+                                        )
+                                    )
+                                }
+                        }
+                    }
+                    any {
+                        it.all {
+                            prop(DataPoints::target).isEqualTo("$savedMetersKeyPrefix.item-6;a=b;c=d;campaign=cead@e28339;measurement=value;scenario=sixth-scenario;step=step-number-six;type=throughput")
+                            prop(DataPoints::tags).isEqualTo(
+                                mapOf(
+                                    "type" to "throughput",
+                                    "campaign" to "cead@e28339",
+                                    "scenario" to "sixth-scenario",
+                                    "step" to "step-number-six",
+                                    "measurement" to "value",
+                                    "name" to "$savedMetersKeyPrefix.item-6",
+                                    "a" to "b",
+                                    "c" to "d"
+                                )
+                            )
+                            prop(DataPoints::dataPoints)
+                                .all {
+                                    hasSize(1)
+                                    containsOnly(
+                                        DataPoints.DataPoint(
+                                            30.0,
+                                            now.truncatedTo(ChronoUnit.SECONDS)
+                                        )
+                                    )
+                                }
+                        }
+                    }
+                    any {
+                        it.all {
+                            prop(DataPoints::target).isEqualTo("$savedMetersKeyPrefix.item-6;a=b;c=d;campaign=cead@e28339;measurement=max;scenario=sixth-scenario;step=step-number-six;type=throughput")
+                            prop(DataPoints::tags).isEqualTo(
+                                mapOf(
+                                    "type" to "throughput",
+                                    "campaign" to "cead@e28339",
+                                    "scenario" to "sixth-scenario",
+                                    "step" to "step-number-six",
+                                    "measurement" to "max",
+                                    "name" to "$savedMetersKeyPrefix.item-6",
+                                    "a" to "b",
+                                    "c" to "d"
+                                )
+                            )
+                            prop(DataPoints::dataPoints)
+                                .all {
+                                    hasSize(1)
+                                    containsOnly(
+                                        DataPoints.DataPoint(
+                                            42.0,
+                                            now.truncatedTo(ChronoUnit.SECONDS)
+                                        )
+                                    )
+                                }
+                        }
+                    }
+                    any {
+                        it.all {
+                            prop(DataPoints::target).isEqualTo("$savedMetersKeyPrefix.item-6;a=b;c=d;campaign=cead@e28339;measurement=total;scenario=sixth-scenario;step=step-number-six;type=throughput")
+                            prop(DataPoints::tags).isEqualTo(
+                                mapOf(
+                                    "type" to "throughput",
+                                    "campaign" to "cead@e28339",
+                                    "scenario" to "sixth-scenario",
+                                    "step" to "step-number-six",
+                                    "measurement" to "total",
+                                    "name" to "$savedMetersKeyPrefix.item-6",
+                                    "a" to "b",
+                                    "c" to "d"
+                                )
+                            )
+                            prop(DataPoints::dataPoints)
+                                .all {
+                                    hasSize(1)
+                                    containsOnly(
+                                        DataPoints.DataPoint(
+                                            173.0,
+                                            now.truncatedTo(ChronoUnit.SECONDS)
+                                        )
+                                    )
+                                }
+                        }
+                    }
+                    any {
+                        it.all {
+                            prop(DataPoints::target).isEqualTo("$savedMetersKeyPrefix.item-6;a=b;c=d;campaign=cead@e28339;measurement=mean;scenario=sixth-scenario;step=step-number-six;type=throughput")
+                            prop(DataPoints::tags).isEqualTo(
+                                mapOf(
+                                    "type" to "throughput",
+                                    "campaign" to "cead@e28339",
+                                    "scenario" to "sixth-scenario",
+                                    "step" to "step-number-six",
+                                    "measurement" to "mean",
+                                    "name" to "$savedMetersKeyPrefix.item-6",
+                                    "a" to "b",
+                                    "c" to "d"
+                                )
+                            )
+                            prop(DataPoints::dataPoints)
+                                .all {
+                                    hasSize(1)
+                                    containsOnly(
+                                        DataPoints.DataPoint(
+                                            22.0,
+                                            now.truncatedTo(ChronoUnit.SECONDS)
+                                        )
+                                    )
+                                }
+                        }
+                    }
+
                 }
             }
 
