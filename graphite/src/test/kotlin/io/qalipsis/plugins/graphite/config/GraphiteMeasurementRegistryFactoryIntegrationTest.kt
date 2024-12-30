@@ -111,7 +111,7 @@ internal class GraphiteMeasurementRegistryFactoryIntegrationTest {
 
         override fun getProperties(): MutableMap<String, String> {
             return mutableMapOf(
-                "meters.enabled" to "true",
+                "meters.export.enabled" to "true",
                 "meters.export.graphite.enabled" to "true",
                 "meters.export.graphite.host" to CONTAINER.host,
                 "meters.export.graphite.port" to CONTAINER.getMappedPort(Constants.HTTP_PORT).toString()
