@@ -102,15 +102,15 @@ dependencies {
         api("io.qalipsis.plugin:qalipsis-plugin-jackson:0.10.1-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-jakarta-ee-messaging:0.10.1-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-jms:0.10.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-kafka:0.13.0-SNAPSHOT")
+        api("io.qalipsis.plugin:qalipsis-plugin-kafka:0.13.1-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-mail:0.10.1-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-mongodb:0.10.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-netty:0.10.1-SNAPSHOT")
+        api("io.qalipsis.plugin:qalipsis-plugin-netty:0.13.0-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-r2dbc-jasync:0.10.1-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-rabbitmq:0.10.1-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-redis-lettuce:0.10.1-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-slack:0.10.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-timescaledb:0.13.0-SNAPSHOT")
+        api("io.qalipsis.plugin:qalipsis-plugin-timescaledb:0.13.1-SNAPSHOT")
     }
 }
 
