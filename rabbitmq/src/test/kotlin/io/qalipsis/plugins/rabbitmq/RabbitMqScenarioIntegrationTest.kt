@@ -1,17 +1,20 @@
 /*
- * Copyright 2022 AERIS IT Solutions GmbH
+ * QALIPSIS
+ * Copyright (C) 2025 AERIS IT Solutions GmbH
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 package io.qalipsis.plugins.rabbitmq
@@ -25,6 +28,7 @@ import com.rabbitmq.client.Channel
 import com.rabbitmq.client.Connection
 import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.MessageProperties
+import io.qalipsis.plugins.rabbitmq.Constants.DOCKER_IMAGE
 import io.qalipsis.runtime.test.QalipsisTestRunner
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions
@@ -54,8 +58,8 @@ internal class RabbitMqScenarioIntegrationTest {
             val factory = ConnectionFactory()
             factory.host = container.host
             factory.port = container.amqpPort
-            factory.password = "defaultpass"
-            factory.username = "user"
+            factory.username = "the-user"
+            factory.password = "the-password"
 
             connection = factory.newConnection()
 
@@ -133,14 +137,11 @@ internal class RabbitMqScenarioIntegrationTest {
 
     companion object {
 
-        private const val DOCKER_IMAGE = "rabbitmq:3.8.14-management"
-
         @Container
         @JvmStatic
         private val container = RabbitMQContainer(DockerImageName.parse(DOCKER_IMAGE))
             .withCreateContainerCmdModifier { it.hostConfig!!.withMemory(256 * 1024.0.pow(2).toLong()).withCpuCount(2) }
-            .withEnv("RABBITMQ_VM_MEMORY_HIGH_WATERMARK", "128MiB")
-            .withUser("user", "defaultpass", setOf("administrator"))
-            .withPermission("/", "user", ".*", ".*", ".*")
+            .withAdminUser("the-user")
+            .withAdminPassword("the-password")
     }
 }
