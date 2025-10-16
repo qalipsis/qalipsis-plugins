@@ -115,7 +115,9 @@ class InfluxdbMeasurementPublisher(
         }
         val tags = if (meterId.tags.isNotEmpty()) {
             // Tags should be sanitized https://github.com/influxdata/influxdb/blob/master/tsdb/README.md
-            meterId.tags.mapValues { (_, value) -> value.replace(" ", "\\ ").replace(",", "\\,") }
+            meterId.tags
+                .filterNot { (_, value) -> value.isNullOrBlank() }
+                .mapValues { (_, value) -> value.replace(" ", "\\ ").replace(",", "\\,") }
                 .entries.joinToString(",") + ",metric_type=${meterId.type.value}"
         } else "metric_type=${meterId.type.value}"
         return "${configuration.prefix}${meterId.meterName.format()},$tags ${fields.entries.joinToString(",")}"

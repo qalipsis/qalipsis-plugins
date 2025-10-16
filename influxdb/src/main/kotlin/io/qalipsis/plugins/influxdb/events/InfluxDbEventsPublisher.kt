@@ -199,7 +199,8 @@ internal class InfluxDbEventsPublisher(
             else -> addField(point, event.value)
         }
 
-        event.tags.forEach { tag -> point.addTag(tag.key, tag.value) }
+        event.tags.filterNot { (_, value) -> value.isNullOrBlank() }
+            .forEach { tag -> point.addTag(tag.key, tag.value.replace(" ", "\\ ").replace(",", "\\,")) }
         return point
     }
 

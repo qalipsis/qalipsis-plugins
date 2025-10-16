@@ -116,7 +116,12 @@ internal class InfluxDbEventsPublisherIntegrationTest : AbstractInfluxDbIntegrat
             Event(
                 name = "my-new-event",
                 EventLevel.INFO,
-                tags = listOf(EventTag("key-1", "value-1"), EventTag("key-2", "value-2"))
+                tags = listOf(
+                    EventTag("key-1", "value-1"),
+                    EventTag("key-2", "value-2"),
+                    EventTag("key-3", " "),
+                    EventTag("key-4", "")
+                )
             )
         )
 
