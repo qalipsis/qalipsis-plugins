@@ -6,10 +6,9 @@ elasticsearch.save.failure.bytes;Double
 elasticsearch.save.failure.documents;Int,String
 elasticsearch.save.failure.records;String
 elasticsearch.save.saving.documents;Int
-elasticsearch.save.success.bytes;Long
+elasticsearch.save.sent.bytes;Long
 elasticsearch.save.success.documents;Int
 elasticsearch.save.time-to-response;Duration
-elasticsearch.query.failure.bytes;Long
 elasticsearch.query.failure.records;String
 elasticsearch.query.failure.times;Int
 elasticsearch.query.success.records;Int

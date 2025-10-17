@@ -25,6 +25,7 @@ import assertk.assertions.isBetween
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
+import assertk.assertions.prop
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -44,8 +45,6 @@ import io.qalipsis.api.meters.Timer
 import io.qalipsis.plugins.elasticsearch.Document
 import io.qalipsis.plugins.elasticsearch.ElasticsearchBulkResponse
 import io.qalipsis.plugins.elasticsearch.ElasticsearchException
-import io.qalipsis.test.assertk.prop
-import io.qalipsis.test.assertk.typedProp
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
@@ -77,7 +76,7 @@ import java.util.concurrent.TimeUnit
 @WithMockk
 @Testcontainers
 @Timeout(3, unit = TimeUnit.MINUTES)
-internal abstract class AbstractElasticsearchBulkClientIntegrationTest {
+internal abstract class AbstractElasticsearchSaveClientIntegrationTest {
 
     @JvmField
     @RegisterExtension
@@ -109,7 +108,7 @@ internal abstract class AbstractElasticsearchBulkClientIntegrationTest {
     protected lateinit var failureCounter: Counter
 
     @RelaxedMockK
-    protected lateinit var savedBytesCounter: Counter
+    protected lateinit var sentBytesCounter: Counter
 
     protected val jsonMapper = JsonMapper().also {
         it.registerModule(JavaTimeModule())
@@ -177,11 +176,11 @@ internal abstract class AbstractElasticsearchBulkClientIntegrationTest {
                 counter(
                     "scenario-test",
                     "step-test",
-                    "elasticsearch-save-success-bytes",
+                    "elasticsearch-save-sent-bytes",
                     refEq(metersTags)
                 )
-            } returns savedBytesCounter
-            every { savedBytesCounter.report(any()) } returns savedBytesCounter
+            } returns sentBytesCounter
+            every { sentBytesCounter.report(any()) } returns sentBytesCounter
         }
         val startStopContext = relaxedMockk<StepStartStopContext> {
             every { toMetersTags() } returns metersTags
@@ -207,16 +206,17 @@ internal abstract class AbstractElasticsearchBulkClientIntegrationTest {
         )
         val resultOfExecute = client.execute(documents, tags)
         assertThat(resultOfExecute).isInstanceOf(ElasticsearchBulkResult::class.java).all {
-            prop("meters").isNotNull().isInstanceOf(ElasticsearchBulkMeters::class.java).all {
-                prop("savedDocuments").isEqualTo(2)
-                prop("failedDocuments").isEqualTo(0)
-                prop("timeToResponse").isNotNull().isInstanceOf(Duration::class.java)
-                typedProp<Long>("bytesToSave").isNotNull().isBetween(433L, 464L)
-                prop("documentsToSave").isEqualTo(2)
+            prop(ElasticsearchBulkResult::meters).isNotNull().isInstanceOf(ElasticsearchBulkMeters::class.java).all {
+                prop(ElasticsearchBulkMeters::savedDocuments).isEqualTo(2)
+                prop(ElasticsearchBulkMeters::failedDocuments).isEqualTo(0)
+                prop(ElasticsearchBulkMeters::timeToResponse).isBetween(Duration.ZERO, Duration.ofSeconds(10))
+                prop(ElasticsearchBulkMeters::sentBytes).isBetween(234L, 264L)
+                prop(ElasticsearchBulkMeters::documentsToSave).isEqualTo(2)
             }
-            prop("responseBody").isNotNull().isInstanceOf(ElasticsearchBulkResponse::class.java).all {
-                prop("httpStatus").isEqualTo(200)
-                prop("responseBody").isNotNull()
+            prop(ElasticsearchBulkResult::response).isNotNull().isInstanceOf(ElasticsearchBulkResponse::class.java)
+                .all {
+                    prop(ElasticsearchBulkResponse::httpStatus).isEqualTo(200)
+                    prop(ElasticsearchBulkResponse::responseBody).isNotNull()
             }
         }
 
@@ -239,10 +239,10 @@ internal abstract class AbstractElasticsearchBulkClientIntegrationTest {
             documentsCount.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
             successCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
             successCounter.increment(2.0)
-            savedBytesCounter.increment(withArg { assertThat(it).isBetween(433.0, 464.0) })
-            savedBytesCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
+            sentBytesCounter.increment(withArg { assertThat(it).isBetween(234.0, 264.0) })
+            sentBytesCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
         }
-        confirmVerified(documentsCount, timeToResponseTimer, successCounter, savedBytesCounter)
+        confirmVerified(documentsCount, timeToResponseTimer, successCounter, sentBytesCounter)
     }
 
     @Test
@@ -289,11 +289,11 @@ internal abstract class AbstractElasticsearchBulkClientIntegrationTest {
                 counter(
                     "scenario-test",
                     "step-test",
-                    "elasticsearch-save-success-bytes",
+                    "elasticsearch-save-sent-bytes",
                     refEq(metersTags)
                 )
-            } returns savedBytesCounter
-            every { savedBytesCounter.report(any()) } returns savedBytesCounter
+            } returns sentBytesCounter
+            every { sentBytesCounter.report(any()) } returns sentBytesCounter
         }
         val startStopContext = relaxedMockk<StepStartStopContext> {
             every { toMetersTags() } returns metersTags
@@ -332,7 +332,7 @@ internal abstract class AbstractElasticsearchBulkClientIntegrationTest {
             timeToResponseTimer.record(more(0L), TimeUnit.NANOSECONDS)
             successCounter.increment(1.0)
             documentsCount.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
-            savedBytesCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
+            sentBytesCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
             successCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
             failureCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
         }

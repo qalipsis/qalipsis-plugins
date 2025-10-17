@@ -25,7 +25,7 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.utility.DockerImageName
 import java.time.format.DateTimeFormatter
 
-internal class Elasticsearch7BulkClientIntegrationTest : AbstractElasticsearchBulkClientIntegrationTest() {
+internal class Elasticsearch7SaveClientIntegrationTest : AbstractElasticsearchSaveClientIntegrationTest() {
 
     override val container: ElasticsearchContainer = CONTAINER
 

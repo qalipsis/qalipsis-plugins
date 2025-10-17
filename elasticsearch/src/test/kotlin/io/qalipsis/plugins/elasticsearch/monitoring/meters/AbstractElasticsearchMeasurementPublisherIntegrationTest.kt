@@ -121,9 +121,9 @@ internal abstract class AbstractElasticsearchMeasurementPublisherIntegrationTest
                     transform { it["@type"].asText() }.isEqualTo("counter")
                     transform { it["@timestamp"].asLong() }.isNotNull()
                     transform { it["metrics"] }.all {
+                        transform { it.size() }.isEqualTo(1)
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("count")
-                            it.transform { it["value"].asInt() }.isEqualTo(9)
+                            it.transform { it["count"].asInt() }.isEqualTo(9)
                         }
                     }
                     transform { it["tags"] as ObjectNode }.all {
@@ -142,8 +142,8 @@ internal abstract class AbstractElasticsearchMeasurementPublisherIntegrationTest
                     transform { it["@type"].asText() }.isEqualTo("gauge")
                     transform { it["@timestamp"].asLong() }.isNotNull()
                     transform { it["metrics"] }.all {
+                        transform { it.size() }.isEqualTo(1)
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("value")
                             it.transform { it["value"].asInt() }.isEqualTo(5)
                         }
                     }
@@ -166,30 +166,22 @@ internal abstract class AbstractElasticsearchMeasurementPublisherIntegrationTest
                     transform { it["@timestamp"].asLong() }.isNotNull()
                     transform { it["metrics"] }.all {
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("count")
-                            it.transform { it["value"].asInt() }.isEqualTo(80)
+                            it.transform { it["count"].asInt() }.isEqualTo(80)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("mean")
-                            it.transform { it["value"].asInt() }.isEqualTo(224)
+                            it.transform { it["mean"].asInt() }.isEqualTo(224)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("total_time")
-                            it.transform { it["value"].asInt() }.isEqualTo(178713)
+                            it.transform { it["total_time"].asInt() }.isEqualTo(178713)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("max")
-                            it.transform { it["value"].asDouble() }.isEqualTo(54328.5)
+                            it.transform { it["max"].asDouble() }.isEqualTo(54328.5)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("percentile")
-                            it.transform { it["percentile"].asDouble() }.isEqualTo(85.0)
-                            it.transform { it["value"].asDouble() }.isEqualTo(548.5)
+                            it.transform { it["percentile_85"].asDouble() }.isEqualTo(548.5)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("percentile")
-                            it.transform { it["percentile"].asDouble() }.isEqualTo(50.0)
-                            it.transform { it["value"].asDouble() }.isEqualTo(54328.5)
+                            it.transform { it["percentile_99_9"].asDouble() }.isEqualTo(54328.5)
                         }
                     }
                     transform { it["tags"] as ObjectNode }.all {
@@ -209,30 +201,22 @@ internal abstract class AbstractElasticsearchMeasurementPublisherIntegrationTest
                     transform { it["@timestamp"].asLong() }.isNotNull()
                     transform { it["metrics"] }.all {
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("count")
-                            it.transform { it["value"].asInt() }.isEqualTo(70)
+                            it.transform { it["count"].asInt() }.isEqualTo(70)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("mean")
-                            it.transform { it["value"].asInt() }.isEqualTo(22)
+                            it.transform { it["mean"].asInt() }.isEqualTo(22)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("total")
-                            it.transform { it["value"].asDouble() }.isEqualTo(1.7873213E7)
+                            it.transform { it["total"].asDouble() }.isEqualTo(1.7873213E7)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("max")
-                            it.transform { it["value"].asDouble() }.isEqualTo(548.5)
+                            it.transform { it["max"].asDouble() }.isEqualTo(548.5)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("percentile")
-                            it.transform { it["percentile"].asDouble() }.isEqualTo(45.0)
-                            it.transform { it["value"].asDouble() }.isEqualTo(54.5)
+                            it.transform { it["percentile_45"].asDouble() }.isEqualTo(54.5)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("percentile")
-                            it.transform { it["percentile"].asDouble() }.isEqualTo(74.5)
-                            it.transform { it["value"].asDouble() }.isEqualTo(548.5)
+                            it.transform { it["percentile_74_5"].asDouble() }.isEqualTo(548.5)
                         }
                     }
                     transform { it["tags"] as ObjectNode }.all {
@@ -255,7 +239,6 @@ internal abstract class AbstractElasticsearchMeasurementPublisherIntegrationTest
                     transform { it["@timestamp"].asLong() }.isNotNull()
                     transform { it["metrics"] }.all {
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("value")
                             it.transform { it["value"].asInt() }.isEqualTo(2)
                         }
                     }
@@ -279,30 +262,22 @@ internal abstract class AbstractElasticsearchMeasurementPublisherIntegrationTest
                     transform { it["@timestamp"].asLong() }.isNotNull()
                     transform { it["metrics"] }.all {
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("value")
                             it.transform { it["value"].asInt() }.isEqualTo(30)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("mean")
-                            it.transform { it["value"].asInt() }.isEqualTo(22)
+                            it.transform { it["mean"].asInt() }.isEqualTo(22)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("total")
-                            it.transform { it["value"].asDouble() }.isEqualTo(173.0)
+                            it.transform { it["total"].asDouble() }.isEqualTo(173.0)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("max")
-                            it.transform { it["value"].asDouble() }.isEqualTo(42.0)
+                            it.transform { it["max"].asDouble() }.isEqualTo(42.0)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("percentile")
-                            it.transform { it["percentile"].asDouble() }.isEqualTo(85.0)
-                            it.transform { it["value"].asDouble() }.isEqualTo(42.0)
+                            it.transform { it["percentile_85"].asDouble() }.isEqualTo(42.0)
                         }
                         any {
-                            it.transform { it["statistic"].asText() }.isEqualTo("percentile")
-                            it.transform { it["percentile"].asDouble() }.isEqualTo(50.0)
-                            it.transform { it["value"].asDouble() }.isEqualTo(30.0)
+                            it.transform { it["percentile_99_9"].asDouble() }.isEqualTo(30.0)
                         }
                     }
                     transform { it["tags"] as ObjectNode }.all {
@@ -326,10 +301,8 @@ internal abstract class AbstractElasticsearchMeasurementPublisherIntegrationTest
                 "nested": {
                   "path": "metrics",
                   "query": {
-                    "term": {
-                      "metrics.statistic": {
-                        "value": "count"
-                      }
+                    "exists": {
+                      "field" : "metrics.count"
                     }
                   }
                 }
@@ -358,7 +331,7 @@ internal abstract class AbstractElasticsearchMeasurementPublisherIntegrationTest
         // The payload should terminate with a new line, but does not.
         bulkRequest.setJsonEntity(
             """$metadataLine
-            {"@timestamp":1616167911000,"name":"my-counter4","type":"counter","metrics":[{"statistic: "count", "value":8.0}]"}
+            {"@timestamp":1616167911000,"name":"my-counter4","type":"counter","metrics":[{"count":8.0}]"}
         """.trimIndent()
         )
 
@@ -394,7 +367,7 @@ internal abstract class AbstractElasticsearchMeasurementPublisherIntegrationTest
         }
         bulkRequest.setJsonEntity(
             """$metadataLine
-{"@timestamp":1616167911000,"name":"my-counter4","type":"counter","metrics":[{"statistic":"count","value":"Not a float"}]"}
+{"@timestamp":1616167911000,"name":"my-counter4","type":"counter","metrics":[{"count":"Not a float"}]"}
 
 """
         )
@@ -412,8 +385,10 @@ internal abstract class AbstractElasticsearchMeasurementPublisherIntegrationTest
         }.message
 
         // then
-        assertThat(errorMessage).isNotNull()
-            .contains("failed to parse field [metrics.value] of type [double] in document with id '216a1b91-4af1-6cba-36ec-36c4ec682c23'")
+        assertThat(errorMessage).isNotNull().all {
+            contains("\"_id\":\"216a1b91-4af1-6cba-36ec-36c4ec682c23\",\"status\":400")
+            contains("parsing_exception")
+        }
 
         publisher.stop()
     }
@@ -465,7 +440,7 @@ internal abstract class AbstractElasticsearchMeasurementPublisherIntegrationTest
                 MeasurementMetric(178713.0, Statistic.TOTAL_TIME),
                 MeasurementMetric(54328.5, Statistic.MAX),
                 DistributionMeasurementMetric(548.5, Statistic.PERCENTILE, 85.0),
-                DistributionMeasurementMetric(54328.5, Statistic.PERCENTILE, 50.0),
+                DistributionMeasurementMetric(54328.5, Statistic.PERCENTILE, 99.9),
             )
         }
         val summarySnapshot = mockk<MeterSnapshot> {
@@ -526,7 +501,7 @@ internal abstract class AbstractElasticsearchMeasurementPublisherIntegrationTest
                 MeasurementMetric(173.0, Statistic.TOTAL),
                 MeasurementMetric(42.0, Statistic.MAX),
                 DistributionMeasurementMetric(42.0, Statistic.PERCENTILE, 85.0),
-                DistributionMeasurementMetric(30.0, Statistic.PERCENTILE, 50.0),
+                DistributionMeasurementMetric(30.0, Statistic.PERCENTILE, 99.9),
             )
         }
         return listOf(countSnapshot, gaugeSnapshot, timerSnapshot, summarySnapshot, rateSnapshot, throughputSnapshot)

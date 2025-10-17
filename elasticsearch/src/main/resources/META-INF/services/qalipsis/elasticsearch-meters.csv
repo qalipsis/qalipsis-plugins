@@ -5,9 +5,8 @@ elasticsearch-poll-success;counter
 elasticsearch-poll-success-bytes;counter
 elasticsearch-poll-time-to-response;timer
 elasticsearch-save-failures;counter
-elasticsearch-save-failure-bytes;counter
 elasticsearch-save-received-documents;counter
-elasticsearch-save-success-bytes;counter
+elasticsearch-save-sent-bytes;counter
 elasticsearch-save-successes;counter
 elasticsearch-save-time-to-response;timer
 elasticsearch-query-documents;counter

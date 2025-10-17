@@ -43,23 +43,7 @@
       },
       "metrics": {
         "type": "nested",
-        "dynamic": true,
-        "include_in_root": true,
-        "properties": {
-          "statistic": {
-            "type": "keyword",
-            "normalizer": "lowercase_normalizer",
-            "store": true
-          },
-          "value": {
-            "type": "double",
-            "store": true
-          },
-          "percentile": {
-            "type": "double",
-            "store": true
-          }
-        }
+        "include_in_root": true
       },
       "tags": {
         "type": "nested",
@@ -74,6 +58,16 @@
           "mapping": {
             "type": "keyword",
             "normalizer": "lowercase_normalizer",
+            "store": true
+          }
+        }
+      },
+      {
+        "metrics_double": {
+          "match_mapping_type": "double",
+          "path_match": "metrics.*",
+          "mapping": {
+            "type": "double",
             "store": true
           }
         }

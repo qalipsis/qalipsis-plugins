@@ -140,9 +140,13 @@ internal class ElasticsearchMeasurementPublisher(
         }
         val measurementJson = meterSnapshot.measurements.joinToString(separator = ",") {
             if (it is DistributionMeasurementMetric) {
-                """{"statistic":"${it.statistic.value.lowercase()}","percentile":${it.observationPoint},"value":${it.value}}"""
+                """{"${it.statistic.value.lowercase()}_${
+                    it.observationPoint.toString()
+                        .replace(".0", "") // Remove the trailing 0 from the integer percentages.
+                        .replace(".", "_") // Remove the decimal separator from the percentages.
+                }":${it.value}}"""
             } else {
-                """{"statistic":"${it.statistic.value.lowercase()}","value":${it.value}}"""
+                """{"${it.statistic.value.lowercase()}":${it.value}}"""
             }
         }
 

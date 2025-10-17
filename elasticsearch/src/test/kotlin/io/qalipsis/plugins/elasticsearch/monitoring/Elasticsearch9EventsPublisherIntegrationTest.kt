@@ -17,16 +17,16 @@
  *
  */
 
-package io.qalipsis.plugins.elasticsearch.save
+package io.qalipsis.plugins.elasticsearch.monitoring
 
-import io.qalipsis.plugins.elasticsearch.ELASTICSEARCH_8_IMAGE
+import io.qalipsis.plugins.elasticsearch.ELASTICSEARCH_9_IMAGE
+import io.qalipsis.plugins.elasticsearch.monitoring.events.AbstractElasticsearchEventsPublisherIntegrationTest
 import org.testcontainers.elasticsearch.ElasticsearchContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.utility.DockerImageName
 import java.time.format.DateTimeFormatter
 
-
-internal class Elasticsearch8BulkClientIntegrationTest: AbstractElasticsearchBulkClientIntegrationTest() {
+internal class Elasticsearch9EventsPublisherIntegrationTest : AbstractElasticsearchEventsPublisherIntegrationTest() {
 
     override val container: ElasticsearchContainer = CONTAINER
 
@@ -38,14 +38,13 @@ internal class Elasticsearch8BulkClientIntegrationTest: AbstractElasticsearchBul
 
         @Container
         @JvmStatic
-        private val CONTAINER =
-            ElasticsearchContainer(
-                DockerImageName.parse(ELASTICSEARCH_8_IMAGE)
-            ).withCreateContainerCmdModifier {
-                it.hostConfig!!.withMemory((512 * 1e20).toLong()).withCpuCount(2)
-            }
-                .withEnv("ES_JAVA_OPTS", "-Xms256m -Xmx256m")
-                .withEnv("action.destructive_requires_name", "false")
-                .withEnv("xpack.security.enabled", "false")
+        private val CONTAINER = ElasticsearchContainer(
+            DockerImageName.parse(ELASTICSEARCH_9_IMAGE)
+        ).withCreateContainerCmdModifier {
+            it.hostConfig!!.withMemory((512 * 1e20).toLong()).withCpuCount(2)
+        }
+            .withEnv("ES_JAVA_OPTS", "-Xms256m -Xmx256m")
+            .withEnv("action.destructive_requires_name", "false")
+            .withEnv("xpack.security.enabled", "false")
     }
 }
