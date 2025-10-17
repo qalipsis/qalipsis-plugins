@@ -149,13 +149,14 @@ dependencies {
         // Core modules.
         api("io.qalipsis:qalipsis-runtime:$pluginPlatformVersion")
         api("io.qalipsis:qalipsis-head:$pluginPlatformVersion")
+        api("io.qalipsis:qalipsis-webapp:${pluginPlatformVersion}")
         api("io.qalipsis:qalipsis-factory:$pluginPlatformVersion")
 
         // Plugins.
         api("io.qalipsis.plugin:qalipsis-plugin-cassandra:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-elasticsearch:0.14.0-SNAPSHOT")
+        api("io.qalipsis.plugin:qalipsis-plugin-elasticsearch:0.15.0-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-graphite:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-influxdb:0.14.0-SNAPSHOT")
+        api("io.qalipsis.plugin:qalipsis-plugin-influxdb:0.15.0-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-jackson:0.14.0-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-jakarta-ee-messaging:0.14.0-SNAPSHOT")
         api("io.qalipsis.plugin:qalipsis-plugin-jms:0.14.0-SNAPSHOT")
