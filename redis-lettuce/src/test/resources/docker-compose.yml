@@ -1,12 +1,10 @@
-version: '3'
-
 networks:
   app-tier:
     driver: bridge
 
 services:
   redis:
-    image: redis:6.0.10
+    image: redis
     networks:
       - app-tier
     ports:
@@ -21,7 +19,7 @@ services:
           memory: 20M
 
   redis-slave:
-    image: redis:6.0.10
+    image: redis
     command: redis-server --slaveof redis-master 6379
     links:
       - redis:redis-master
@@ -39,7 +37,7 @@ services:
           memory: 20M
 
   sentinel:
-    image: 'bitnami/redis-sentinel:6.0.10'
+    image: 'bitnami/redis-sentinel'
     ports:
       - '26379:26379'
     networks:
