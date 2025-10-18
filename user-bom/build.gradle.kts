@@ -10,6 +10,7 @@ plugins {
 
 group = "io.qalipsis"
 version = File(rootDir, "project.version").readText().trim()
+description = "Bill of materials for QALIPSIS scenario development"
 
 repositories {
     mavenLocal()
@@ -153,22 +154,22 @@ dependencies {
         api("io.qalipsis:qalipsis-factory:$pluginPlatformVersion")
 
         // Plugins.
-        api("io.qalipsis.plugin:qalipsis-plugin-cassandra:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-elasticsearch:0.15.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-graphite:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-influxdb:0.15.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-jackson:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-jakarta-ee-messaging:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-jms:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-kafka:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-mail:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-mongodb:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-netty:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-r2dbc-jasync:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-rabbitmq:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-redis-lettuce:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-slack:0.14.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-timescaledb:0.14.0-SNAPSHOT")
+        api("io.qalipsis.plugin:qalipsis-plugin-cassandra:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-elasticsearch:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-graphite:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-influxdb:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-jackson:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-jakarta-ee-messaging:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-jms:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-kafka:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-mail:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-mongodb:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-netty:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-r2dbc-jasync:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-rabbitmq:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-redis-lettuce:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-slack:0.16.0")
+        api("io.qalipsis.plugin:qalipsis-plugin-timescaledb:0.16.0")
     }
 }
 

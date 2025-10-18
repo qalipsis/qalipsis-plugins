@@ -1,4 +1,4 @@
-name: Java CI - Main branch
+name: Build the main branch and publish artifacts
 
 on:
   push:
@@ -11,7 +11,7 @@ env:
 
 jobs:
   build:
-    timeout-minutes: 10
+    timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -20,16 +20,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: ${{ matrix.java }}
           distribution: 'temurin'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Prepare publishing configuration
         env:
@@ -40,3 +40,4 @@ jobs:
 
       - name: Publish artifacts
         run: ./gradlew clean publish jreleaserFullRelease
+
