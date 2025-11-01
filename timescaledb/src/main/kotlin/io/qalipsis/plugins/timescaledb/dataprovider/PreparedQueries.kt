@@ -88,7 +88,7 @@ internal class PreparedQueries(
     /**
      * Determines the SQL identifier that can be used to bind the next parameter.
      */
-    private fun getNextUserIdentifierIndex(identifiers: Collection<String>): Int {
+    fun getNextUserIdentifierIndex(identifiers: Collection<String>): Int {
         return identifiers.maxOf { it.substringAfter('$').toIntOrNull() ?: 0 } + 1
     }
 

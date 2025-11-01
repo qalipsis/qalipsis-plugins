@@ -67,6 +67,7 @@ internal class DataRetrievalExecutor(
         val additionalClauses = buildAdditionalClauses(
             campaignsReferences = context.campaignsReferences,
             scenariosNames = context.scenariosNames,
+            zones = context.zones,
             actualBoundParameters = actualBoundParameters,
             nextParameterIndex = nextParameterIndex,
             dataType = dataType

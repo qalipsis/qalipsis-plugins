@@ -35,23 +35,33 @@ internal abstract class AbstractQueryExecutor<T> {
     protected fun buildAdditionalClauses(
         campaignsReferences: Set<String>,
         scenariosNames: Set<String>,
+        zones: Set<String>,
         actualBoundParameters: MutableMap<String, BoundParameter>,
         nextParameterIndex: Int,
         dataType: DataType? = null
     ): StringBuilder {
-        var nextIdentifier = "$${nextParameterIndex}"
+        var actualNextParameterIndex = nextParameterIndex
+        var nextIdentifier = "$${actualNextParameterIndex}"
         actualBoundParameters[nextIdentifier] =
             RawBoundParameter(campaignsReferences.toTypedArray(), nextIdentifier)
         val additionalClauses = StringBuilder(" AND campaign = any (array[${nextIdentifier}])")
 
         if (scenariosNames.isNotEmpty()) {
-            nextIdentifier = "$${nextParameterIndex + 1}"
+            nextIdentifier = "$${++actualNextParameterIndex}"
             actualBoundParameters[nextIdentifier] =
                 RawBoundParameter(scenariosNames.toTypedArray(), nextIdentifier)
             additionalClauses.append(" AND scenario = any (array[${nextIdentifier}])")
         } else if (dataType == DataType.METER) {
             additionalClauses.append(" AND scenario IS NULL")
         }
+
+        if (zones.isNotEmpty()) {
+            nextIdentifier = "$${++actualNextParameterIndex}"
+            actualBoundParameters[nextIdentifier] =
+                RawBoundParameter(zones.toTypedArray(), nextIdentifier)
+            additionalClauses.append(" AND tags->>'zone' = any (array[${nextIdentifier}])")
+        }
+
         return additionalClauses
     }
 
@@ -74,6 +84,11 @@ internal abstract class AbstractQueryExecutor<T> {
             val actualTenant = it.value ?: tenant
             log.trace { "Binding $actualTenant to ${it.identifiers.first()}" }
             statement.bind(it.identifiers.first(), actualTenant)
+        }
+        boundParameter[":scope"]?.let {
+            val actualScope = it.value ?: "period"
+            log.trace { "Binding $actualScope to ${it.identifiers.first()}" }
+            statement.bind(it.identifiers.first(), actualScope)
         }
 
         // Bind the non-hard-coded arguments.

@@ -196,7 +196,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"number-tag": "$number","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"number-tag": "$number","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-1", "zone":"zone-a"}""",
                         timestamp = Timestamp.from(currentEventTimestamp),
                         number = number.toBigDecimal(),
                     ),
@@ -206,7 +206,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-2",
-                        tags = """{"number-tag": "$number","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-2"}""",
+                        tags = """{"number-tag": "$number","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-2", "zone":"zone-a"}""",
                         timestamp = Timestamp.from(currentEventTimestamp),
                         number = number.toBigDecimal(),
                     ),
@@ -216,7 +216,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-2",
                         scenario = "my-scenario-1",
-                        tags = """{"number-tag": "$number","tenant-tag":"tenant-1","campaign-tag":"my-campaign-2","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"number-tag": "$number","tenant-tag":"tenant-1","campaign-tag":"my-campaign-2","scenario-tag":"my-scenario-1", "zone":"zone-b"}""",
                         timestamp = Timestamp.from(currentEventTimestamp.plusSeconds(3)),
                         number = number.toBigDecimal(),
                     )
@@ -482,7 +482,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers in the expected time-range`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1",
                     QueryDescription(QueryClause("name", QueryClauseOperator.IS, "my-event-1"))
@@ -531,7 +531,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with the expected tag`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("number-tag", QueryClauseOperator.IS, "21"))
                 )
@@ -556,7 +556,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with the equal numeric number`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1",
                     QueryDescription(QueryClause("number", QueryClauseOperator.IS, "21"))
@@ -581,7 +581,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with the not equal numeric number`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(
                         QueryClause("name", QueryClauseOperator.IS, "my-event-1"),
@@ -608,7 +608,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with the greater numbers`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(
                         QueryClause("name", QueryClauseOperator.IS, "my-event-1"),
@@ -635,7 +635,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with the greater or equal to numbers`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(
                         QueryClause("name", QueryClauseOperator.IS, "my-event-1"),
@@ -662,7 +662,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with the lower or equal to numbers`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(
                         QueryClause("name", QueryClauseOperator.IS, "my-event-1"),
@@ -689,7 +689,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with the lower than numbers`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(
                         QueryClause("name", QueryClauseOperator.IS, "my-event-1"),
@@ -716,7 +716,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with the IN numeric numbers`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("number", QueryClauseOperator.IS_IN, "13, 21"))
                 )
@@ -740,7 +740,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with NOT IN numeric numbers`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("number", QueryClauseOperator.IS_NOT_IN, "13, 21"))
                 )
@@ -767,7 +767,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with the LIKE string single number`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("name", QueryClauseOperator.IS_LIKE, "mY_ev%"))
                 )
@@ -790,7 +790,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with the NOT LIKE string single number`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("name", QueryClauseOperator.IS_NOT_LIKE, "mY_ev%-2"))
                 )
@@ -813,7 +813,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with the LIKE string numbers`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("name", QueryClauseOperator.IS_LIKE, "mY_ev%-1, other"))
                 )
@@ -836,7 +836,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with the NOT LIKE string numbers`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1",
                     QueryDescription(QueryClause("name", QueryClauseOperator.IS_NOT_LIKE, "mY_ev%-1,mY_ev%-2"))
@@ -876,7 +876,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with NOT IN number numbers`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("number", QueryClauseOperator.IS_NOT_IN, "13, 21"))
                 )
@@ -903,7 +903,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with the IN string numbers for a tag`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("number-tag", QueryClauseOperator.IS_IN, "8,21"))
                 )
@@ -927,7 +927,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers with the NOT IN string numbers for a tag`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("number-tag", QueryClauseOperator.IS_NOT_IN, "8,21"))
                 )
@@ -1009,7 +1009,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers in the descending order by default`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("name", QueryClauseOperator.IS, "my-event-1"))
                 )
@@ -1034,7 +1034,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers in the ascending order when specified`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("name", QueryClauseOperator.IS, "my-event-1"))
                 )
@@ -1065,7 +1065,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers in the ascending order when set`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("name", QueryClauseOperator.IS, "my-event-1"))
                 )
@@ -1090,7 +1090,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the numbers in the right campaigns`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries("tenant-1", QueryDescription())
                 var result = executeSelect(
                     coroutineScope = this,
@@ -1162,9 +1162,9 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
             }
 
         @Test
-        internal fun `should fetch the numbers in the right campaigns and scenarios`() =
+        internal fun `should fetch the numbers in the right campaigns and scenarios and zones`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries("tenant-1", QueryDescription())
                 var result = executeSelect(
                     coroutineScope = this,
@@ -1235,6 +1235,60 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
                             prop(TimeSeriesEvent::scenario).isEqualTo("my-scenario-2")
                             prop(TimeSeriesEvent::tags).isNotNull().all {
                                 key("tenant-tag").isEqualTo("tenant-1")
+                            }
+                        }
+                    }
+                }
+
+                // when
+                result = executeSelect(
+                    coroutineScope = this,
+                    query = query,
+                    start = Instant.EPOCH,
+                    end = latestTimestamp + Duration.ofSeconds(3),
+                    campaigns = setOf("my-campaign-1", "my-campaign-2"),
+                    scenariosNames = setOf("my-scenario-1"),
+                    zones = setOf("zone-a")
+                )
+
+                // then
+                assertThat(result.elements).all {
+                    hasSize(12)
+                    each {
+                        it.isInstanceOf(TimeSeriesEvent::class).all {
+                            prop(TimeSeriesEvent::name).isEqualTo("my-event-1")
+                            prop(TimeSeriesEvent::campaign).isIn("my-campaign-1", "my-campaign-2")
+                            prop(TimeSeriesEvent::scenario).isEqualTo("my-scenario-1")
+                            prop(TimeSeriesEvent::tags).isNotNull().all {
+                                key("tenant-tag").isEqualTo("tenant-1")
+                                key("zone").isEqualTo("zone-a")
+                            }
+                        }
+                    }
+                }
+
+                // when
+                result = executeSelect(
+                    coroutineScope = this,
+                    query = query,
+                    start = Instant.EPOCH,
+                    end = latestTimestamp + Duration.ofSeconds(3),
+                    campaigns = setOf("my-campaign-1", "my-campaign-2"),
+                    scenariosNames = setOf("my-scenario-1"),
+                    zones = setOf("zone-b")
+                )
+
+                // then
+                assertThat(result.elements).all {
+                    hasSize(12)
+                    each {
+                        it.isInstanceOf(TimeSeriesEvent::class).all {
+                            prop(TimeSeriesEvent::name).isEqualTo("my-event-1")
+                            prop(TimeSeriesEvent::campaign).isIn("my-campaign-1", "my-campaign-2")
+                            prop(TimeSeriesEvent::scenario).isEqualTo("my-scenario-1")
+                            prop(TimeSeriesEvent::tags).isNotNull().all {
+                                key("tenant-tag").isEqualTo("tenant-1")
+                                key("zone").isEqualTo("zone-b")
                             }
                         }
                     }
@@ -1745,9 +1799,9 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
             }
 
         @Test
-        internal fun `should aggregate in the right campaigns and scenarios`() =
+        internal fun `should aggregate in the right campaigns and scenarios and zones`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = eventQueryGenerator.prepareQueries(
                     "tenant-1",
                     QueryDescription(aggregationOperation = QueryAggregationOperator.COUNT)
@@ -1870,6 +1924,78 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
                         prop(TimeSeriesAggregationResult::elapsed).isEqualTo(Duration.ofSeconds(4))
                     }
                 }
+
+                // when
+                result = executeAggregation(
+                    query = query,
+                    start = start,
+                    end = latestTimestamp + Duration.ofSeconds(3),
+                    campaigns = setOf("my-campaign-1", "my-campaign-2"),
+                    scenariosNames = setOf("my-scenario-1"),
+                    zones = setOf("zone-a")
+                )
+
+                // then
+                assertThat(result).all {
+                    hasSize(3)
+                    index(0).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start)
+                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
+                        prop(TimeSeriesAggregationResult::elapsed).isEqualTo(Duration.ZERO)
+                    }
+                    index(1).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
+                        prop(TimeSeriesAggregationResult::elapsed).isEqualTo(Duration.ofSeconds(2))
+                    }
+                    index(2).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
+                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
+                        prop(TimeSeriesAggregationResult::elapsed).isEqualTo(Duration.ofSeconds(4))
+                    }
+                }
+
+                // when
+                result = executeAggregation(
+                    query = query,
+                    start = start,
+                    end = latestTimestamp + Duration.ofSeconds(3),
+                    campaigns = setOf("my-campaign-1", "my-campaign-2"),
+                    scenariosNames = setOf("my-scenario-1"),
+                    zones = setOf("zone-b")
+                )
+
+                // then
+                assertThat(result).all {
+                    hasSize(4)
+                    index(0).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
+                        prop(TimeSeriesAggregationResult::elapsed).isEqualTo(Duration.ZERO)
+                    }
+                    index(1).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
+                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
+                        prop(TimeSeriesAggregationResult::elapsed).isEqualTo(Duration.ofSeconds(2))
+                    }
+                    index(2).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(6))
+                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
+                        prop(TimeSeriesAggregationResult::elapsed).isEqualTo(Duration.ofSeconds(4))
+                    }
+                    index(3).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(8))
+                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(1.0)
+                        prop(TimeSeriesAggregationResult::elapsed).isEqualTo(Duration.ofSeconds(6))
+                    }
+                }
             }
     }
 
@@ -1883,7 +2009,8 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         size: Int = 100,
         order: String? = null,
         campaigns: Set<String> = setOf("my-campaign-1"),
-        scenariosNames: Set<String> = setOf("my-scenario-1")
+        scenariosNames: Set<String> = setOf("my-scenario-1"),
+        zones: Set<String> = emptySet(),
     ): Page<TimeSeriesRecord> {
         return DataRetrievalExecutor(
             coroutineScope,
@@ -1894,6 +2021,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
                 tenant = "default-tenant",
                 campaignsReferences = campaigns,
                 scenariosNames = scenariosNames,
+                zones = zones,
                 from = start,
                 until = end,
                 aggregationTimeframe = timeframe,
@@ -1914,7 +2042,8 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
         end: Instant,
         timeframe: Duration = Duration.ofSeconds(2),
         campaigns: Set<String> = setOf("my-campaign-1"),
-        scenariosNames: Set<String> = setOf("my-scenario-1")
+        scenariosNames: Set<String> = setOf("my-scenario-1"),
+        zones: Set<String> = emptySet(),
     ): List<TimeSeriesAggregationResult> {
         return AggregationExecutor(
             connection,
@@ -1923,6 +2052,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
                 tenant = "default-tenant",
                 campaignsReferences = campaigns,
                 scenariosNames = scenariosNames,
+                zones = zones,
                 from = start,
                 until = end,
                 aggregationTimeframe = timeframe

@@ -79,7 +79,7 @@ internal abstract class AbstractQueryGenerator(
         preparedQueries.aggregationStatement = sql.toString()
     }
 
-    private fun addDefaultParametersForAggregationStatement(
+    protected open fun addDefaultParametersForAggregationStatement(
         tenant: String?,
         timeframeMillis: Long?,
         preparedQueries: PreparedQueries
@@ -147,7 +147,10 @@ internal abstract class AbstractQueryGenerator(
             "SELECT * $sql ORDER BY ${databaseTable}.timestamp %order% LIMIT %limit% OFFSET %offset%"
     }
 
-    private fun addDefaultParametersForCountAndRetrievalStatement(tenant: String?, preparedQueries: PreparedQueries) {
+    protected open fun addDefaultParametersForCountAndRetrievalStatement(
+        tenant: String?,
+        preparedQueries: PreparedQueries
+    ) {
         preparedQueries.bindCountAndRetrievalParameter(
             ":schema",
             SerializableBoundParameter(serializedValue = null, SerializableBoundParameter.Type.STRING, "%schema%")
@@ -178,7 +181,7 @@ internal abstract class AbstractQueryGenerator(
         )
     }
 
-    private fun addClauses(
+    protected open fun addClauses(
         queryClauses: Collection<QueryClause>,
         sql: StringBuilder,
         boundParametersCollector: (key: String, SerializableBoundParameter) -> Unit,
@@ -186,6 +189,7 @@ internal abstract class AbstractQueryGenerator(
     ) {
         sql.append(" %s") // Placeholder for additional filters (specific campaigns or scenarios)
         queryClauses.forEach { clause ->
+            // Manages the name of the meter/event.
             if (clause.name == "name" || clause.name in queryFieldsByName.keys) {
                 sql.append(""" AND ${databaseTable}.${clause.name}""")
                 sql.append(

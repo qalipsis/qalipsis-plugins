@@ -173,7 +173,18 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-1", "zone":"zone-a"}""",
+                        timestamp = Timestamp.from(currentMeterTimestamp),
+                        type = "gauge",
+                        value = value.toBigDecimal(),
+                    ),
+                    TimescaledbMeter(
+                        // This one has in the unexpected value tags.scope and should be ignored.
+                        name = "my-meter-1",
+                        tenant = "tenant-1",
+                        campaign = "my-campaign-1",
+                        scenario = "my-scenario-1",
+                        tags = """{"scope":"not-period", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-1", "zone":"zone-b"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -183,7 +194,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-2",
-                        tags = """{"value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-2"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-2", "zone":"zone-a"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -193,7 +204,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-2",
                         scenario = "my-scenario-1",
-                        tags = """{"value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-2","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-2","scenario-tag":"my-scenario-1", "zone":"zone-a"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -202,7 +213,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         name = "my-meter-1",
                         tenant = "tenant-1",
                         campaign = "my-campaign-3",
-                        tags = """{"value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-3"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-3"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -220,7 +231,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"value-tag": "$value","tenant-tag":"tenant-1","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","scenario-tag":"my-scenario-1"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -237,7 +248,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-2",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"value-tag": "$value","tenant-tag":"tenant-2","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-2","scenario-tag":"my-scenario-1"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -255,7 +266,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "default-tenant",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"value-tag": "$value","tenant-tag":"default-tenant","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"default-tenant","scenario-tag":"my-scenario-1"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -264,7 +275,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         name = "my-meter-1",
                         tenant = "default-tenant",
                         campaign = "my-campaign-3",
-                        tags = """{"value-tag": "$value","tenant-tag":"default-tenant","campaign-tag":"my-campaign-3"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"default-tenant","campaign-tag":"my-campaign-3"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -282,7 +293,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "default-tenant",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"value-tag": "$value","tenant-tag":"default-tenant","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"default-tenant","scenario-tag":"my-scenario-1"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -583,7 +594,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values in the expected time-range`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1",
                     QueryDescription(QueryClause("name", QueryClauseOperator.IS, "my-meter-1"))
@@ -632,7 +643,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with the expected tag`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("value-tag", QueryClauseOperator.IS, "21"))
                 )
@@ -657,7 +668,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with the equal numeric value`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1",
                     QueryDescription(QueryClause("value", QueryClauseOperator.IS, "21"))
@@ -709,7 +720,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with the greater values`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(
                         QueryClause("name", QueryClauseOperator.IS, "my-meter-1"),
@@ -736,7 +747,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with the greater or equal to values`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(
                         QueryClause("name", QueryClauseOperator.IS, "my-meter-1"),
@@ -763,7 +774,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with the lower or equal to values`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(
                         QueryClause("name", QueryClauseOperator.IS, "my-meter-1"),
@@ -790,7 +801,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with the lower than values`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(
                         QueryClause("name", QueryClauseOperator.IS, "my-meter-1"),
@@ -817,7 +828,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with the IN numeric values`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("value", QueryClauseOperator.IS_IN, "13, 21"))
                 )
@@ -841,7 +852,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with NOT IN numeric values`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("value", QueryClauseOperator.IS_NOT_IN, "13, 21"))
                 )
@@ -868,7 +879,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with the LIKE string single value`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("name", QueryClauseOperator.IS_LIKE, "mY_me%"))
                 )
@@ -891,7 +902,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with the NOT LIKE string single value`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("name", QueryClauseOperator.IS_NOT_LIKE, "mY_me%-2"))
                 )
@@ -914,7 +925,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with the LIKE string values`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("name", QueryClauseOperator.IS_LIKE, "mY_me%-1, other"))
                 )
@@ -937,7 +948,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with the NOT LIKE string values`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1",
                     QueryDescription(QueryClause("name", QueryClauseOperator.IS_NOT_LIKE, "mY_me%-1,mY_me%-2"))
@@ -977,7 +988,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with NOT IN number values`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("value", QueryClauseOperator.IS_NOT_IN, "13, 21"))
                 )
@@ -1004,7 +1015,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with the IN string values for a tag`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("value-tag", QueryClauseOperator.IS_IN, "8,21"))
                 )
@@ -1028,7 +1039,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values with the NOT IN string values for a tag`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("value-tag", QueryClauseOperator.IS_NOT_IN, "8,21"))
                 )
@@ -1110,7 +1121,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values in the descending order by default`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("name", QueryClauseOperator.IS, "my-meter-1"))
                 )
@@ -1135,7 +1146,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values in the ascending order when specified`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("name", QueryClauseOperator.IS, "my-meter-1"))
                 )
@@ -1166,7 +1177,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values in the ascending order when set`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(QueryClause("name", QueryClauseOperator.IS, "my-meter-1"))
                 )
@@ -1191,7 +1202,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should fetch the values in the right campaigns`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries("tenant-1", QueryDescription())
                 var result = executeSelect(
                     coroutineScope = this,
@@ -1263,9 +1274,9 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
             }
 
         @Test
-        internal fun `should fetch the values in the right campaigns and scenarios`() =
+        internal fun `should fetch the values in the right campaigns and scenarios and zones`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries("tenant-1", QueryDescription())
                 var result = executeSelect(
                     coroutineScope = this,
@@ -1340,6 +1351,47 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         }
                     }
                 }
+
+                // when
+                result = executeSelect(
+                    coroutineScope = this,
+                    query = query,
+                    start = Instant.EPOCH,
+                    end = latestTimestamp + Duration.ofSeconds(3),
+                    campaigns = setOf("my-campaign-1", "my-campaign-2"),
+                    scenariosNames = setOf("my-scenario-1"),
+                    zones = setOf("zone-a")
+                )
+
+                // then
+                assertThat(result.elements).all {
+                    hasSize(24)
+                    each {
+                        it.isInstanceOf(TimeSeriesMeter::class).all {
+                            prop(TimeSeriesMeter::name).isEqualTo("my-meter-1")
+                            prop(TimeSeriesMeter::campaign).isIn("my-campaign-1", "my-campaign-2")
+                            prop(TimeSeriesMeter::scenario).isEqualTo("my-scenario-1")
+                            prop(TimeSeriesMeter::tags).isNotNull().all {
+                                key("tenant-tag").isEqualTo("tenant-1")
+                                key("zone").isEqualTo("zone-a")
+                            }
+                        }
+                    }
+                }
+
+                // when
+                result = executeSelect(
+                    coroutineScope = this,
+                    query = query,
+                    start = Instant.EPOCH,
+                    end = latestTimestamp + Duration.ofSeconds(3),
+                    campaigns = setOf("my-campaign-1", "my-campaign-2"),
+                    scenariosNames = setOf("my-scenario-1"),
+                    zones = setOf("zone-b")
+                )
+
+                // then
+                assertThat(result.elements).isEmpty()
             }
     }
 
@@ -1865,7 +1917,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         @Test
         internal fun `should aggregate in the right campaigns`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1",
                     QueryDescription(aggregationOperation = QueryAggregationOperator.COUNT)
@@ -1970,9 +2022,9 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
             }
 
         @Test
-        internal fun `should aggregate in the right campaigns and scenarios`() =
+        internal fun `should aggregate in the right campaigns and scenarios and zones`() =
             testDispatcherProvider.run {
-                // given"
+                // given
                 val query = meterQueryGenerator.prepareQueries(
                     "tenant-1",
                     QueryDescription(aggregationOperation = QueryAggregationOperator.COUNT)
@@ -2077,11 +2129,69 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
                     }
                 }
+
+                // when
+                result = executeAggregation(
+                    query = query,
+                    start = start,
+                    end = latestTimestamp + Duration.ofSeconds(3),
+                    campaigns = setOf("my-campaign-1", "my-campaign-2"),
+                    scenariosNames = setOf("my-scenario-1"),
+                    zones = setOf("zone-a")
+                )
+
+                // then
+                assertThat(result).all {
+                    hasSize(6)
+                    index(0).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start)
+                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
+                    }
+                    index(1).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
+                    }
+                    index(2).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
+                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
+                    }
+                    index(3).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start)
+                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
+                    }
+                    index(4).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
+                    }
+                    index(5).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
+                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
+                    }
+                }
+
+                // when
+                result = executeAggregation(
+                    query = query,
+                    start = start,
+                    end = latestTimestamp + Duration.ofSeconds(3),
+                    campaigns = setOf("my-campaign-1", "my-campaign-2"),
+                    scenariosNames = setOf("my-scenario-1"),
+                    zones = setOf("zone-b")
+                )
+
+                // then
+                assertThat(result).isEmpty()
             }
 
         @Test
         internal fun `should aggregate only meters without scenarios`() = testDispatcherProvider.run {
-            // given"
+            // given
             val query = meterQueryGenerator.prepareQueries(
                 "tenant-1",
                 QueryDescription(aggregationOperation = QueryAggregationOperator.COUNT)
@@ -2126,7 +2236,8 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         size: Int = 100,
         order: String? = null,
         campaigns: Set<String> = setOf("my-campaign-1"),
-        scenariosNames: Set<String> = setOf("my-scenario-1")
+        scenariosNames: Set<String> = setOf("my-scenario-1"),
+        zones: Set<String> = emptySet(),
     ): Page<TimeSeriesRecord> {
         return DataRetrievalExecutor(
             coroutineScope,
@@ -2137,6 +2248,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                 tenant = "default-tenant",
                 campaignsReferences = campaigns,
                 scenariosNames = scenariosNames,
+                zones = zones,
                 from = start,
                 until = end,
                 aggregationTimeframe = timeframe,
@@ -2158,7 +2270,8 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
         end: Instant,
         timeframe: Duration = Duration.ofSeconds(2),
         campaigns: Set<String> = setOf("my-campaign-1"),
-        scenariosNames: Set<String> = setOf("my-scenario-1")
+        scenariosNames: Set<String> = setOf("my-scenario-1"),
+        zones: Set<String> = emptySet(),
     ): List<TimeSeriesAggregationResult> {
         return AggregationExecutor(
             connection,
@@ -2167,6 +2280,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                 tenant = "default-tenant",
                 campaignsReferences = campaigns,
                 scenariosNames = scenariosNames,
+                zones = zones,
                 from = start,
                 until = end,
                 aggregationTimeframe = timeframe
