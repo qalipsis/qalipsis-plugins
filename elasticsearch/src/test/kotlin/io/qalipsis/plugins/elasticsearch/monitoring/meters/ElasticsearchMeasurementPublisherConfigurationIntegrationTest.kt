@@ -22,6 +22,7 @@ package io.qalipsis.plugins.elasticsearch.monitoring.meters
 import assertk.all
 import assertk.assertThat
 import assertk.assertions.any
+import assertk.assertions.containsOnly
 import assertk.assertions.hasSize
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
@@ -37,7 +38,6 @@ import jakarta.inject.Inject
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
-import org.testcontainers.shaded.org.apache.commons.lang3.StringUtils.containsOnly
 
 /**
  * Tests to verify the automatic configuration of the Elasticsearch publisher.

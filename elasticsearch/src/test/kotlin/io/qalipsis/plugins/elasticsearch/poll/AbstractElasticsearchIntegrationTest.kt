@@ -23,11 +23,11 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import java.util.UUID
 import org.apache.http.util.EntityUtils
 import org.elasticsearch.client.Request
 import org.elasticsearch.client.RestClient
-import org.junit.Assert
-import java.util.UUID
+import org.junit.jupiter.api.Assertions
 
 /**
  *
@@ -46,7 +46,7 @@ internal abstract class AbstractElasticsearchIntegrationTest {
         request.setJsonEntity(indexConfiguration)
         val responseBody = EntityUtils.toString(restClient.performRequest(request).entity)
         val response = jsonMapper.readTree(responseBody).get("acknowledged").booleanValue()
-        Assert.assertTrue("An error occurred while creating the index: $responseBody", response)
+        Assertions.assertTrue(response, "An error occurred while creating the index: $responseBody")
     }
 
     protected fun bulk(restClient: RestClient, index: String, documents: List<String>, withType: Boolean) {
@@ -63,8 +63,10 @@ internal abstract class AbstractElasticsearchIntegrationTest {
         request.setJsonEntity(bulk)
         val responseBody = EntityUtils.toString(restClient.performRequest(request).entity)
         val response = jsonMapper.readTree(responseBody)
-        Assert.assertFalse("Errors occurred during the bulk request: $responseBody",
-                response.get("errors").booleanValue())
+        Assertions.assertFalse(
+            response.get("errors").booleanValue(),
+            "Errors occurred during the bulk request: $responseBody"
+        )
     }
 
     protected fun count(restClient: RestClient, index: String): Int {

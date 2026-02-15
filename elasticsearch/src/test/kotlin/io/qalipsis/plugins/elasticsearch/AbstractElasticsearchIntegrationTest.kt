@@ -26,7 +26,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.apache.http.util.EntityUtils
 import org.elasticsearch.client.Request
 import org.elasticsearch.client.RestClient
-import org.junit.Assert
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Timeout
 import java.util.concurrent.TimeUnit
 
@@ -48,7 +48,7 @@ internal abstract class AbstractElasticsearchIntegrationTest {
         request.setJsonEntity(indexConfiguration)
         val responseBody = EntityUtils.toString(restClient.performRequest(request).entity)
         val response = jsonMapper.readTree(responseBody).get("acknowledged").booleanValue()
-        Assert.assertTrue("An error occurred while creating the index: $responseBody", response)
+        Assertions.assertTrue(response, "An error occurred while creating the index: $responseBody")
     }
 
     protected fun bulk(restClient: RestClient, index: String, documents: List<DocumentWithId>, withType: Boolean) {
@@ -65,8 +65,7 @@ internal abstract class AbstractElasticsearchIntegrationTest {
         request.setJsonEntity(bulk)
         val responseBody = EntityUtils.toString(restClient.performRequest(request).entity)
         val response = jsonMapper.readTree(responseBody)
-        Assert.assertFalse("Errors occurred during the bulk request: $responseBody",
-                response.get("errors").booleanValue())
+        Assertions.assertFalse(response.get("errors").booleanValue(), "Errors occurred during the bulk request: $responseBody")
     }
 
     protected fun count(restClient: RestClient, index: String): Int {

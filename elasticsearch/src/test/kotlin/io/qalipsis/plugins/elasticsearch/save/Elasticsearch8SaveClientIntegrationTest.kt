@@ -24,6 +24,7 @@ import org.testcontainers.elasticsearch.ElasticsearchContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.utility.DockerImageName
 import java.time.format.DateTimeFormatter
+import kotlin.math.pow
 
 
 internal class Elasticsearch8SaveClientIntegrationTest : AbstractElasticsearchSaveClientIntegrationTest() {
@@ -42,7 +43,7 @@ internal class Elasticsearch8SaveClientIntegrationTest : AbstractElasticsearchSa
             ElasticsearchContainer(
                 DockerImageName.parse(ELASTICSEARCH_8_IMAGE)
             ).withCreateContainerCmdModifier {
-                it.hostConfig!!.withMemory((512 * 1e20).toLong()).withCpuCount(2)
+                it.hostConfig!!.withMemory(512 * 1024.0.pow(2).toLong()).withCpuCount(2)
             }
                 .withEnv("ES_JAVA_OPTS", "-Xms256m -Xmx256m")
                 .withEnv("action.destructive_requires_name", "false")
