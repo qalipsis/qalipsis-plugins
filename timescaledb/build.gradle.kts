@@ -85,7 +85,7 @@ dependencies {
     testImplementation(testFixtures("io.qalipsis:qalipsis-api-dsl"))
     testImplementation(testFixtures("io.qalipsis:qalipsis-api-common"))
     testImplementation("org.testcontainers:testcontainers")
-    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.testcontainers:testcontainers-postgresql")
     testRuntimeOnly("io.qalipsis:qalipsis-runtime")
     testRuntimeOnly("io.qalipsis:qalipsis-head")
     testRuntimeOnly("io.qalipsis:qalipsis-factory")
