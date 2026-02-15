@@ -74,7 +74,7 @@ dependencies {
     kapt("io.qalipsis:qalipsis-api-common")
     kapt("io.aeris-consulting:catadioptre-annotations")
 
-    testImplementation("org.testcontainers:mongodb")
+    testImplementation("org.testcontainers:testcontainers-mongodb")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
     testImplementation("io.qalipsis:qalipsis-test")

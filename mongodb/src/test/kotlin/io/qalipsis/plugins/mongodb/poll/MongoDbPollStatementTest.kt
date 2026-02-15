@@ -33,7 +33,7 @@ import io.qalipsis.test.assertk.typedProp
 import org.bson.BsonString
 import org.bson.BsonValue
 import org.bson.Document
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 internal class MongoDbPollStatementTest {
 
@@ -127,7 +127,7 @@ internal class MongoDbPollStatementTest {
         val filterForFirstRequest = pollStatement.filter
 
         // then
-        assertThat(filterForFirstRequest).isEqualTo(initialFindClause)
+        assertThat(filterForFirstRequest).isEqualTo(initialFindClause.toBsonDocument())
     }
 
     @Test
