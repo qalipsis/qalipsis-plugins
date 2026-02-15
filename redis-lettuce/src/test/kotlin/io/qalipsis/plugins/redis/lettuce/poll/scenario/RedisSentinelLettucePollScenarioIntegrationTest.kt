@@ -30,21 +30,21 @@ import io.lettuce.core.codec.ByteArrayCodec
 import io.lettuce.core.codec.RedisCodec
 import io.qalipsis.plugins.redis.lettuce.AbstractRedisIntegrationTest
 import io.qalipsis.runtime.test.QalipsisTestRunner
+import java.io.File
+import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
-import org.junit.jupiter.api.condition.DisabledOnOs
-import org.junit.jupiter.api.condition.OS
 import org.testcontainers.containers.DockerComposeContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.io.File
-import java.util.concurrent.TimeUnit
 
 @Testcontainers
-@DisabledOnOs(value = [OS.MAC]) // Docker on Mac does not support bridge networking in Docker.
+@Disabled
+// FIXME The docker image bitnami/redis-sentinel used for the test is no longer opensource and available.
 internal class RedisSentinelLettucePollScenarioIntegrationTest {
 
     private lateinit var redisClient: RedisClient
