@@ -74,7 +74,7 @@ dependencies {
 
     testImplementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
     testImplementation("io.micronaut.test:micronaut-test-junit5")
-    testImplementation("org.testcontainers:kafka")
+    testImplementation("org.testcontainers:testcontainers-kafka")
     testImplementation("io.qalipsis:qalipsis-test")
     testImplementation("io.qalipsis:qalipsis-api-dsl")
     testImplementation(testFixtures("io.qalipsis:qalipsis-api-dsl"))
