@@ -70,7 +70,7 @@ dependencies {
 
     testImplementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
     testImplementation("io.aeris-consulting:catadioptre-kotlin")
-    testImplementation("org.testcontainers:influxdb")
+    testImplementation("org.testcontainers:testcontainers-influxdb")
     testImplementation("io.micronaut.test:micronaut-test-junit5")
     testImplementation("io.qalipsis:qalipsis-test")
     testImplementation("io.qalipsis:qalipsis-api-dsl")
