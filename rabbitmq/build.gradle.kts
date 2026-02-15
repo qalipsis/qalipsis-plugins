@@ -66,7 +66,7 @@ dependencies {
     kapt("io.qalipsis:qalipsis-api-common")
     kapt("io.aeris-consulting:catadioptre-annotations")
 
-    testImplementation("org.testcontainers:rabbitmq")
+    testImplementation("org.testcontainers:testcontainers-rabbitmq")
     testImplementation("io.qalipsis:qalipsis-test")
     testImplementation("io.qalipsis:qalipsis-api-dsl")
     testImplementation(testFixtures("io.qalipsis:qalipsis-api-dsl"))
