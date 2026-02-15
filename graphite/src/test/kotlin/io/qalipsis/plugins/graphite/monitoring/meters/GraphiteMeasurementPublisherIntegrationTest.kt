@@ -54,6 +54,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
+import kotlin.math.pow
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -773,7 +774,7 @@ internal class GraphiteMeasurementPublisherIntegrationTest {
             setWaitStrategy(HttpWaitStrategy().forPort(Constants.HTTP_PORT).forPath("/render").forStatusCode(200))
             withStartupTimeout(Duration.ofSeconds(60))
 
-            withCreateContainerCmdModifier { it.hostConfig!!.withMemory((512 * 1e20).toLong()).withCpuCount(2) }
+            withCreateContainerCmdModifier { it.hostConfig!!.withMemory(512 * 1024.0.pow(2).toLong()).withCpuCount(2) }
             withClasspathResourceMapping("carbon.conf", Constants.CARBON_CONFIG_PATH, BindMode.READ_ONLY)
             withClasspathResourceMapping(
                 "storage-schemas.conf",

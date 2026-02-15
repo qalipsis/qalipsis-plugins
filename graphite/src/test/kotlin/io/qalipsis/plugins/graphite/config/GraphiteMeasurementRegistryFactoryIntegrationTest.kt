@@ -44,6 +44,7 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
 import java.time.Duration
+import kotlin.math.pow
 
 @Testcontainers
 internal class GraphiteMeasurementRegistryFactoryIntegrationTest {
@@ -144,7 +145,7 @@ internal class GraphiteMeasurementRegistryFactoryIntegrationTest {
             withExposedPorts(Constants.HTTP_PORT, Constants.GRAPHITE_PLAINTEXT_PORT, Constants.GRAPHITE_PICKLE_PORT)
             withAccessToHost(true)
             withStartupTimeout(Duration.ofSeconds(60))
-            withCreateContainerCmdModifier { it.hostConfig!!.withMemory((512 * 1e20).toLong()).withCpuCount(2) }
+            withCreateContainerCmdModifier { it.hostConfig!!.withMemory(512 * 1024.0.pow(2).toLong()).withCpuCount(2) }
         }
     }
 }

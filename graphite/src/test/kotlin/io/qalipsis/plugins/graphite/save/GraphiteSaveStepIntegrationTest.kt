@@ -89,6 +89,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
+import kotlin.math.pow
 
 /**
  *
@@ -582,7 +583,7 @@ internal class GraphiteSaveStepIntegrationTest {
             setWaitStrategy(HttpWaitStrategy().forPort(Constants.HTTP_PORT).forPath("/render").forStatusCode(200))
             withStartupTimeout(Duration.ofSeconds(60))
 
-            withCreateContainerCmdModifier { it.hostConfig!!.withMemory((512 * 1e20).toLong()).withCpuCount(2) }
+            withCreateContainerCmdModifier { it.hostConfig!!.withMemory(512 * 1024.0.pow(2).toLong()).withCpuCount(2) }
             withClasspathResourceMapping("carbon.conf", Constants.CARBON_CONFIG_PATH, BindMode.READ_ONLY)
             withClasspathResourceMapping(
                 "storage-schemas.conf",
