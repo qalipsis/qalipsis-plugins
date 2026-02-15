@@ -75,7 +75,8 @@ dependencies {
     testFixturesImplementation("io.qalipsis:qalipsis-test")
 
     testImplementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
-    testImplementation("org.testcontainers:cassandra")
+    testImplementation("org.testcontainers:testcontainers-bom:2.0.3")
+    testImplementation("org.testcontainers:testcontainers-cassandra")
     testImplementation("io.qalipsis:qalipsis-test")
     testImplementation("io.qalipsis:qalipsis-api-dsl")
     testImplementation("io.qalipsis:qalipsis-runtime")
