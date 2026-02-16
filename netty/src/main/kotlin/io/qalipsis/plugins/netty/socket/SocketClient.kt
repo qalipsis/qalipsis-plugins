@@ -109,8 +109,8 @@ internal abstract class SocketClient<CONN : SocketClientConfiguration, REQ : Any
             remoteAddress(InetSocketAddress(config.inetAddress, config.port))
             option(ChannelOption.TCP_NODELAY, config.noDelay)
             option(ChannelOption.CONNECT_TIMEOUT_MILLIS, config.connectTimeout.toMillis().toInt())
-            option(ChannelOption.SO_RCVBUF, config.receiveBufferSize)
-            option(ChannelOption.SO_SNDBUF, config.sendBufferSize)
+            config.receiveBufferSize?.let { option(ChannelOption.SO_RCVBUF, it) }
+            config.sendBufferSize?.let { option(ChannelOption.SO_SNDBUF, it) }
             option(ChannelOption.SO_KEEPALIVE, config.keepConnectionAlive)
             config.nettyChannelOptions.forEach { (option, value) ->
                 @Suppress("UNCHECKED_CAST")

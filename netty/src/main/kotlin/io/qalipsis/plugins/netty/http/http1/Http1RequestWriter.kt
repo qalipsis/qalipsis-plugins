@@ -30,7 +30,9 @@ import io.qalipsis.plugins.netty.http.HttpPipelineNames
 import io.qalipsis.plugins.netty.http.spec.HttpVersion
 import io.qalipsis.plugins.netty.monitoring.StepContextBasedSocketMonitoringCollector
 import io.qalipsis.plugins.netty.socket.RequestWriter
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.net.URI
 
 internal open class Http1RequestWriter(
@@ -66,9 +68,7 @@ internal open class Http1RequestWriter(
             if (!it.isSuccess) {
                 monitoringCollector.recordSentRequestFailure(it.cause())
                 if (responseSlot.isEmpty()) {
-                    runBlocking {
-                        responseSlot.set(Result.failure(it.cause()))
-                    }
+                    responseSlot.offer(Result.failure(it.cause()))
                 }
                 log.trace { "The request could not be sent: ${it.cause().message}" }
             } else {

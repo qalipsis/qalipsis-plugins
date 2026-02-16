@@ -45,19 +45,32 @@ internal class Http2RequestExecutionConfigurer(
 
     private var streamIdGenerator = Http2ClientStreamIdGeneratorImpl()
 
+    private var channelMonitoringHandler: HttpChannelMonitoringHandler? = null
+
+    private var responseHandler: Http2ResponseHandler? = null
+
     override fun configure(
         request: HttpRequest<*>,
         monitoringCollector: StepContextBasedSocketMonitoringCollector,
         responseSlot: ImmutableSlot<Result<HttpResponse>>
     ): RequestWriter {
-        pipeline.addFirst(CHANNEL_MONITORING_HANDLER, HttpChannelMonitoringHandler(monitoringCollector))
-        pipeline.addLast(
-            INBOUND_HANDLER,
-            Http2ResponseHandler(
-                responseSlot,
-                monitoringCollector as HttpStepContextBasedSocketMonitoringCollector
-            )
-        )
+        val httpMonitoringCollector = monitoringCollector as HttpStepContextBasedSocketMonitoringCollector
+
+        val existingCmh = channelMonitoringHandler
+        if (existingCmh == null) {
+            // First request: install handlers into the pipeline.
+            val cmh = HttpChannelMonitoringHandler(monitoringCollector)
+            pipeline.addFirst(CHANNEL_MONITORING_HANDLER, cmh)
+            channelMonitoringHandler = cmh
+
+            val rh = Http2ResponseHandler(responseSlot, httpMonitoringCollector)
+            pipeline.addLast(INBOUND_HANDLER, rh)
+            responseHandler = rh
+        } else {
+            // Subsequent requests: reset handler state.
+            existingCmh.prepare(monitoringCollector)
+            responseHandler!!.prepare(responseSlot, httpMonitoringCollector)
+        }
 
         return Http2RequestWriter(
             (request as InternalHttpRequest<*, *>).toNettyRequest(clientConfiguration),
@@ -68,4 +81,7 @@ internal class Http2RequestExecutionConfigurer(
         )
     }
 
+    override fun completeMonitoring() {
+        channelMonitoringHandler?.complete()
+    }
 }

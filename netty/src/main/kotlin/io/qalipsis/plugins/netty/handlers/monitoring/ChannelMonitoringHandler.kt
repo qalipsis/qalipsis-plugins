@@ -35,13 +35,30 @@ import java.util.concurrent.atomic.AtomicInteger
  * @author Eric Jessé
  */
 internal open class ChannelMonitoringHandler(
-    private val monitoringCollector: MonitoringCollector
+    monitoringCollector: MonitoringCollector
 ) : ChannelDuplexHandler() {
+
+    private var monitoringCollector: MonitoringCollector = monitoringCollector
 
     /**
      * Phase of the discussion.
      */
     private val exchangePhase = AtomicInteger(INIT_PHASE)
+
+    /**
+     * Resets the handler state for a new request cycle.
+     */
+    open fun prepare(monitoringCollector: MonitoringCollector) {
+        this.monitoringCollector = monitoringCollector
+        this.exchangePhase.set(INIT_PHASE)
+    }
+
+    /**
+     * Marks the request cycle as complete so no further writes or reads are monitored.
+     */
+    open fun complete() {
+        this.exchangePhase.set(COMPLETED_PHASE)
+    }
 
     override fun handlerRemoved(ctx: ChannelHandlerContext) {
         log.trace { "Channel ${ctx.channel()}: removed handler" }
@@ -78,8 +95,9 @@ internal open class ChannelMonitoringHandler(
 
     override fun write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise) {
         val size = getMessageSize(msg)
-        if (size > 0) {
-            // Exchange state change and event logging are only considered when bytes are sent on the wire.
+        if (size > 0 && exchangePhase.get() < RECEIVING_PHASE) {
+            // Only count bytes during the request-sending phase, not protocol-level frames
+            // (e.g. HTTP/2 WINDOW_UPDATE) sent after response reception has started.
             log.trace { "Channel ${ctx.channel()}: writing $size bytes" }
             monitoringCollector.recordSendingData(size)
 
@@ -133,6 +151,12 @@ internal open class ChannelMonitoringHandler(
          * This phase can only follow [DATA_SENT_PHASE].
          */
         const val RECEIVING_PHASE = 2
+
+        /**
+         * Phase of the exchange with the server, when the request cycle is complete and
+         * no further monitoring should be recorded.
+         */
+        const val COMPLETED_PHASE = 3
 
         @JvmStatic
         val log = logger()

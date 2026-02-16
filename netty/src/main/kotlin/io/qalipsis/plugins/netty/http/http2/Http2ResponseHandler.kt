@@ -26,7 +26,6 @@ import io.netty.util.ReferenceCountUtil
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.sync.ImmutableSlot
 import io.qalipsis.plugins.netty.http.client.monitoring.HttpStepContextBasedSocketMonitoringCollector
-import kotlinx.coroutines.runBlocking
 
 /**
  * Handler for responses for HTTP 2.0.
@@ -34,9 +33,21 @@ import kotlinx.coroutines.runBlocking
  * @author Eric Jessé
  */
 internal class Http2ResponseHandler(
-    private val responseSlot: ImmutableSlot<Result<HttpResponse>>,
-    private val monitoringCollector: HttpStepContextBasedSocketMonitoringCollector
+    responseSlot: ImmutableSlot<Result<HttpResponse>>,
+    monitoringCollector: HttpStepContextBasedSocketMonitoringCollector
 ) : SimpleChannelInboundHandler<HttpResponse>() {
+
+    private var responseSlot: ImmutableSlot<Result<HttpResponse>> = responseSlot
+
+    private var monitoringCollector: HttpStepContextBasedSocketMonitoringCollector = monitoringCollector
+
+    fun prepare(
+        responseSlot: ImmutableSlot<Result<HttpResponse>>,
+        monitoringCollector: HttpStepContextBasedSocketMonitoringCollector
+    ) {
+        this.responseSlot = responseSlot
+        this.monitoringCollector = monitoringCollector
+    }
 
     override fun channelRead0(ctx: ChannelHandlerContext, msg: HttpResponse) {
         log.trace { "Received a HTTP/2 response: $msg" }
@@ -45,15 +56,17 @@ internal class Http2ResponseHandler(
 
         monitoringCollector.recordReceptionComplete()
         monitoringCollector.recordHttpStatus(msg.status())
-        runBlocking {
-            responseSlot.set(Result.success(msg))
+        if (responseSlot.isEmpty()) {
+            responseSlot.offer(Result.success(msg))
+        } else {
+            ReferenceCountUtil.release(msg)
         }
     }
 
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
         log.trace(cause) { "An exception occurred while processing the HTTP 2.0 response: ${cause.message}" }
-        runBlocking {
-            responseSlot.set(Result.failure(cause))
+        if (responseSlot.isEmpty()) {
+            responseSlot.offer(Result.failure(cause))
         }
     }
 

@@ -44,28 +44,45 @@ internal class Http1RequestExecutionConfigurer(
     private val pipeline: ChannelPipeline
 ) : HttpRequestExecutionConfigurer {
 
+    private var channelMonitoringHandler: HttpChannelMonitoringHandler? = null
+
+    private var responseHandler: Http1ResponseHandler? = null
+
     override fun configure(
         request: HttpRequest<*>,
         monitoringCollector: StepContextBasedSocketMonitoringCollector,
         responseSlot: ImmutableSlot<Result<HttpResponse>>
     ): RequestWriter {
-        pipeline.addBefore(
-            PipelineHandlerNames.CLIENT_CODEC,
-            HttpPipelineNames.CHANNEL_MONITORING_HANDLER,
-            HttpChannelMonitoringHandler(monitoringCollector)
-        )
-        pipeline.addLast(
-            HttpPipelineNames.INBOUND_HANDLER,
-            Http1ResponseHandler(
-                responseSlot,
-                monitoringCollector as HttpStepContextBasedSocketMonitoringCollector
+        val httpMonitoringCollector = monitoringCollector as HttpStepContextBasedSocketMonitoringCollector
+
+        val existingCmh = channelMonitoringHandler
+        if (existingCmh == null) {
+            // First request: install handlers into the pipeline.
+            val cmh = HttpChannelMonitoringHandler(monitoringCollector)
+            pipeline.addBefore(
+                PipelineHandlerNames.CLIENT_CODEC,
+                HttpPipelineNames.CHANNEL_MONITORING_HANDLER,
+                cmh
             )
-        )
+            channelMonitoringHandler = cmh
+
+            val rh = Http1ResponseHandler(responseSlot, httpMonitoringCollector)
+            pipeline.addLast(HttpPipelineNames.INBOUND_HANDLER, rh)
+            responseHandler = rh
+        } else {
+            // Subsequent requests: reset handler state.
+            existingCmh.prepare(monitoringCollector)
+            responseHandler!!.prepare(responseSlot, httpMonitoringCollector)
+        }
 
         return Http1RequestWriter(
             (request as InternalHttpRequest<*, *>).toNettyRequest(clientConfiguration),
             responseSlot,
             monitoringCollector
         )
+    }
+
+    override fun completeMonitoring() {
+        channelMonitoringHandler?.complete()
     }
 }

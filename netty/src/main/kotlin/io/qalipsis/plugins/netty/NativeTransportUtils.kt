@@ -75,17 +75,12 @@ object NativeTransportUtils : NativeTransportProvider {
     private val delegate: NativeTransportProvider
 
     init {
-        delegate = if (System.getProperty("os.arch").contains("64")) {
-            val os = System.getProperty("os.name").lowercase()
-            if (os.contains("linux")) {
-                LinuxNativeTransportProvider()
-            } else if (os.contains("mac") && System.getProperty("os.arch") != "aarch64") {
-                MacX86NativeTransportProvider()
-            } else {
-                DefaultTransportProvider()
-            }
-        } else {
-            DefaultTransportProvider()
+        val arch = System.getProperty("os.arch")
+        val os = System.getProperty("os.name").lowercase()
+        delegate = when {
+            os.contains("linux") && arch.contains("64") -> LinuxNativeTransportProvider()
+            os.contains("mac") -> MacNativeTransportProvider()
+            else -> DefaultTransportProvider()
         }
     }
 
@@ -121,9 +116,9 @@ object NativeTransportUtils : NativeTransportProvider {
     }
 
     /**
-     * Implementation of [NativeTransportProvider] used when the running system is under Mac OS x86 64 bits.
+     * Implementation of [NativeTransportProvider] used when the running system is under Mac OS (x86-64 or ARM64).
      */
-    private class MacX86NativeTransportProvider : NativeTransportProvider {
+    private class MacNativeTransportProvider : NativeTransportProvider {
 
         override fun getEventLoopGroup(size: Int): EventLoopGroup {
             return KQueueEventLoopGroup(size)

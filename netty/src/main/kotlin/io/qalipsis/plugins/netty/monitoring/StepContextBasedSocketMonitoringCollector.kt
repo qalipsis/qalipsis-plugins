@@ -60,9 +60,13 @@ internal open class StepContextBasedSocketMonitoringCollector(
 
     protected val meterPrefix = "netty-${stepQualifier}"
 
-    protected val eventTags = stepContext.toEventTags().toMutableMap()
+    private val baseEventTags: Map<String, String> = stepContext.toEventTags()
 
-    protected val metersTags = stepContext.toMetersTags().toMutableMap()
+    private val baseMetersTags: Map<String, String> = stepContext.toMetersTags()
+
+    protected val eventTags = baseEventTags.toMutableMap()
+
+    protected val metersTags = baseMetersTags.toMutableMap()
 
     private val scenarioName = stepContext.scenarioName
 
@@ -148,36 +152,42 @@ internal open class StepContextBasedSocketMonitoringCollector(
         }
     }
 
-    private val sendingRequestCounter =
+    private val sendingRequestCounter by lazy {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-sending-request", metersTags)?.report {
             display("\u2197 Reqs.", ReportMessageSeverity.INFO, row = 1) { 0 }
             display("\u27B6 %,.0f", ReportMessageSeverity.INFO, row = 1, column = 1, Counter::count)
         }
+    }
 
-    private val sentRequestCounter =
+    private val sentRequestCounter by lazy {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-sent-request", metersTags)?.report {
             display("\u2713 %,.0f reqs", ReportMessageSeverity.INFO, row = 1, column = 2, Counter::count)
         }
+    }
 
-    private val sendingBytesCounter =
+    private val sendingBytesCounter by lazy {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-sending-bytes", metersTags)?.report {
             display("\u27B6 %,.0f bytes", ReportMessageSeverity.INFO, row = 1, column = 3, Counter::count)
         }
+    }
 
-    private val sentBytesCounter =
+    private val sentBytesCounter by lazy {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-sent-bytes", metersTags)?.report {
             display("\u2713 %,.0f bytes", ReportMessageSeverity.INFO, row = 1, column = 4, Counter::count)
         }
+    }
 
-    private val sendingRequestFailureCounter =
+    private val sendingRequestFailureCounter by lazy {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-sending-request-failure", metersTags)?.report {
             display("\u2716 %,.0f reqs", ReportMessageSeverity.ERROR, row = 1, column = 5, Counter::count)
         }
+    }
 
-    private val sendingBytesFailureCounter =
+    private val sendingBytesFailureCounter by lazy {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-sending-failure", metersTags)
+    }
 
-    private val receivingDataTimer =
+    private val receivingDataTimer by lazy {
         meterRegistry?.timer(scenarioName, stepName, "${meterPrefix}-receiving", metersTags)?.report {
             display("\u2198 Resp.", ReportMessageSeverity.INFO, row = 2) { 0 }
             display("1st byte", ReportMessageSeverity.INFO, row = 2, column = 1) { 0 }
@@ -194,6 +204,7 @@ internal open class StepContextBasedSocketMonitoringCollector(
                 column = 3
             ) { this.max(TimeUnit.MILLISECONDS) }
         }
+    }
 
     private val receivedDataTimer by lazy {
         meterRegistry?.timer(scenarioName, stepName, "${meterPrefix}-received-response", metersTags)?.report {
@@ -213,16 +224,17 @@ internal open class StepContextBasedSocketMonitoringCollector(
         }
     }
 
-    private val receivingDataFailureCounter =
+    private val receivingDataFailureCounter by lazy {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-receiving-failure", metersTags)
+    }
 
     fun setTags(vararg tags: Pair<String, String>) {
         this.eventTags.clear()
-        this.eventTags.putAll(stepContext.toEventTags())
+        this.eventTags.putAll(baseEventTags)
         this.eventTags.putAll(tags)
 
         this.metersTags.clear()
-        this.metersTags.putAll(stepContext.toMetersTags())
+        this.metersTags.putAll(baseMetersTags)
         this.metersTags.putAll(tags)
     }
 

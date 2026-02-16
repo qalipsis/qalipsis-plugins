@@ -72,6 +72,7 @@ dependencies {
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml")
     implementation(group = "io.netty", name = "netty-transport-native-epoll", classifier = "linux-x86_64")
     implementation(group = "io.netty", name = "netty-transport-native-kqueue", classifier = "osx-x86_64")
+    implementation(group = "io.netty", name = "netty-transport-native-kqueue", classifier = "osx-aarch_64")
     implementation("com.github.ben-manes.caffeine:caffeine")
     implementation("com.google.guava:guava")
 

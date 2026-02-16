@@ -32,16 +32,16 @@ import javax.validation.constraints.Positive
  *
  * @property readTimeout timeout duration to receive a response after a request
  * @property shutdownTimeout timeout duration to close an open connection
- * @property sendBufferSize size (in bytes) of the sending buffer, defaults to 1024
- * @property receiveBufferSize size (in bytes) of the receiving buffer, defaults to 1024
+ * @property sendBufferSize size (in bytes) of the sending buffer, defaults to OS auto-tuned value when null
+ * @property receiveBufferSize size (in bytes) of the receiving buffer, defaults to OS auto-tuned value when null
  * @property nettyChannelOptions additional netty options to overload the default
  */
 @Spec
 class ConnectionConfiguration internal constructor(
     @field:PositiveDuration var readTimeout: Duration = Duration.ofSeconds(10),
     @field:PositiveDuration var shutdownTimeout: Duration = Duration.ofSeconds(10),
-    @field:Positive var sendBufferSize: Int = 1024,
-    @field:Positive var receiveBufferSize: Int = 1024,
+    var sendBufferSize: Int? = null,
+    var receiveBufferSize: Int? = null,
     internal var nettyChannelOptions: MutableMap<ChannelOption<*>, Any> = mutableMapOf()
 ) {
 

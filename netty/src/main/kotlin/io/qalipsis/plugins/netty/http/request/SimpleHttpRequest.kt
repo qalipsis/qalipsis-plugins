@@ -140,7 +140,7 @@ data class SimpleHttpRequest internal constructor(
             addHeader(HttpHeaderNames.CONTENT_TYPE, valueWithEncoding)
         }
         val bodyBuffer = bodyString?.let { Unpooled.copiedBuffer(it, clientConfiguration.charset) }
-            ?: if (bodyBytes.isNotEmpty()) Unpooled.copiedBuffer(bodyBytes) else Unpooled.EMPTY_BUFFER
+            ?: if (bodyBytes.isNotEmpty()) Unpooled.wrappedBuffer(bodyBytes) else Unpooled.EMPTY_BUFFER
 
         if (!headers.containsKey(HttpHeaderNames.CONTENT_LENGTH)) {
             addHeader(HttpHeaderNames.CONTENT_LENGTH, bodyBuffer.readableBytes())

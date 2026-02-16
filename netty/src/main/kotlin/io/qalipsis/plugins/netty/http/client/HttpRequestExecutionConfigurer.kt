@@ -37,4 +37,11 @@ internal interface HttpRequestExecutionConfigurer {
         responseSlot: ImmutableSlot<Result<HttpResponse>>
     ): RequestWriter
 
+    /**
+     * Signals that the current request cycle is complete. Prevents the monitoring handler
+     * from recording protocol-level writes (e.g. HTTP/2 GOAWAY, TLS close_notify) that
+     * occur after the request/response exchange.
+     */
+    fun completeMonitoring() {}
+
 }

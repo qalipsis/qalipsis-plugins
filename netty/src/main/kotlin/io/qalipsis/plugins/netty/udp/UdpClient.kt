@@ -62,8 +62,8 @@ internal class UdpClient {
         with(bootstrap) {
             group(workerGroup)
             remoteAddress(InetSocketAddress(config.host, config.port))
-            option(ChannelOption.SO_RCVBUF, config.receiveBufferSize)
-            option(ChannelOption.SO_SNDBUF, config.sendBufferSize)
+            config.receiveBufferSize?.let { option(ChannelOption.SO_RCVBUF, it) }
+            config.sendBufferSize?.let { option(ChannelOption.SO_SNDBUF, it) }
 
             config.nettyChannelOptions.forEach { (option, value) ->
                 @Suppress("UNCHECKED_CAST")

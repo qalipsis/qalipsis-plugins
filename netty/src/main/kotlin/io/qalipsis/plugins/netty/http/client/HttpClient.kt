@@ -26,9 +26,7 @@ import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.sync.ImmutableSlot
 import io.qalipsis.api.sync.SuspendedCountLatch
-import io.qalipsis.plugins.netty.http.HttpPipelineNames.CHANNEL_MONITORING_HANDLER
 import io.qalipsis.plugins.netty.http.HttpPipelineNames.CHUNKED_REQUEST_HANDLER
-import io.qalipsis.plugins.netty.http.HttpPipelineNames.INBOUND_HANDLER
 import io.qalipsis.plugins.netty.http.http1.Http1ChannelInitializer
 import io.qalipsis.plugins.netty.http.http2.Http2ChannelInitializer
 import io.qalipsis.plugins.netty.http.spec.HttpClientConfiguration
@@ -118,9 +116,8 @@ internal class HttpClient(
             response
         } finally {
             log.trace { "Removing local handlers" }
-            removeHandler(channel.pipeline(), CHANNEL_MONITORING_HANDLER)
-            removeHandler(channel.pipeline(), INBOUND_HANDLER)
             removeHandler(channel.pipeline(), CHUNKED_REQUEST_HANDLER)
+            channelInitializer.requestExecutionConfigurer.completeMonitoring()
         }
     }
 

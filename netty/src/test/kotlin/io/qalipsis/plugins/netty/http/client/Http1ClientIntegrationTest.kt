@@ -38,7 +38,6 @@ import assertk.assertions.isTrue
 import assertk.assertions.key
 import assertk.assertions.prop
 import assertk.assertions.startsWith
-import com.google.common.io.Files
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.confirmVerified
@@ -93,6 +92,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.ConnectException
 import java.nio.channels.ClosedChannelException
+import java.nio.file.Files
 import java.time.Duration
 import java.util.concurrent.TimeoutException
 import java.util.stream.Stream
@@ -772,7 +772,7 @@ internal class Http1ClientIntegrationTest {
     ) = testDispatcherProvider.run {
         val monitoringCollector = spyk(HttpStepContextBasedSocketMonitoringCollector(ctx, eventsLogger, meterRegistry))
 
-        val tmpDir = Files.createTempDir()
+        val tmpDir = Files.createTempDirectory("qalipsis-http-client-test-").toFile()
         val file = File(tmpDir, "upload.txt")
         file.writeText("Anything in the file\r\n".repeat(1000))
         val zipArchive = File(tmpDir, "upload.txt.zip")
