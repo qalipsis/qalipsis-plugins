@@ -1,0 +1,6 @@
+sql.save.records;Int
+sql.save.records.failure;Int
+sql.save.records.success;Int
+sql.save.records.time-to-response;Duration
+sql.poll.records;Int
+sql.search.records;Int
