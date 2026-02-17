@@ -62,9 +62,9 @@ import java.time.LocalDateTime
 @Testcontainers
 internal abstract class AbstractSqlSearchStepIntegrationTest(
     private val scriptFolderBaseName: String,
-    private val dialect: Dialect,
+    dialect: Dialect,
     connectionPoolFactory: () -> ConnectionPool
-) : AbstractSqlIntegrationTest(connectionPoolFactory) {
+) : AbstractSqlIntegrationTest(dialect, connectionPoolFactory) {
 
     private val resultValuesConverter: ResultValuesConverter = relaxedMockk()
 
@@ -94,7 +94,7 @@ internal abstract class AbstractSqlSearchStepIntegrationTest(
     @Test
     internal fun `should run the search`() = testDispatcherProvider.run {
         val query =
-            "select username, timestamp from buildingentries where action = ? and enabled = ? order by timestamp"
+            "select username, ${dialect.quote("timestamp")} from buildingentries where action = ? and enabled = ? order by ${dialect.quote("timestamp")}"
         val parameters = listOf("IN", false)
         val metersTags = mapOf("kit" to "kat")
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {

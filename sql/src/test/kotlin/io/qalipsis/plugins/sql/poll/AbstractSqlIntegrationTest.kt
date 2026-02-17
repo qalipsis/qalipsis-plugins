@@ -22,6 +22,7 @@ package io.qalipsis.plugins.sql.poll
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.plugins.sql.dialect.Dialect
 import io.qalipsis.plugins.sql.r2dbc.acquireConnection
 import io.qalipsis.plugins.sql.r2dbc.closeConnection
 import io.qalipsis.plugins.sql.r2dbc.executePreparedQuery
@@ -39,6 +40,7 @@ import java.util.concurrent.atomic.AtomicReference
  * @author Eric Jessé
  */
 internal abstract class AbstractSqlIntegrationTest(
+    protected val dialect: Dialect,
     private val connectionPoolFactory: () -> ConnectionPool
 ) {
 
@@ -81,7 +83,7 @@ internal abstract class AbstractSqlIntegrationTest(
     protected suspend fun count(table: String): Int {
         val connection = connectionPool.acquireConnection()
         try {
-            val result = connection.executePreparedQuery("select count(*) from $table", emptyList())
+            val result = connection.executePreparedQuery("select count(*) from ${dialect.quote(table)}", emptyList())
             return (result[0][0] as Number).toInt()
         } finally {
             connection.closeConnection()

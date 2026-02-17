@@ -118,4 +118,81 @@ internal object DialectConfigurations {
 
         override fun convertPlaceholders(sql: String): String = sql
     }
+
+    /**
+     * Dialect configuration for Microsoft SQL Server.
+     */
+    @JvmStatic
+    val MSSQL = object : Dialect {
+        override val quotingConfig: Quoting = Quoting.BRACKET
+
+        override fun createConnectionPool(config: SqlConnection): ConnectionPool =
+            buildConnectionPool("mssql", config)
+
+        override fun convertPlaceholders(sql: String): String {
+            val result = StringBuilder()
+            var paramIndex = 1
+            var i = 0
+            while (i < sql.length) {
+                val c = sql[i]
+                if (c == '\'') {
+                    result.append(c)
+                    i++
+                    while (i < sql.length && sql[i] != '\'') {
+                        result.append(sql[i])
+                        i++
+                    }
+                    if (i < sql.length) {
+                        result.append(sql[i])
+                    }
+                } else if (c == '?') {
+                    result.append("@P").append(paramIndex++)
+                } else {
+                    result.append(c)
+                }
+                i++
+            }
+            return result.toString()
+        }
+    }
+
+    /**
+     * Dialect configuration for Oracle Database.
+     */
+    @JvmStatic
+    val ORACLE = object : Dialect {
+        override val quotingConfig: Quoting = Quoting.DOUBLE_QUOTE
+
+        override fun createConnectionPool(config: SqlConnection): ConnectionPool =
+            buildConnectionPool("oracle", config)
+
+        override fun quote(tableOrColumnName: String): String =
+            "\"${tableOrColumnName.uppercase()}\""
+
+        override fun convertPlaceholders(sql: String): String {
+            val result = StringBuilder()
+            var paramIndex = 1
+            var i = 0
+            while (i < sql.length) {
+                val c = sql[i]
+                if (c == '\'') {
+                    result.append(c)
+                    i++
+                    while (i < sql.length && sql[i] != '\'') {
+                        result.append(sql[i])
+                        i++
+                    }
+                    if (i < sql.length) {
+                        result.append(sql[i])
+                    }
+                } else if (c == '?') {
+                    result.append(':').append(paramIndex++)
+                } else {
+                    result.append(c)
+                }
+                i++
+            }
+            return result.toString()
+        }
+    }
 }

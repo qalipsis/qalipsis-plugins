@@ -48,7 +48,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
  */
 @Testcontainers
 internal class SqlPollScenarioIntegrationTest : AbstractSqlIntegrationTest(
-    {
+    DialectConfigurations.POSTGRESQL, {
         DialectConfigurations.POSTGRESQL.createConnectionPool(SqlConnection(
             host = "localhost",
             port = db.firstMappedPort,

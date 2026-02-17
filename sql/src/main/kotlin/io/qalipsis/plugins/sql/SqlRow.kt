@@ -31,7 +31,7 @@ class SqlRow(
 ) {
 
     operator fun get(column: String): Any? {
-        val index = columnIndex[column]
+        val index = columnIndex[column] ?: columnIndex[column.lowercase()]
             ?: throw IllegalArgumentException("Column '$column' not found. Available columns: $columnNames")
         return values[index]
     }

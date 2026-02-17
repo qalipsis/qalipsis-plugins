@@ -50,9 +50,9 @@ import java.time.LocalDateTime
 @Testcontainers
 internal abstract class AbstractSqlIterativeReaderIntegrationTest(
     scriptFolderBaseName: String,
-    private val dialect: Dialect,
+    dialect: Dialect,
     private val connectionPoolFactory: () -> ConnectionPool
-) : AbstractSqlIntegrationTest(connectionPoolFactory) {
+) : AbstractSqlIntegrationTest(dialect, connectionPoolFactory) {
 
     private val creationScript = readResource("schemas/$scriptFolderBaseName/create-table-events.sql").trim()
 

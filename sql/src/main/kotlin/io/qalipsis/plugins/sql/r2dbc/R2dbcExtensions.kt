@@ -92,7 +92,7 @@ suspend fun Connection.executePreparedQuery(sql: String, params: List<Any?>): Sq
     var columnIndex: Map<String, Int>? = null
     val rows = Flux.from(result.map { row: Row, metadata: RowMetadata ->
         if (columnNames == null) {
-            columnNames = metadata.columnMetadatas.map { it.name }
+            columnNames = metadata.columnMetadatas.map { it.name.lowercase() }
             columnIndex = columnNames!!.withIndex().associate { (index, name) -> name to index }
         }
         val names = columnNames!!
@@ -115,18 +115,24 @@ suspend fun Connection.executeUpdate(sql: String, params: List<Any?>): Long {
 
 /**
  * Executes a prepared INSERT and returns the generated key (if any).
+ * Uses [Long.MIN_VALUE] as an internal sentinel for failed inserts, mapped back to null after collection.
  */
 suspend fun Connection.executePreparedInsert(sql: String, params: List<List<Any?>>): List<Long?> {
+    val failureSentinel = Long.MIN_VALUE
     return Flux.fromIterable(params)
         .concatMap { queryParams ->
             val statement = this.createStatement(sql).returnGeneratedValues()
             statement.bindParams(queryParams)
             Flux.from(statement.execute())
                 .concatMap { result ->
-                    result.map { row -> row.get(0, java.lang.Long::class.java) as Long? }
+                    result.map { row ->
+                        val value = row.get(0)
+                        if (value is Number) value.toLong() else 0L
+                    }
                 }
-                .onErrorResume { Flux.just(null) }
+                .onErrorResume { Flux.just(failureSentinel) }
         }
+        .map { id -> if (id == failureSentinel) null else id }
         .collectList()
         .awaitLast()
 }

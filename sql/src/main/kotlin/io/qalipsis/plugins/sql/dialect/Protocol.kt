@@ -39,5 +39,15 @@ enum class Protocol(internal val dialect: Dialect) {
     /**
      * For MySQL.
      */
-    MYSQL(DialectConfigurations.MYSQL)
+    MYSQL(DialectConfigurations.MYSQL),
+
+    /**
+     * For Microsoft SQL Server.
+     */
+    MSSQL(DialectConfigurations.MSSQL),
+
+    /**
+     * For Oracle Database.
+     */
+    ORACLE(DialectConfigurations.ORACLE)
 }

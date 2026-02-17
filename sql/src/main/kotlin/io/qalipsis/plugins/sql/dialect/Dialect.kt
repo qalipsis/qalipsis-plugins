@@ -43,12 +43,20 @@ internal interface Dialect {
 
     /**
      * Converts placeholder characters in SQL statements.
-     * PostgreSQL uses $1, $2, etc. while MySQL/MariaDB use ?.
+     * Each database has its own parameter syntax: PostgreSQL uses $1, $2;
+     * MySQL/MariaDB use ?; SQL Server uses @P1, @P2; Oracle uses :1, :2.
      */
     fun convertPlaceholders(sql: String): String
 
     /**
      * Adds the quote characters of the dialect around [tableOrColumnName].
+     * Handles bracket quoting (SQL Server) by using `[name]` instead of `[name[`.
      */
-    fun quote(tableOrColumnName: String) = "${quotingConfig.string}$tableOrColumnName${quotingConfig.string}"
+    fun quote(tableOrColumnName: String): String {
+        return if (quotingConfig == Quoting.BRACKET) {
+            "[$tableOrColumnName]"
+        } else {
+            "${quotingConfig.string}$tableOrColumnName${quotingConfig.string}"
+        }
+    }
 }

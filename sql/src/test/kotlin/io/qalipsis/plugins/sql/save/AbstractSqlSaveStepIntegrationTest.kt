@@ -59,9 +59,9 @@ import java.util.concurrent.TimeUnit
 @Testcontainers
 internal abstract class AbstractSqlSaveStepIntegrationTest(
     scriptFolderBaseName: String,
-    private val dialect: Dialect,
+    dialect: Dialect,
     connectionPoolFactory: () -> ConnectionPool
-) : AbstractSqlIntegrationTest(connectionPoolFactory) {
+) : AbstractSqlIntegrationTest(dialect, connectionPoolFactory) {
 
     private val eventsLogger: EventsLogger = relaxedMockk(name = "eventsLogger")
 
@@ -169,7 +169,7 @@ internal abstract class AbstractSqlSaveStepIntegrationTest(
 
         val connection = connectionPool.acquireConnection()
         try {
-            val result = connection.executePreparedQuery("SELECT * FROM $tableName", emptyList())
+            val result = connection.executePreparedQuery("SELECT * FROM ${dialect.quote(tableName)}", emptyList())
             val firstRow = result[0]
             assertTrue(firstRow[1].toString().contains("IN") || firstRow[2].toString().contains("IN"))
             assertTrue(firstRow[2].toString().contains("alice") || firstRow[3].toString().contains("alice"))
@@ -268,7 +268,7 @@ internal abstract class AbstractSqlSaveStepIntegrationTest(
 
         val connection = connectionPool.acquireConnection()
         try {
-            val result = connection.executePreparedQuery("SELECT * FROM $tableName", emptyList())
+            val result = connection.executePreparedQuery("SELECT * FROM ${dialect.quote(tableName)}", emptyList())
             val allValues = result.flatMap { row ->
                 (0 until result.columnNames().size).map { row[it]?.toString() ?: "" }
             }

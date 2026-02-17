@@ -52,6 +52,9 @@ val r2dbcPoolVersion = "1.0.1.RELEASE"
 val r2dbcPostgresqlVersion = "1.0.5.RELEASE"
 val r2dbcMysqlVersion = "1.1.0"
 val r2dbcMariadbVersion = "1.1.4"
+val r2dbcMssqlVersion = "1.0.2.RELEASE"
+val r2dbcOracleVersion = "1.3.0"
+val mssqlJdbcVersion = "12.4.2.jre11"
 val pluginPlatformVersion: String by project
 
 dependencies {
@@ -65,6 +68,8 @@ dependencies {
     implementation("org.postgresql:r2dbc-postgresql:${r2dbcPostgresqlVersion}")
     implementation("io.asyncer:r2dbc-mysql:${r2dbcMysqlVersion}")
     implementation("org.mariadb:r2dbc-mariadb:${r2dbcMariadbVersion}")
+    implementation("io.r2dbc:r2dbc-mssql:${r2dbcMssqlVersion}")
+    implementation("com.oracle.database.r2dbc:oracle-r2dbc:${r2dbcOracleVersion}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 
     api("io.qalipsis:qalipsis-api-common")
@@ -82,6 +87,9 @@ dependencies {
     testImplementation("org.mariadb.jdbc:mariadb-java-client:${mariadbClientVersion}")
     testImplementation("org.testcontainers:testcontainers-mysql")
     testImplementation("mysql:mysql-connector-java:${mysqlClientVersion}")
+    testImplementation("org.testcontainers:testcontainers-mssqlserver:2.0.3")
+    testImplementation("com.microsoft.sqlserver:mssql-jdbc:${mssqlJdbcVersion}")
+    testImplementation("org.testcontainers:testcontainers-oracle-free:2.0.3")
     testImplementation("io.qalipsis:qalipsis-test")
     testImplementation("io.qalipsis:qalipsis-api-dsl")
     testImplementation(testFixtures("io.qalipsis:qalipsis-api-dsl"))

@@ -21,7 +21,6 @@ package io.qalipsis.plugins.sql.poll
 
 import io.qalipsis.plugins.sql.SqlRow
 import io.qalipsis.plugins.sql.dialect.Dialect
-import io.qalipsis.plugins.sql.dialect.DialectConfigurations
 import org.apache.calcite.sql.SqlBasicCall
 import org.apache.calcite.sql.SqlIdentifier
 import org.apache.calcite.sql.SqlKind
@@ -57,7 +56,7 @@ internal class SqlPollStatementImpl(
                 0
             ).endColumnNum
         tieBreakerName = sql.substring(position)
-            .trim { it == DialectConfigurations.POSTGRESQL.quotingConfig.string[0] || it == DialectConfigurations.MYSQL.quotingConfig.string[0] }
+            .trim { it == '"' || it == '`' || it == '[' || it == ']' }
         tieBreakerOperator = if (firstSortingStatement.kind == SqlKind.DESCENDING) {
             "<="
         } else {
