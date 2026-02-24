@@ -22,6 +22,9 @@ package io.qalipsis.plugins.cassandra.save
 /**
  * Wrapper for the passed records to save in Cassandra.
  *
+ * Values must be native Java/Kotlin types matching the Cassandra column types
+ * (e.g. [String], [Int], [java.time.Instant] for timestamps), not CQL-quoted literals.
+ *
  * @author Svetlana Paliashchuk
  */
 class CassandraSaveRow(vararg args: Any?) {

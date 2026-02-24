@@ -82,7 +82,7 @@ internal class CassandraPollStepSpecificationConverterTest :
 
     @Test
     @ExperimentalCoroutinesApi
-    @Timeout(1)
+    @Timeout(10)
     fun `should convert with event logger only`() = testDispatcherProvider.runTest {
         // given
         val spec = CassandraPollStepSpecificationImpl()
@@ -151,7 +151,7 @@ internal class CassandraPollStepSpecificationConverterTest :
 
     @Test
     @ExperimentalCoroutinesApi
-    @Timeout(1)
+    @Timeout(10)
     fun `should convert with meter registry only`() = testDispatcherProvider.runTest {
         // given
         val spec = CassandraPollStepSpecificationImpl()

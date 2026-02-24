@@ -50,7 +50,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertThrows
 import java.time.Duration
-import java.util.concurrent.atomic.AtomicInteger
+import java.time.Instant
 
 /**
  *
@@ -132,7 +132,7 @@ internal class CassandraSaveQueryClientIntegrationTest : AbstractCassandraIntegr
             } returns failedDocuments
             every { failedDocuments.report(any()) } returns failedDocuments
         }
-        val rows = listOf(CassandraSaveRow(42, "'2020-10-20T12:38:56'", "'Truck #1'", "'Leaving office geofence'"))
+        val rows = listOf(CassandraSaveRow(42, Instant.parse("2020-10-20T12:38:56Z"), "Truck #1", "Leaving office geofence"))
         val columns = listOf("dummy_node_id", "event_timestamp", "device_name", "event_name")
         val tableName = "tracker"
         val saveClient = CassandraSaveQueryClientImpl(eventsLogger, meterRegistry)
@@ -173,9 +173,7 @@ internal class CassandraSaveQueryClientIntegrationTest : AbstractCassandraIntegr
             savedDocuments.increment(1.0)
         }
         assertThat(eventCaptor.captured.toList()).all {
-            index(0).isNotNull().isInstanceOf<AtomicInteger>().all {
-                prop(AtomicInteger::get).isEqualTo(1)
-            }
+            index(0).isNotNull().isInstanceOf<Int>().isEqualTo(1)
             index(1).isNotNull().isInstanceOf(Duration::class.java).isGreaterThan(Duration.ZERO)
         }
 
@@ -194,9 +192,9 @@ internal class CassandraSaveQueryClientIntegrationTest : AbstractCassandraIntegr
     fun `should succeed when save multiple rows`() = testDispatcherProvider.run {
         // given
         val rows = listOf(
-            CassandraSaveRow(42, "'2020-10-20T12:38:56'", "'Truck #1'", "'Leaving office geofence'"),
-            CassandraSaveRow(42, "'2020-10-20T12:40:14'", "'Car #1'", "'Driving over 30 kmh'"),
-            CassandraSaveRow(42, "'2020-10-20T12:40:14'", "'Car #2'", "'Driving over 30 kmh'")
+            CassandraSaveRow(42, Instant.parse("2020-10-20T12:38:56Z"), "Truck #1", "Leaving office geofence"),
+            CassandraSaveRow(42, Instant.parse("2020-10-20T12:40:14Z"), "Car #1", "Driving over 30 kmh"),
+            CassandraSaveRow(42, Instant.parse("2020-10-20T12:40:14Z"), "Car #2", "Driving over 30 kmh")
         )
         val columns = listOf("dummy_node_id", "event_timestamp", "device_name", "event_name")
         val tableName = "tracker"
@@ -234,9 +232,9 @@ internal class CassandraSaveQueryClientIntegrationTest : AbstractCassandraIntegr
         testDispatcherProvider.run {
             // given
             val rows = listOf(
-                CassandraSaveRow(42, "'2020-10-20T12:38:56'", "'Truck #1'", "'Leaving office geofence'"),
-                CassandraSaveRow(42, "'2020-10-20T12:40:14'", "'Driving over 30 kmh'"),
-                CassandraSaveRow(42, "'2020-10-20T12:40:14'", "'Car #2'", "'Driving over 30 kmh'")
+                CassandraSaveRow(42, Instant.parse("2020-10-20T12:38:56Z"), "Truck #1", "Leaving office geofence"),
+                CassandraSaveRow(42, Instant.parse("2020-10-20T12:40:14Z"), "Driving over 30 kmh"),
+                CassandraSaveRow(42, Instant.parse("2020-10-20T12:40:14Z"), "Car #2", "Driving over 30 kmh")
             )
             val columns = listOf("dummy_node_id", "event_timestamp", "device_name", "event_name")
             val tableName = "tracker"
@@ -288,10 +286,42 @@ internal class CassandraSaveQueryClientIntegrationTest : AbstractCassandraIntegr
         assertThat(results).hasSize(0)
     }
 
+    @Test
+    @Timeout(20)
+    fun `should succeed when saving rows with different partition keys`() = testDispatcherProvider.run {
+        // given
+        val rows = listOf(
+            CassandraSaveRow(1, Instant.parse("2020-10-20T12:38:56Z"), "Truck #1", "Leaving office geofence"),
+            CassandraSaveRow(2, Instant.parse("2020-10-20T12:40:14Z"), "Car #1", "Driving over 30 kmh"),
+            CassandraSaveRow(3, Instant.parse("2020-10-20T12:42:00Z"), "Car #2", "Parked")
+        )
+        val columns = listOf("dummy_node_id", "event_timestamp", "device_name", "event_name")
+        val tableName = "tracker"
+        val tags: Map<String, String> = emptyMap()
+        val saveClient = CassandraSaveQueryClientImpl(null, null)
+
+        // when
+        saveClient.execute(session, tableName, columns, rows, tags)
+        val results = mutableListOf<Row>()
+        val statement = "SELECT * FROM $tableName"
+        fetch(session.executeAsync(statement).asSuspended().get(), results)
+
+        // then
+        saveClient.stop(relaxedMockk())
+        assertThat(results).hasSize(3)
+        val deviceNames = results.map { it.getString("device_name") }.toSet()
+        assertThat(deviceNames).isEqualTo(setOf("Truck #1", "Car #1", "Car #2"))
+    }
+
     private suspend fun fetch(asyncResultSet: AsyncResultSet, results: MutableList<Row>) {
-        results.addAll(asyncResultSet.currentPage().toList())
-        if (asyncResultSet.hasMorePages()) {
-            fetch(asyncResultSet.fetchNextPage().asSuspended().get(), results)
+        var currentPage = asyncResultSet
+        while (true) {
+            results.addAll(currentPage.currentPage().toList())
+            if (currentPage.hasMorePages()) {
+                currentPage = currentPage.fetchNextPage().asSuspended().get()
+            } else {
+                break
+            }
         }
     }
 }

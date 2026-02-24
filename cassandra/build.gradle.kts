@@ -47,7 +47,7 @@ kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catad
 kapt.useBuildCache = false
 
 val pluginPlatformVersion: String by project
-val cassandraDriverVersion = "4.13.0"
+val cassandraDriverVersion = "4.19.2"
 val cassandraAllDriverVersion = "4.0.2"
 
 dependencies {
@@ -56,9 +56,9 @@ dependencies {
     compileOnly("io.aeris-consulting:catadioptre-annotations")
     compileOnly("io.micronaut:micronaut-runtime")
 
-    api("com.datastax.oss:java-driver-core:$cassandraDriverVersion")
-    api("com.datastax.oss:java-driver-query-builder:$cassandraDriverVersion")
-    api("com.datastax.oss:java-driver-mapper-runtime:$cassandraDriverVersion")
+    api("org.apache.cassandra:java-driver-core:$cassandraDriverVersion")
+    api("org.apache.cassandra:java-driver-query-builder:$cassandraDriverVersion")
+    api("org.apache.cassandra:java-driver-mapper-runtime:$cassandraDriverVersion")
     api("org.apache.cassandra:cassandra-all:$cassandraAllDriverVersion")
     implementation(group = "io.netty", name = "netty-transport-native-epoll", classifier = "linux-x86_64")
     implementation(group = "io.netty", name = "netty-transport-native-kqueue", classifier = "osx-x86_64")

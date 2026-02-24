@@ -152,9 +152,14 @@ internal class CassandraQueryClientImpl(
     }
 
     private suspend fun fetch(asyncResultSet: AsyncResultSet, results: MutableList<Row>) {
-        results.addAll(asyncResultSet.currentPage().toList())
-        if (asyncResultSet.hasMorePages()) {
-            fetch(asyncResultSet.fetchNextPage().asSuspended().get(), results)
+        var currentPage = asyncResultSet
+        while (true) {
+            results.addAll(currentPage.currentPage().toList())
+            if (currentPage.hasMorePages()) {
+                currentPage = currentPage.fetchNextPage().asSuspended().get()
+            } else {
+                break
+            }
         }
     }
 }

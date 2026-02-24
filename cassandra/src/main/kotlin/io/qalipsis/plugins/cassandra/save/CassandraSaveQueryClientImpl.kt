@@ -20,15 +20,20 @@
 package io.qalipsis.plugins.cassandra.save
 
 import com.datastax.oss.driver.api.core.CqlSession
+import com.datastax.oss.driver.api.core.cql.BatchStatement
+import com.datastax.oss.driver.api.core.cql.BoundStatement
+import com.datastax.oss.driver.api.core.cql.DefaultBatchType
+import com.datastax.oss.driver.api.core.cql.Statement
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.meters.Counter
 import io.qalipsis.api.meters.Timer
 import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.sync.asSuspended
+import io.qalipsis.plugins.cassandra.save.CassandraSaveQueryClientImpl.Companion.MAX_BATCH_SIZE
 import java.time.Duration
-import java.util.concurrent.atomic.AtomicInteger
 
 
 /**
@@ -116,25 +121,39 @@ internal class CassandraSaveQueryClientImpl(
         rows: List<CassandraSaveRow>,
         contextEventTags: Map<String, String>
     ): CassandraSaveQueryMeters {
-        val failedDocumentsCount = AtomicInteger()
-        val savedDocumentsCount = AtomicInteger()
+        var failedDocumentsCount = 0
+        var savedDocumentsCount = 0
         eventsLogger?.debug("$eventPrefix.saving-documents", rows.size, tags = contextEventTags)
         recordsToBeSent?.increment(rows.size.toDouble())
-        val queryList = mutableListOf<String>()
-        rows.forEach {
-            if (checkColumnsAndArgumentsSizes(columns, it)) {
-                queryList.add("INSERT INTO $tableName (${columns.joinToString()}) VALUES (${it.args.joinToString()})")
-            } else failedDocumentsCount.incrementAndGet()
+
+        val placeholders = columns.joinToString { "?" }
+        val cql = "INSERT INTO $tableName (${columns.joinToString()}) VALUES ($placeholders)"
+        val preparedStatement = session.prepare(cql)
+
+        val boundStatements = mutableListOf<BoundStatement>()
+        rows.forEach { row ->
+            if (columns.size == row.args.size) {
+                boundStatements += preparedStatement.bind(*row.args.toTypedArray())
+            } else {
+                log.warn { "Skipping row with ${row.args.size} arguments (expected ${columns.size} columns)" }
+                failedDocumentsCount++
+            }
         }
+
+        val executables = buildExecutableStatements(boundStatements)
 
         val requestStart = System.nanoTime()
         val timeToResponse = try {
-            val futures = queryList.map { session.executeAsync(it).asSuspended() }
-            futures.forEach {
-                if (it.get().wasApplied()) {
-                    savedDocumentsCount.incrementAndGet()
-                } else {
-                    failedDocumentsCount.incrementAndGet()
+            val futures = executables.map { (statement, count) ->
+                session.executeAsync(statement).asSuspended() to count
+            }
+            futures.forEach { (future, count) ->
+                try {
+                    future.get()
+                    savedDocumentsCount += count
+                } catch (e: Exception) {
+                    log.warn(e) { "Failed to execute save statement" }
+                    failedDocumentsCount += count
                 }
             }
             Duration.ofNanos(System.nanoTime() - requestStart)
@@ -144,7 +163,7 @@ internal class CassandraSaveQueryClientImpl(
             timeToFailure?.record(timeToResponse)
             throw e
         }
-        require(savedDocumentsCount.get() > 0) { "None of the rows could be saved" }
+        require(savedDocumentsCount > 0) { "None of the rows could be saved" }
 
         eventsLogger?.info(
             "$eventPrefix.saved-documents",
@@ -152,19 +171,53 @@ internal class CassandraSaveQueryClientImpl(
             tags = contextEventTags
         )
         savedDocuments?.increment(savedDocumentsCount.toDouble())
-        if (failedDocumentsCount.get() > 0) {
-            eventsLogger?.warn("$eventPrefix.failed-documents", failedDocumentsCount.get(), tags = contextEventTags)
+        if (failedDocumentsCount > 0) {
+            eventsLogger?.warn("$eventPrefix.failed-documents", failedDocumentsCount, tags = contextEventTags)
             failedDocuments?.increment(failedDocumentsCount.toDouble())
         }
 
         timeToSuccess?.record(timeToResponse)
 
         return CassandraSaveQueryMeters(
-            rows.size, timeToResponse, savedDocumentsCount.get(), failedDocumentsCount.get()
+            rows.size, timeToResponse, savedDocumentsCount, failedDocumentsCount
         )
     }
 
-    private fun checkColumnsAndArgumentsSizes(columns: List<String>, row: CassandraSaveRow): Boolean {
-        return columns.size == row.args.size
+    /**
+     * Groups bound statements by partition (routing token) and builds executable statements.
+     * Same-partition statements are grouped into UNLOGGED batches (chunked at [MAX_BATCH_SIZE]).
+     * Statements with no routing token or alone in their partition are executed individually.
+     */
+    private fun buildExecutableStatements(
+        boundStatements: List<BoundStatement>,
+    ): List<Pair<Statement<*>, Int>> {
+        val grouped = boundStatements.groupBy { it.routingToken }
+        val executables = mutableListOf<Pair<Statement<*>, Int>>()
+
+        grouped.forEach { (token, statements) ->
+            if (token == null || statements.size == 1) {
+                statements.forEach { executables += it to 1 }
+            } else {
+                statements.chunked(MAX_BATCH_SIZE).forEach { chunk ->
+                    if (chunk.size == 1) {
+                        executables += chunk[0] to 1
+                    } else {
+                        executables += BatchStatement.newInstance(
+                            DefaultBatchType.UNLOGGED,
+                            chunk
+                        ) to chunk.size
+                    }
+                }
+            }
+        }
+
+        return executables
+    }
+
+    companion object {
+        @JvmStatic
+        private val log = logger()
+
+        private const val MAX_BATCH_SIZE = 25
     }
 }
