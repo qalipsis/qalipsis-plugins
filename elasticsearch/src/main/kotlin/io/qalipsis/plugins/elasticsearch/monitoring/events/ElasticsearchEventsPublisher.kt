@@ -147,7 +147,7 @@ internal class ElasticsearchEventsPublisher(
                 exportStart,
                 numberOfSentItems,
                 meterRegistry,
-                coroutineContext,
+                coroutineScope,
                 "events"
             )
         } catch (e: Exception) {

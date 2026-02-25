@@ -33,7 +33,7 @@ import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecificationConverter
 import io.qalipsis.plugins.elasticsearch.query.ElasticsearchDocumentsQueryClientImpl
 import io.qalipsis.plugins.elasticsearch.query.ElasticsearchDocumentsQueryStep
-import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineScope
 import kotlin.reflect.KClass
 
 
@@ -44,7 +44,7 @@ import kotlin.reflect.KClass
  * @author Eric Jessé
  */
 internal abstract class AbstractElasticsearchQueryStepSpecificationConverter<S : AbstractElasticsearchQueryStepSpecification<*>>(
-    private val ioCoroutineContext: CoroutineContext,
+    private val ioCoroutineScope: CoroutineScope,
     private val meterRegistry: CampaignMeterRegistry,
     private val eventsLogger: EventsLogger
 ) : StepSpecificationConverter<S> {
@@ -94,7 +94,7 @@ internal abstract class AbstractElasticsearchQueryStepSpecificationConverter<S :
     ): ElasticsearchDocumentsQueryClientImpl<Any?> {
 
         return ElasticsearchDocumentsQueryClientImpl(
-            ioCoroutineContext = ioCoroutineContext,
+            ioCoroutineScope = ioCoroutineScope,
             endpoint = endpoint,
             jsonMapper = jsonMapper,
             documentsExtractor = buildDocumentsExtractor(spec),

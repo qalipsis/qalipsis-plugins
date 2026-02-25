@@ -242,7 +242,7 @@ internal class ElasticsearchSaveQueryClientImpl(
 
             override fun onFailure(e: java.lang.Exception) {
                 val timeToResponseNano = System.nanoTime() - requestStart
-                timeToResponse = Duration.ofNanos(timeToResponseNano - requestStart)
+                timeToResponse = Duration.ofNanos(timeToResponseNano)
                 eventsLogger?.info(
                     "$eventPrefix.time-to-response",
                     timeToResponse,
@@ -254,7 +254,6 @@ internal class ElasticsearchSaveQueryClientImpl(
                     eventsLogger?.apply {
                         warn("${eventPrefix}.failure.documents", numberOfSentItems, tags = contextEventTags)
                     }
-                    failureCounter?.increment(numberOfSentItems.toDouble())
                     log.debug { "Received error from the server: ${EntityUtils.toString(e.response.entity)}" }
                     val response = ElasticsearchBulkResult(
                         ElasticsearchBulkResponse(

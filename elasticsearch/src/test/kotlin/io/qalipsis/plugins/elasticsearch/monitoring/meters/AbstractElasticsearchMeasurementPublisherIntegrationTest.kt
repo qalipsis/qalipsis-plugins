@@ -342,7 +342,7 @@ internal abstract class AbstractElasticsearchMeasurementPublisherIntegrationTest
                 System.currentTimeMillis(),
                 1,
                 null,
-                coroutineContext,
+                this@run,
                 "meters"
             )
         }
@@ -379,7 +379,7 @@ internal abstract class AbstractElasticsearchMeasurementPublisherIntegrationTest
                 System.currentTimeMillis(),
                 1,
                 null,
-                coroutineContext,
+                this@run,
                 "meters"
             )
         }.message

@@ -26,7 +26,8 @@ import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.sync.ImmutableSlot
 import io.qalipsis.plugins.elasticsearch.ElasticsearchException
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.apache.http.HttpHost
 import org.apache.http.auth.AuthScope
 import org.apache.http.auth.UsernamePasswordCredentials
@@ -40,7 +41,6 @@ import java.time.Duration
 import java.util.Random
 import java.util.UUID
 import java.util.regex.Pattern
-import kotlin.coroutines.CoroutineContext
 
 /**
  * Implementation of [ElasticsearchOperations] to handle initialization of elasticsearch templates, as well as exporting data into elasticsearch.
@@ -138,7 +138,7 @@ internal class ElasticsearchOperationsImpl : ElasticsearchOperations {
         exportStart: Long,
         numberOfSentItems: Int,
         meterRegistry: CampaignMeterRegistry?,
-        coroutineContext: CoroutineContext,
+        coroutineScope: CoroutineScope,
         monitoringType: String,
     ) {
         val slot = ImmutableSlot<Result<Unit>>()
@@ -167,7 +167,7 @@ internal class ElasticsearchOperationsImpl : ElasticsearchOperations {
                         }"
                     }
                     logger.debug { "Failed $monitoringType payload: ${bulkRequest.entity}" }
-                    runBlocking(coroutineContext) {
+                    coroutineScope.launch {
                         slot.set(Result.failure(ElasticsearchException(responseBody)))
                     }
                 } else {
@@ -178,7 +178,7 @@ internal class ElasticsearchOperationsImpl : ElasticsearchOperations {
                         tags = mapOf("publisher" to "elasticsearch", "status" to "success")
                     )?.record(Duration.ofNanos(exportEnd - exportStart))
                     logger.debug { "Successfully sent $numberOfSentItems $monitoringType to Elasticsearch" }
-                    runBlocking(coroutineContext) {
+                    coroutineScope.launch {
                         slot.set(Result.success(Unit))
                     }
                 }
@@ -186,7 +186,7 @@ internal class ElasticsearchOperationsImpl : ElasticsearchOperations {
             }
 
             override fun onFailure(exception: Exception) {
-                runBlocking(coroutineContext) {
+                coroutineScope.launch {
                     slot.set(Result.failure(exception))
                 }
                 logger.trace { "onFailure totally processed" }

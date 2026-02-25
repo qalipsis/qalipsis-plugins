@@ -46,7 +46,7 @@ kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catad
 kapt.useBuildCache = false
 
 val pluginPlatformVersion: String by project
-val elasticsearchVersion = "8.4.1"
+val elasticsearchVersion = "8.17.0"
 
 dependencies {
     implementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))

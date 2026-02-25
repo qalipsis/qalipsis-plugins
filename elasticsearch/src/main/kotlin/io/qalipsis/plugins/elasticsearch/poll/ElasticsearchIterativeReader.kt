@@ -229,13 +229,13 @@ internal class ElasticsearchIterativeReader(
         requestCancellable = restClient.performRequestAsync(request, object : ResponseListener {
             override fun onSuccess(response: Response) {
                 try {
-                    timeToResponse?.record(Duration.ofNanos(System.currentTimeMillis() - requestStart))
+                    timeToResponse?.record(Duration.ofNanos(System.nanoTime() - requestStart))
                     val totalBytes = response.entity.contentLength.toDouble()
                     receivedSuccessBytesCounter?.increment(totalBytes)
                     successCounter?.increment(1.0)
                     eventsLogger?.info("${eventPrefix}.success.bytes", totalBytes, tags = eventTags!!)
                     processResponse(request, response, requestStart)
-                    runBlocking(ioCoroutineContext) {
+                    ioCoroutineScope.launch {
                         slot.set(Result.success(Unit))
                     }
                 } catch (e: Exception) {
@@ -249,14 +249,14 @@ internal class ElasticsearchIterativeReader(
                             tags = eventTags!!
                         )
                     }
-                    runBlocking(ioCoroutineContext) {
+                    ioCoroutineScope.launch {
                         slot.set(Result.failure(e))
                     }
                 }
             }
 
             override fun onFailure(e: java.lang.Exception) {
-                timeToResponse?.record(Duration.ofNanos(System.currentTimeMillis() - requestStart))
+                timeToResponse?.record(Duration.ofNanos(System.nanoTime() - requestStart))
                 failureCounter?.increment(1.0)
                 if (e is ResponseException) {
                     val totalBytes = e.response.entity.contentLength.toDouble()
@@ -267,7 +267,7 @@ internal class ElasticsearchIterativeReader(
                     }
                     log.error { "Received error from the server: ${EntityUtils.toString(e.response.entity)}" }
                     val exception = extractAndLogError(e)
-                    runBlocking(ioCoroutineContext) {
+                    ioCoroutineScope.launch {
                         slot.set(Result.failure(exception))
                     }
                 } else {
@@ -279,7 +279,7 @@ internal class ElasticsearchIterativeReader(
                             tags = eventTags!!
                         )
                     }
-                    runBlocking(ioCoroutineContext) {
+                    ioCoroutineScope.launch {
                         slot.set(Result.failure(e))
                     }
                 }
@@ -358,16 +358,22 @@ internal class ElasticsearchIterativeReader(
     }
 
     private fun extractAndLogError(e: Exception): ElasticsearchException {
-        val res = "{\"error" + e.message?.split("error")?.get(1)
-        val errorBody = res.let {
-            jsonMapper.readValue(it, object : TypeReference<Map<String?, Any?>?>() {})
+        try {
+            val parts = e.message?.split("error")
+            if (parts == null || parts.size < 2) {
+                throw IllegalArgumentException("Cannot parse error from response")
+            }
+            val res = "{\"error" + parts[1]
+            val errorBody = jsonMapper.readValue(res, object : TypeReference<Map<String?, Any?>?>() {})
+            val error = errorBody?.get("error") as Map<*, *>
+            eventsLogger?.error(
+                name = error["type"].toString(),
+                value = error["reason"],
+                tags = eventTags!!
+            )
+            return ElasticsearchException("${error["type"]} : caused by ${error["reason"]}")
+        } catch (_: Exception) {
+            return ElasticsearchException("Elasticsearch request failed: ${e.message}")
         }
-        val error = errorBody?.get("error") as Map<*, *>
-        eventsLogger?.error(
-            name = error["type"].toString(),
-            value = error["reason"],
-            tags = eventTags!!
-        )
-        return ElasticsearchException("${error["type"]} : caused by ${error["reason"]}")
     }
 }

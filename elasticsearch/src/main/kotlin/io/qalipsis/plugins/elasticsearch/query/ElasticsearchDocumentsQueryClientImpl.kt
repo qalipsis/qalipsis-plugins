@@ -32,7 +32,8 @@ import io.qalipsis.plugins.elasticsearch.ElasticsearchDocument
 import io.qalipsis.plugins.elasticsearch.ElasticsearchException
 import io.qalipsis.plugins.elasticsearch.ElasticsearchUtility.checkElasticsearchVersionIsGreaterThanSeven
 import io.qalipsis.plugins.elasticsearch.query.model.ElasticsearchDocumentsQueryMetrics
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.apache.http.util.EntityUtils
 import org.elasticsearch.client.Cancellable
@@ -44,12 +45,11 @@ import org.elasticsearch.client.RestClient
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.coroutines.CoroutineContext
 
 /**
  * Thread-safe client to search or send data from Elasticsearch.
  *
- * @property ioCoroutineContext local coroutine context...
+ * @property ioCoroutineScope local coroutine scope...
  * @property endpoint Elasticsearch function / endpoint to use, such as _mget, _search...
  * @property jsonMapper JSON mapper to interpret the results
  * @property documentsExtractor closure to extract the list of JSON documents as [ObjectNode] from the response body
@@ -58,7 +58,7 @@ import kotlin.coroutines.CoroutineContext
  * @author Eric Jessé
  */
 internal class ElasticsearchDocumentsQueryClientImpl<T>(
-    private val ioCoroutineContext: CoroutineContext,
+    private val ioCoroutineScope: CoroutineScope,
     private val endpoint: String,
     private val jsonMapper: JsonMapper,
     private val documentsExtractor: (JsonNode) -> List<ObjectNode>,
@@ -109,7 +109,7 @@ internal class ElasticsearchDocumentsQueryClientImpl<T>(
         request.addParameters(parameters)
         request.setJsonEntity(typeConversion(query))
 
-        val result = withContext(ioCoroutineContext) {
+        val result = withContext(ioCoroutineScope.coroutineContext) {
             executeDocumentFetchingRequest(
                 restClient,
                 request,
@@ -133,7 +133,7 @@ internal class ElasticsearchDocumentsQueryClientImpl<T>(
         val request = Request("POST", "/_search/scroll")
         request.setJsonEntity("""{ "scroll" : "$scrollDuration", "scroll_id" : "$scrollId" }""")
 
-        return withContext(ioCoroutineContext) {
+        return withContext(ioCoroutineScope.coroutineContext) {
             executeDocumentFetchingRequest(
                 restClient,
                 request,
@@ -147,7 +147,7 @@ internal class ElasticsearchDocumentsQueryClientImpl<T>(
     override suspend fun clearScroll(restClient: RestClient, scrollId: String) {
         val request = Request("DELETE", "/_search/scroll")
         request.setJsonEntity("""{"scroll_id" : "$scrollId" }""")
-        withContext(ioCoroutineContext) {
+        withContext(ioCoroutineScope.coroutineContext) {
             restClient.performRequestAsync(request, object : ResponseListener {
                 override fun onSuccess(response: Response) {
                     log.trace { "Scroll context $scrollId was cleaned" }
@@ -190,7 +190,7 @@ internal class ElasticsearchDocumentsQueryClientImpl<T>(
                         warn("${eventPrefix}.failure.times", 1, tags = eventTags)
                         error("${eventPrefix}.failure.records", e.message, tags = eventTags)
                     }
-                    runBlocking(ioCoroutineContext) {
+                    ioCoroutineScope.launch {
                         resultsSlot.set(SearchResult(failure = e))
                     }
                 }
@@ -199,7 +199,7 @@ internal class ElasticsearchDocumentsQueryClientImpl<T>(
             override fun onFailure(e: Exception) {
                 elasticsearchDocumentsQueryMetrics?.failureCounter?.increment(1.0)
                 eventsLogger?.warn("${eventPrefix}.failure.times", 1, tags = eventTags)
-                runBlocking(ioCoroutineContext) {
+                ioCoroutineScope.launch {
                     if (e is ResponseException) {
                         elasticsearchDocumentsQueryMetrics?.receivedFailureBytesCounter?.increment(e.response.entity.contentLength.toDouble())
                         eventsLogger?.warn(
@@ -287,7 +287,7 @@ internal class ElasticsearchDocumentsQueryClientImpl<T>(
             SearchResult(totalResults = total, scrollId = cursor)
         }
 
-        runBlocking(ioCoroutineContext) {
+        ioCoroutineScope.launch {
             resultsSlot.offer(searchResult)
         }
     }
@@ -315,17 +315,23 @@ internal class ElasticsearchDocumentsQueryClientImpl<T>(
         eventsLogger: EventsLogger?,
         eventTags: Map<String, String>?
     ): ElasticsearchException {
-        val res = "{\"error" + e.message?.split("error")?.get(1)
-        val errorBody = res.let {
-            jsonMapper.readValue(it, object : TypeReference<Map<String?, Any?>?>() {})
+        try {
+            val parts = e.message?.split("error")
+            if (parts == null || parts.size < 2) {
+                throw IllegalArgumentException("Cannot parse error from response")
+            }
+            val res = "{\"error" + parts[1]
+            val errorBody = jsonMapper.readValue(res, object : TypeReference<Map<String?, Any?>?>() {})
+            val error = errorBody?.get("error") as Map<*, *>
+            eventsLogger?.error(
+                name = error["type"].toString(),
+                value = error["reason"],
+                tags = eventTags!!
+            )
+            return ElasticsearchException("${error["type"]} : caused by ${error["reason"]}")
+        } catch (_: Exception) {
+            return ElasticsearchException("Elasticsearch request failed: ${e.message}")
         }
-        val error = errorBody?.get("error") as Map<*, *>
-        eventsLogger?.error(
-            name = error["type"].toString(),
-            value = error["reason"],
-            tags = eventTags!!
-        )
-        return ElasticsearchException("${error["type"]} : caused by ${error["reason"]}")
     }
 
 }

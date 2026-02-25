@@ -20,8 +20,8 @@
 package io.qalipsis.plugins.elasticsearch.monitoring
 
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import kotlinx.coroutines.CoroutineScope
 import org.elasticsearch.client.Request
-import kotlin.coroutines.CoroutineContext
 
 /**
  * Handles initialization of elasticsearch templates, as well as exporting data into elasticsearch.
@@ -57,7 +57,7 @@ internal interface ElasticsearchOperations {
         exportStart: Long,
         numberOfSentItems: Int,
         meterRegistry: CampaignMeterRegistry?,
-        coroutineContext: CoroutineContext,
+        coroutineScope: CoroutineScope,
         monitoringType: String,
     )
 

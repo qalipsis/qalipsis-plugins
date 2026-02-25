@@ -33,7 +33,7 @@ import io.qalipsis.api.steps.StepSpecificationConverter
 import io.qalipsis.plugins.elasticsearch.AbstractElasticsearchQueryStepSpecificationConverter
 import io.qalipsis.plugins.elasticsearch.query.ElasticsearchDocumentsQueryStep
 import jakarta.inject.Named
-import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineScope
 
 
 /**
@@ -44,11 +44,11 @@ import kotlin.coroutines.CoroutineContext
  */
 @StepConverter
 internal class ElasticsearchMultiGetStepSpecificationConverter(
-    @Named(Executors.IO_EXECUTOR_NAME) ioCoroutineContext: CoroutineContext,
+    @Named(Executors.IO_EXECUTOR_NAME) ioCoroutineScope: CoroutineScope,
     meterRegistry: CampaignMeterRegistry,
     eventsLogger: EventsLogger
 ) : AbstractElasticsearchQueryStepSpecificationConverter<ElasticsearchMultiGetStepSpecificationImpl<*>>(
-    ioCoroutineContext,
+    ioCoroutineScope,
     meterRegistry,
     eventsLogger
 ) {

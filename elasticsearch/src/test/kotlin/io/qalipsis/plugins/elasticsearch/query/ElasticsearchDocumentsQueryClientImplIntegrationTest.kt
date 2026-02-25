@@ -119,7 +119,7 @@ internal class ElasticsearchDocumentsQueryClientImplIntegrationTest : AbstractEl
 
             @Suppress("UNCHECKED_CAST")
             val queryClient = ElasticsearchDocumentsQueryClientImpl(
-                ioCoroutineContext = this.coroutineContext,
+                ioCoroutineScope = this,
                 endpoint = "_search",
                 jsonMapper = jsonMapper,
                 documentsExtractor = { (it.get("hits")?.get("hits") as ArrayNode).toList() as List<ObjectNode> },
@@ -160,7 +160,7 @@ internal class ElasticsearchDocumentsQueryClientImplIntegrationTest : AbstractEl
 
             @Suppress("UNCHECKED_CAST")
             val queryClient = ElasticsearchDocumentsQueryClientImpl(
-                ioCoroutineContext = this.coroutineContext,
+                ioCoroutineScope = this,
                 endpoint = "_search",
                 jsonMapper = jsonMapper,
                 documentsExtractor = { (it.get("hits")?.get("hits") as ArrayNode).toList() as List<ObjectNode> },
@@ -199,7 +199,7 @@ internal class ElasticsearchDocumentsQueryClientImplIntegrationTest : AbstractEl
 
         @Suppress("UNCHECKED_CAST")
         val queryClient = ElasticsearchDocumentsQueryClientImpl(
-            ioCoroutineContext = this.coroutineContext,
+            ioCoroutineScope = this,
             endpoint = "_search",
             jsonMapper = jsonMapper,
             documentsExtractor = { (it.get("hits")?.get("hits") as ArrayNode).toList() as List<ObjectNode> },
@@ -258,7 +258,7 @@ internal class ElasticsearchDocumentsQueryClientImplIntegrationTest : AbstractEl
 
         @Suppress("UNCHECKED_CAST")
         val queryClient = ElasticsearchDocumentsQueryClientImpl(
-            ioCoroutineContext = this.coroutineContext,
+            ioCoroutineScope = this,
             endpoint = "_search",
             jsonMapper = jsonMapper,
             documentsExtractor = { (it.get("hits")?.get("hits") as ArrayNode).toList() as List<ObjectNode> },
@@ -300,7 +300,7 @@ internal class ElasticsearchDocumentsQueryClientImplIntegrationTest : AbstractEl
 
         @Suppress("UNCHECKED_CAST")
         val queryClient = ElasticsearchDocumentsQueryClientImpl(
-            ioCoroutineContext = this.coroutineContext,
+            ioCoroutineScope = this,
             endpoint = "_mget",
             jsonMapper = jsonMapper,
             documentsExtractor = {
@@ -360,7 +360,7 @@ internal class ElasticsearchDocumentsQueryClientImplIntegrationTest : AbstractEl
 
             @Suppress("UNCHECKED_CAST")
             val queryClient = ElasticsearchDocumentsQueryClientImpl(
-                ioCoroutineContext = this.coroutineContext,
+                ioCoroutineScope = this,
                 endpoint = "_search",
                 jsonMapper = jsonMapper,
                 documentsExtractor = { (it.get("hits")?.get("hits") as ArrayNode).toList() as List<ObjectNode> },

@@ -221,7 +221,7 @@ internal abstract class AbstractElasticsearchEventsPublisherIntegrationTest {
         // when
         assertThrows<ResponseException> {
             publisher.elasticsearchOperations()
-                .executeBulk(bulkRequest, System.currentTimeMillis(), 1, meterRegistry, coroutineContext, "events")
+                .executeBulk(bulkRequest, System.currentTimeMillis(), 1, meterRegistry, this@run, "events")
         }
 
         publisher.stop()
@@ -255,7 +255,7 @@ internal abstract class AbstractElasticsearchEventsPublisherIntegrationTest {
         // when
         val errorMessage = assertThrows<ElasticsearchException> {
             publisher.elasticsearchOperations()
-                .executeBulk(bulkRequest, System.currentTimeMillis(), 1, meterRegistry, coroutineContext, "events")
+                .executeBulk(bulkRequest, System.currentTimeMillis(), 1, meterRegistry, this@run, "events")
         }.message
 
         // then

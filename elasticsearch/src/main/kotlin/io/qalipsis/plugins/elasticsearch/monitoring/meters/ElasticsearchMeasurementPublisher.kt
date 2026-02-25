@@ -104,7 +104,7 @@ internal class ElasticsearchMeasurementPublisher(
                 exportStart,
                 numberOfSentItems,
                 null,
-                coroutineScope.coroutineContext,
+                coroutineScope,
                 "meters"
             )
         } catch (e: Exception) {
