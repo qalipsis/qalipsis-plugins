@@ -28,7 +28,6 @@ import io.qalipsis.api.report.CampaignReport
 import io.qalipsis.api.report.CampaignReportPublisher
 import jakarta.inject.Singleton
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.Duration
@@ -65,13 +64,13 @@ internal class MailNotificationPublisher(
     private val properties = Properties()
 
     override suspend fun publish(campaignKey: CampaignKey, report: CampaignReport) {
-        val reportStatus = ReportExecutionStatus.values().firstOrNull { it.name === report.status.toString() }
-        withContext(Dispatchers.IO) {
-            async {
-                if (reportStatus != null && ((mailConfiguration.status.contains(ReportExecutionStatus.ALL)) || mailConfiguration.status.contains(
-                        ReportExecutionStatus.valueOf(reportStatus.toString())
-                    ))
-                ) sendNotification(report)
+        val reportStatus = ReportExecutionStatus.values().firstOrNull { it.name == report.status.toString() }
+        if (reportStatus != null && ((mailConfiguration.status.contains(ReportExecutionStatus.ALL)) || mailConfiguration.status.contains(
+                ReportExecutionStatus.valueOf(reportStatus.toString())
+            ))
+        ) {
+            withContext(Dispatchers.IO) {
+                sendNotification(report)
             }
         }
     }
@@ -81,7 +80,6 @@ internal class MailNotificationPublisher(
         val session = getSession(properties)
         val message = MimeMessage(session)
         val attachmentFile = File.createTempFile(report.campaignKey, ".zip")
-        attachmentFile.mkdirs()
         try {
             message.apply {
                 subject = "${report.campaignKey} ${report.status}"

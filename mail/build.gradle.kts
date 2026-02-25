@@ -39,7 +39,7 @@ dependencies {
     api("io.qalipsis:qalipsis-api-common")
     api("io.qalipsis:qalipsis-api-dsl")
 
-    implementation("javax.mail:mail:1.4.7")
+    implementation("com.sun.mail:javax.mail:1.6.2")
     implementation("io.micronaut:micronaut-http-client")
     kapt(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
     kapt("io.qalipsis:qalipsis-api-processors")
