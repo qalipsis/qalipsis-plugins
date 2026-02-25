@@ -38,9 +38,9 @@ dependencies {
     api("io.qalipsis:qalipsis-api-common")
     api("io.qalipsis:qalipsis-api-dsl")
 
-    implementation("com.slack.api:slack-api-client:1.27.1")
-    implementation("com.slack.api:slack-api-model-kotlin-extension:1.27.1")
-    implementation("com.slack.api:slack-api-client-kotlin-extension:1.27.1")
+    implementation("com.slack.api:slack-api-client:1.47.0")
+    implementation("com.slack.api:slack-api-model-kotlin-extension:1.47.0")
+    implementation("com.slack.api:slack-api-client-kotlin-extension:1.47.0")
     kapt(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
     kapt("io.qalipsis:qalipsis-api-processors")
     kapt("io.qalipsis:qalipsis-api-dsl")
