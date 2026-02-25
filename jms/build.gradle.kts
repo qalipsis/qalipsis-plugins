@@ -75,7 +75,7 @@ dependencies {
     testFixturesImplementation("io.qalipsis:qalipsis-test")
 
     testImplementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
-    testImplementation("org.apache.activemq:activemq-all:5.4.2")
+    testImplementation("org.apache.activemq:activemq-client:5.19.2")
     testImplementation("org.testcontainers:testcontainers")
     testImplementation("io.qalipsis:qalipsis-test")
     testImplementation("io.qalipsis:qalipsis-api-dsl")

@@ -229,7 +229,7 @@ internal class JmsConsumerConverterTest {
                     prop(JmsConsumerRecord<*>::expiration).isEqualTo(0)
                     prop(JmsConsumerRecord<*>::priority).isEqualTo(0)
                     prop(JmsConsumerRecord<*>::correlationId).isEqualTo("correlation-id-1")
-                    prop(JmsConsumerRecord<*>::messageId).isEqualTo("key-id-1")
+                    prop(JmsConsumerRecord<*>::messageId).isEqualTo("key-id:1")
                     prop(JmsConsumerRecord<*>::offset).isEqualTo(1)
                     prop(JmsConsumerRecord<*>::destination).isEqualTo(destination1)
                     prop(JmsConsumerRecord<*>::value).isEqualTo("test-message-1")
@@ -245,7 +245,7 @@ internal class JmsConsumerConverterTest {
                     prop(JmsConsumerRecord<*>::expiration).isEqualTo(0)
                     prop(JmsConsumerRecord<*>::priority).isEqualTo(0)
                     prop(JmsConsumerRecord<*>::correlationId).isEqualTo("correlation-id-2")
-                    prop(JmsConsumerRecord<*>::messageId).isEqualTo("key-id-2")
+                    prop(JmsConsumerRecord<*>::messageId).isEqualTo("key-id:2")
                     prop(JmsConsumerRecord<*>::offset).isEqualTo(2)
                     prop(JmsConsumerRecord<*>::destination).isEqualTo(destination1)
                     prop(JmsConsumerRecord<*>::value).isEqualTo("test-message-2")
@@ -259,9 +259,9 @@ internal class JmsConsumerConverterTest {
                 prop(JmsConsumerResult<*>::record).all {
                     prop(JmsConsumerRecord<*>::timestamp).isEqualTo(0)
                     prop(JmsConsumerRecord<*>::expiration).isEqualTo(0)
-                    prop(JmsConsumerRecord<*>::priority).isEqualTo(33)
+                    prop(JmsConsumerRecord<*>::priority).isEqualTo(9)
                     prop(JmsConsumerRecord<*>::correlationId).isEqualTo("correlation-id-3")
-                    prop(JmsConsumerRecord<*>::messageId).isEqualTo("key-id-3")
+                    prop(JmsConsumerRecord<*>::messageId).isEqualTo("key-id:3")
                     prop(JmsConsumerRecord<*>::offset).isEqualTo(3)
                     prop(JmsConsumerRecord<*>::destination).isEqualTo(destination2)
                     prop(JmsConsumerRecord<*>::value).isEqualTo("test-message-3")
@@ -280,7 +280,7 @@ internal class JmsConsumerConverterTest {
         offset: Long
     ): Message {
         val message = ActiveMQTextMessage()
-        val msgId = MessageId("key-id-$offset")
+        val msgId = MessageId("key-id:$offset")
 
         message.text = text
         message.destination = destination
