@@ -61,11 +61,11 @@ kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catad
 kapt.useBuildCache = false
 
 val pluginPlatformVersion: String by project
-val ktorVersion = "2.2.4"
+val ktorVersion = "2.3.13"
 
 dependencies {
     implementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
-    implementation("io.ktor:ktor-client-java:2.2.4")
+    implementation("io.ktor:ktor-client-java:$ktorVersion")
     compileOnly("io.aeris-consulting:catadioptre-annotations")
     compileOnly("io.micronaut:micronaut-runtime")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core")
