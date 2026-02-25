@@ -40,7 +40,9 @@ allOpen {
 kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catadioptre")
 kapt.useBuildCache = false
 
-val r2dbcVersion = "0.8.13.RELEASE"
+val r2dbcPostgresqlVersion = "1.1.1.RELEASE"
+val r2dbcPoolVersion = "1.0.2.RELEASE"
+val commonsTextVersion = "1.15.0"
 val pluginPlatformVersion: String by project
 
 dependencies {
@@ -54,11 +56,11 @@ dependencies {
     implementation("org.liquibase:liquibase-core")
     implementation("io.micronaut.sql:micronaut-jdbc-hikari")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
-    implementation("io.r2dbc:r2dbc-postgresql:${r2dbcVersion}")
-    implementation("io.r2dbc:r2dbc-pool:${r2dbcVersion}")
+    implementation("org.postgresql:r2dbc-postgresql:${r2dbcPostgresqlVersion}")
+    implementation("io.r2dbc:r2dbc-pool:${r2dbcPoolVersion}")
     implementation("org.postgresql:postgresql")
-    implementation("io.r2dbc:r2dbc-spi:${r2dbcVersion}")
-    implementation("org.apache.commons:commons-text:1.11.0")
+    implementation("io.r2dbc:r2dbc-spi")
+    implementation("org.apache.commons:commons-text:${commonsTextVersion}")
     implementation(
         group = "io.netty",
         name = "netty-transport-native-epoll",
