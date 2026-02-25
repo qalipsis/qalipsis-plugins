@@ -68,11 +68,11 @@ internal class KafkaConsumerSingleConverterTest {
     val testDispatcherProvider = TestDispatcherProvider()
 
     private val keySerializer: Deserializer<Int> = relaxedMockk {
-        every { deserialize(any(), any(), any()) } answers { thirdArg<ByteArray?>()?.size ?: Int.MIN_VALUE }
+        every { deserialize(any(), any<Headers>(), any<ByteArray>()) } answers { thirdArg<ByteArray?>()?.size ?: Int.MIN_VALUE }
     }
 
     private val valueSerializer: Deserializer<Int> = relaxedMockk {
-        every { deserialize(any(), any(), any()) } answers { thirdArg<ByteArray?>()?.size ?: Int.MAX_VALUE }
+        every { deserialize(any(), any<Headers>(), any<ByteArray>()) } answers { thirdArg<ByteArray?>()?.size ?: Int.MAX_VALUE }
     }
 
     private val counter: Counter = relaxedMockk {}
@@ -273,8 +273,8 @@ internal class KafkaConsumerSingleConverterTest {
             valueSerializer.deserialize("topic-1", refEq(headers1), refEq(value1))
             keySerializer.deserialize("topic-2", refEq(headers2), refEq(key2))
             valueSerializer.deserialize("topic-2", refEq(headers2), refEq(value2))
-            keySerializer.deserialize("topic-2", refEq(headers3), isNull())
-            valueSerializer.deserialize("topic-2", refEq(headers3), isNull())
+            keySerializer.deserialize("topic-2", refEq(headers3), isNull<ByteArray>())
+            valueSerializer.deserialize("topic-2", refEq(headers3), isNull<ByteArray>())
         }
     }
 

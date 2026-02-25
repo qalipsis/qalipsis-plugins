@@ -46,7 +46,7 @@ allOpen {
 kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catadioptre")
 kapt.useBuildCache = false
 
-val kafkaVersion = "3.2.2"
+val kafkaVersion = "3.9.0"
 val pluginPlatformVersion: String by project
 
 dependencies {
