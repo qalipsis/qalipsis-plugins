@@ -45,8 +45,8 @@ allOpen {
 kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catadioptre")
 kapt.useBuildCache = false
 
-val jasyncVersion = "2.0.8"
-val calciteVersion = "1.32.0"
+val jasyncVersion = "2.2.4"
+val calciteVersion = "1.38.0"
 val mariadbClientVersion = "3.0.7"
 val mysqlClientVersion = "8.0.30"
 val pluginPlatformVersion: String by project

@@ -70,7 +70,7 @@ internal class JasyncSearchStep<I>(
         val parameters = parametersFactory(context, input)
         val requestStart = System.nanoTime()
         val resultSet = connection.sendPreparedStatement(query, parameters, true).rows
-        val timeToResponse = Duration.ofMillis(System.nanoTime() - requestStart)
+        val timeToResponse = Duration.ofNanos(System.nanoTime() - requestStart)
         val result = ResultSetWrapper(
             resultSet = resultSet,
             timeToResponse = timeToResponse
