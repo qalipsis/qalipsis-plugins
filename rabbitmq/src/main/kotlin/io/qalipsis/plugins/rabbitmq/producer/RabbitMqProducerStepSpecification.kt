@@ -95,7 +95,7 @@ internal class RabbitMqProducerStepSpecificationImpl<I> :
     }
 
     override fun monitoring(monitoringConfiguration: StepMonitoringConfiguration.() -> Unit) {
-        monitoringConfiguration.apply { monitoring }
+        this.monitoring.monitoringConfiguration()
     }
 
     override fun concurrency(concurrency: Int) {

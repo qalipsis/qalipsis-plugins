@@ -159,6 +159,7 @@ internal class RabbitMqConsumerIterativeReader(
                     updateMonitoringStats(message.body)
                     resultChannel?.trySend(message)
                     channel.basicAck(message.envelope.deliveryTag, false)
+                    successCounter?.increment()
                 },
                 CancelCallback { }
             )

@@ -25,6 +25,6 @@ package io.qalipsis.plugins.rabbitmq
  */
 object Constants {
 
-    const val DOCKER_IMAGE = "rabbitmq:alpine"
+    const val DOCKER_IMAGE = "rabbitmq:4.2.4-alpine"
 
 }

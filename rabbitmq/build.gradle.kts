@@ -46,7 +46,7 @@ allOpen {
 kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catadioptre")
 kapt.useBuildCache = false
 
-val rabbitMQVersion = "5.16.0"
+val rabbitMQVersion = "5.28.0"
 val pluginPlatformVersion: String by project
 
 dependencies {
