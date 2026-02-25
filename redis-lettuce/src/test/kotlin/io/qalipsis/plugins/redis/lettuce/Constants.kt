@@ -22,10 +22,10 @@ package io.qalipsis.plugins.redis.lettuce
 import org.testcontainers.utility.DockerImageName
 
 internal object Constants {
-    const val REDIS_DOCKER_IMAGE = "redis:6.2.7"
-    const val REDIS_5_DOCKER_IMAGE = "redis:5.0.14"
-    const val REDIS_CLUSTER_DOCKER_IMAGE = "grokzen/redis-cluster:6.0.10"
-    const val REDIS_7_DOCKER_IMAGE = "redis:7.0.4"
+    const val REDIS_DOCKER_IMAGE = "redis:6.2.21"
+    const val REDIS_CLUSTER_DOCKER_IMAGE = "grokzen/redis-cluster:7.2.5"
+    const val REDIS_7_DOCKER_IMAGE = "redis:7.4.8"
+    const val REDIS_8_DOCKER_IMAGE = "redis:8.6.1"
 
     @JvmStatic
     val REDIS_IMAGE_NAME: DockerImageName = DockerImageName.parse(REDIS_DOCKER_IMAGE)

@@ -56,7 +56,7 @@ kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catad
 kapt.useBuildCache = false
 
 
-val redisLettuceVersion = "6.2.0.RELEASE"
+val redisLettuceVersion = "6.8.2.RELEASE"
 val pluginPlatformVersion: String by project
 
 dependencies {
