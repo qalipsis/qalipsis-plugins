@@ -132,6 +132,7 @@ internal class InfluxDbQueryClientImpl(
                 "$eventPrefix.success",
                 arrayOf(duration, records.size), tags = contextEventTags
             )
+            successCounter?.increment(records.size.toDouble())
         } catch (e: InterruptedException) {
             // The exception is ignored.
         } catch (e: CancellationException) {
@@ -139,7 +140,7 @@ internal class InfluxDbQueryClientImpl(
         } catch (e: Exception) {
             duration = Duration.ofNanos(System.nanoTime() - requestStart)
             eventsLogger?.warn("$eventPrefix.failure", arrayOf(e, duration), tags = contextEventTags)
-            failureCounter?.increment()
+            failureCounter?.increment(records.size.toDouble())
             log.debug(e) { e.message }
             throw e
         }

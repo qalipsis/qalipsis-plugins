@@ -68,8 +68,6 @@ internal class InfluxDbSavePointClientImpl(
     override suspend fun start(context: StepStartStopContext) {
         client = clientBuilder()
         writeApi = client.getWriteKotlinApi()
-        val failures = (pointsCounter?.count()?.minus(successCounter?.count()!!))
-        failures?.let { failureCounter?.increment(it) }
         meterRegistry?.apply {
             val tags = context.toMetersTags()
             val scenarioName = context.scenarioName

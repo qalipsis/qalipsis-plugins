@@ -92,7 +92,7 @@ internal abstract class AbstractInfluxDbIntegrationTest {
 
         @Container
         @JvmStatic
-        val influxDBContainer = InfluxDBContainer<Nothing>(DockerImageName.parse("influxdb:2.1"))
+        val influxDBContainer = InfluxDBContainer<Nothing>(DockerImageName.parse("influxdb:2.8"))
             .apply {
                 waitingFor(Wait.forListeningPort().withStartupTimeout(Duration.ofSeconds(60)))
                 withCreateContainerCmdModifier { cmd ->
