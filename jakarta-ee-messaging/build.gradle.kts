@@ -61,7 +61,6 @@ dependencies {
 
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("org.apache.activemq:artemis-jakarta-client:2.26.0")
 
     api("jakarta.jms:jakarta.jms-api:3.1.0")
     api("io.qalipsis:qalipsis-api-common")
@@ -77,7 +76,7 @@ dependencies {
     testFixturesImplementation("io.qalipsis:qalipsis-test")
 
     testImplementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
-    testImplementation("org.apache.activemq:artemis-jakarta-client:2.26.0")
+    testImplementation("org.apache.activemq:artemis-jakarta-client:2.38.0")
     testImplementation("org.testcontainers:testcontainers")
     testImplementation("io.qalipsis:qalipsis-test")
     testImplementation("io.qalipsis:qalipsis-api-dsl")

@@ -24,7 +24,7 @@ package io.qalipsis.plugins.jakarta
  * @author Krawist Ngoben
  */
 object Constants {
-    const val DOCKER_IMAGE = "quay.io/artemiscloud/activemq-artemis-broker-init:artemis.2.28.0"
+    const val DOCKER_IMAGE = "quay.io/artemiscloud/activemq-artemis-broker-init:artemis.2.38.0"
     const val CONTAINER_USER_NAME_ENV_KEY = "AMQ_USER"
     const val CONTAINER_PASSWORD_ENV_KEY = "AMQ_PASSWORD"
     const val CONTAINER_USER_NAME = "qalipsis_user"
