@@ -56,7 +56,7 @@ kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catad
 kapt.useBuildCache = false
 
 val pluginPlatformVersion: String by project
-val mongoDbVersion = "4.7.1"
+val mongoDbVersion = "4.11.1"
 
 dependencies {
     implementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))

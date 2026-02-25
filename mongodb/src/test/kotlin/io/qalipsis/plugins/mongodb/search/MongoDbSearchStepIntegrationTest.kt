@@ -124,6 +124,7 @@ internal class MongoDbSearchStepIntegrationTest : AbstractMongoDbIntegrationTest
         }
 
         val searchClient = MongoDbQueryClientImpl(
+            ioCoroutineScope = this,
             clientFactory = clientFactory,
             meterRegistry = meterRegistry,
             eventsLogger = eventsLogger
@@ -227,6 +228,7 @@ internal class MongoDbSearchStepIntegrationTest : AbstractMongoDbIntegrationTest
         }
 
         val searchClient = MongoDbQueryClientImpl(
+            ioCoroutineScope = this,
             clientFactory = clientFactory,
             meterRegistry = meterRegistry,
             eventsLogger = eventsLogger

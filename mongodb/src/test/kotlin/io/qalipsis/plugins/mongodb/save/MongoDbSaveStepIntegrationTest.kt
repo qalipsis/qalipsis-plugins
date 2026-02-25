@@ -143,6 +143,7 @@ internal class MongoDbSaveStepIntegrationTest {
         val results = ArrayList<Document>()
         val document = Document("key1", "val1")
         val saveClient = MongoDbSaveQueryClientImpl(
+            ioCoroutineScope = this,
             clientBuilder = { client },
             meterRegistry = meterRegistry,
             eventsLogger = eventsLogger
@@ -218,6 +219,7 @@ internal class MongoDbSaveStepIntegrationTest {
         }
 
         val saveClient = MongoDbSaveQueryClientImpl(
+            ioCoroutineScope = this,
             clientBuilder = { client },
             meterRegistry = meterRegistry,
             eventsLogger = eventsLogger

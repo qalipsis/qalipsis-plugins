@@ -30,7 +30,8 @@ import io.qalipsis.api.meters.Counter
 import io.qalipsis.api.meters.Timer
 import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.sync.Slot
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.bson.Document
 import org.reactivestreams.Subscriber
 import org.reactivestreams.Subscription
@@ -51,6 +52,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * @author Alexander Sosnovsky
  */
 internal class MongoDbSaveQueryClientImpl(
+    private val ioCoroutineScope: CoroutineScope,
     private val clientBuilder: () -> MongoClient,
     private var eventsLogger: EventsLogger?,
     private val meterRegistry: CampaignMeterRegistry?
@@ -147,7 +149,7 @@ internal class MongoDbSaveQueryClientImpl(
                     eventsLogger?.warn("$eventPrefix.failure", arrayOf(error, duration), tags = contextEventTags)
                     failureCounter?.increment(records.size.toDouble())
 
-                    runBlocking {
+                    ioCoroutineScope.launch {
                         result.set(Result.failure(error))
                     }
                 }
@@ -160,6 +162,7 @@ internal class MongoDbSaveQueryClientImpl(
                         tags = contextEventTags
                     )
                     val failed = records.size - saved.get()
+                    successCounter?.increment()
                     recordsCounter?.increment(saved.get().toDouble())
                     if (failed > 0) {
                         failureCounter?.increment(failed.toDouble())
@@ -169,7 +172,7 @@ internal class MongoDbSaveQueryClientImpl(
                             tags = contextEventTags
                         )
                     }
-                    runBlocking {
+                    ioCoroutineScope.launch {
                         result.set(Result.success(MongoDbSaveQueryMeters(saved.get(), failed, duration)))
                     }
                 }

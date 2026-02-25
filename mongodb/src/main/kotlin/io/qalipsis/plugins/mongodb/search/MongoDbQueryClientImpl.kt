@@ -30,7 +30,8 @@ import io.qalipsis.api.meters.Timer
 import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.sync.Slot
 import io.qalipsis.plugins.mongodb.Sorting
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.bson.Document
 import org.bson.conversions.Bson
 import org.reactivestreams.Subscriber
@@ -51,6 +52,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * @author Alexander Sosnovsky
  */
 internal class MongoDbQueryClientImpl(
+    private val ioCoroutineScope: CoroutineScope,
     private val clientFactory: () -> MongoClient,
     private var eventsLogger: EventsLogger?,
     private val meterRegistry: CampaignMeterRegistry?
@@ -163,7 +165,7 @@ internal class MongoDbQueryClientImpl(
                     eventsLogger?.warn("$eventPrefix.failure", arrayOf(error, duration), tags = contextEventTags)
                     failureCounter?.increment()
 
-                    runBlocking {
+                    ioCoroutineScope.launch {
                         latch.set(Result.failure(error))
                     }
                 }
@@ -178,7 +180,7 @@ internal class MongoDbQueryClientImpl(
                     successCounter?.increment()
                     recordsCount?.increment(results.size.toDouble())
 
-                    runBlocking {
+                    ioCoroutineScope.launch {
                         latch.set(
                             Result.success(
                                 io.qalipsis.plugins.mongodb.MongoDBQueryResult(
