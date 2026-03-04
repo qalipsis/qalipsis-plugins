@@ -21,16 +21,25 @@ package io.qalipsis.plugins.sql.search
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNull
+import assertk.assertions.isSameAs
+import assertk.assertions.isTrue
+import assertk.assertions.prop
 import io.qalipsis.api.context.StepContext
+import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.sql.SqlConnection
+import io.qalipsis.plugins.sql.configuration.defaults
 import io.qalipsis.plugins.sql.dialect.Protocol
 import io.qalipsis.plugins.sql.sql
 import io.qalipsis.test.mockk.relaxedMockk
 import org.junit.jupiter.api.Test
-import java.time.Duration
 
 /**
  * @author Fiodar Hmyza
@@ -153,6 +162,146 @@ internal class SqlSearchStepSpecificationTest {
             prop(SqlSearchStepSpecificationImpl<*>::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
                 prop(StepMonitoringConfiguration::meters).isFalse()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should apply defaults from SqlDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            sql().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5432
+                    database = "default-db"
+                    username = "default-user"
+                }
+                protocol(Protocol.POSTGRESQL)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        val queryFactory: suspend (ctx: StepContext<*, *>, input: Int) -> String = relaxedMockk()
+        previousStep.sql().search {
+            query(queryFactory)
+        }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(SqlSearchStepSpecificationImpl::class).all {
+            prop(SqlSearchStepSpecificationImpl<*>::connection).all {
+                prop(SqlConnection::host).isEqualTo("default-host")
+                prop(SqlConnection::port).isEqualTo(5432)
+                prop(SqlConnection::database).isEqualTo("default-db")
+                prop(SqlConnection::username).isEqualTo("default-user")
+            }
+            prop(SqlSearchStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.POSTGRESQL)
+            prop(SqlSearchStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow overriding defaults from SqlDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            sql().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5432
+                    database = "default-db"
+                    username = "default-user"
+                }
+                protocol(Protocol.POSTGRESQL)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        val queryFactory: suspend (ctx: StepContext<*, *>, input: Int) -> String = relaxedMockk()
+        previousStep.sql().search {
+            connection {
+                host = "override-host"
+            }
+            protocol(Protocol.MYSQL)
+            monitoring {
+                events = false
+            }
+            query(queryFactory)
+        }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(SqlSearchStepSpecificationImpl::class).all {
+            prop(SqlSearchStepSpecificationImpl<*>::connection).all {
+                prop(SqlConnection::host).isEqualTo("override-host")
+                prop(SqlConnection::port).isEqualTo(5432)
+                prop(SqlConnection::database).isEqualTo("default-db")
+                prop(SqlConnection::username).isEqualTo("default-user")
+            }
+            prop(SqlSearchStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.MYSQL)
+            prop(SqlSearchStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow successive overwriting of defaults`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            sql().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5432
+                    database = "default-db"
+                    username = "default-user"
+                }
+                protocol(Protocol.POSTGRESQL)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        val queryFactory: suspend (ctx: StepContext<*, *>, input: Int) -> String = relaxedMockk()
+        previousStep
+            .sql().defaults {
+                connection {
+                    host = "step-default-host"
+                    database = "step-db"
+                }
+            }
+            .sql().search {
+                connection {
+                    host = "override-host"
+                }
+                monitoring {
+                    events = false
+                }
+                query(queryFactory)
+            }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(SqlSearchStepSpecificationImpl::class).all {
+            prop(SqlSearchStepSpecificationImpl<*>::connection).all {
+                prop(SqlConnection::host).isEqualTo("override-host")
+                prop(SqlConnection::port).isEqualTo(5432)
+                prop(SqlConnection::database).isEqualTo("step-db")
+                prop(SqlConnection::username).isEqualTo("default-user")
+            }
+            prop(SqlSearchStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.POSTGRESQL)
+            prop(SqlSearchStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
     }

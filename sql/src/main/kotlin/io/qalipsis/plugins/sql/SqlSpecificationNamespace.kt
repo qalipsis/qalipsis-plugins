@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.sql
 
+import io.qalipsis.api.scenario.ConfigurableScenarioSpecification
 import io.qalipsis.api.scenario.ScenarioSpecification
 import io.qalipsis.api.steps.AbstractPluginStepWrapper
 import io.qalipsis.api.steps.AbstractScenarioSpecificationWrapper
@@ -50,6 +51,16 @@ fun <INPUT, OUTPUT> StepSpecification<INPUT, OUTPUT, *>.sql(): SqlStepSpecificat
  *
  * @author Eric Jessé
  */
-class SqlScenarioSpecification(scenario: ScenarioSpecification) : AbstractScenarioSpecificationWrapper(scenario)
+class SqlScenarioSpecification(internal val scenario: ScenarioSpecification) :
+    AbstractScenarioSpecificationWrapper(scenario)
 
 fun ScenarioSpecification.sql() = SqlScenarioSpecification(this)
+
+/**
+ * Wrapper to access the SQL namespace from a [ConfigurableScenarioSpecification].
+ *
+ * @author Eric Jessé
+ */
+class SqlConfigurableScenarioSpecification(internal val scenario: ConfigurableScenarioSpecification)
+
+fun ConfigurableScenarioSpecification.sql() = SqlConfigurableScenarioSpecification(this)

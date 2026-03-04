@@ -27,6 +27,7 @@ import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.sql.SqlConnection
 import io.qalipsis.plugins.sql.SqlStepSpecification
+import io.qalipsis.plugins.sql.configuration.findSqlDefaults
 import io.qalipsis.plugins.sql.dialect.Protocol
 import org.jetbrains.annotations.NotNull
 
@@ -93,7 +94,7 @@ internal class SqlSaveStepSpecificationImpl<I> :
     internal var rowsFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<SqlSaveRecord>) =
         { _, _ -> emptyList() }
 
-    internal val monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration()
 
     override fun connection(configBlock: SqlConnection.() -> Unit) {
         connection.configBlock()
@@ -130,6 +131,7 @@ fun <I> SqlStepSpecification<*, I, *>.save(
     configurationBlock: SqlSaveStepSpecification<I>.() -> Unit
 ): SqlSaveStepSpecification<I> {
     val step = SqlSaveStepSpecificationImpl<I>()
+    findSqlDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
     this.add(step)
     return step

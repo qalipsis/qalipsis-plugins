@@ -34,10 +34,11 @@ import io.qalipsis.api.steps.datasource.DatasourceRecord
 import io.qalipsis.plugins.sql.SqlConnection
 import io.qalipsis.plugins.sql.SqlScenarioSpecification
 import io.qalipsis.plugins.sql.SqlStepSpecification
+import io.qalipsis.plugins.sql.configuration.findSqlDefaults
 import io.qalipsis.plugins.sql.dialect.Protocol
-import org.jetbrains.annotations.NotNull
 import java.time.Duration
 import javax.validation.constraints.NotBlank
+import org.jetbrains.annotations.NotNull
 
 /**
  * Specification for an [io.qalipsis.api.steps.datasource.IterativeDatasourceStep] to poll data from a PostgreSQL,
@@ -129,7 +130,7 @@ internal class SqlPollStepSpecificationImpl :
 
     internal var flattenOutput = false
 
-    internal val monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration()
 
     override fun connection(configBlock: SqlConnection.() -> Unit) {
         connection.configBlock()
@@ -175,6 +176,7 @@ fun SqlScenarioSpecification.poll(
     configurationBlock: SqlPollStepSpecification.() -> Unit
 ): SqlPollStepSpecification {
     val step = SqlPollStepSpecificationImpl()
+    findSqlDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
 
     (this as StepSpecificationRegistry).add(step)

@@ -35,11 +35,12 @@ import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.sql.SqlConnection
+import io.qalipsis.plugins.sql.configuration.defaults
 import io.qalipsis.plugins.sql.dialect.Protocol
 import io.qalipsis.plugins.sql.sql
-import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.LocalDate
+import org.junit.jupiter.api.Test
 
 /**
  *
@@ -151,6 +152,91 @@ internal class SqlPollStepSpecificationImplTest {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.BROADCAST)
                 prop(SingletonConfiguration::bufferSize).isEqualTo(123)
                 prop(SingletonConfiguration::idleTimeout).isEqualTo(Duration.ofSeconds(20))
+            }
+        }
+    }
+
+    @Test
+    internal fun `should apply defaults from SqlDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            sql().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5432
+                    database = "default-db"
+                    username = "default-user"
+                }
+                protocol(Protocol.POSTGRESQL)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        scenario.sql().poll {
+            name = "my-step"
+            query("SELECT * FROM test")
+            pollDelay(Duration.ofSeconds(10))
+        }
+
+        assertThat(scenario.rootSteps[0]).isInstanceOf(SqlPollStepSpecificationImpl::class).all {
+            prop(SqlPollStepSpecificationImpl::connection).all {
+                prop(SqlConnection::host).isEqualTo("default-host")
+                prop(SqlConnection::port).isEqualTo(5432)
+                prop(SqlConnection::database).isEqualTo("default-db")
+                prop(SqlConnection::username).isEqualTo("default-user")
+            }
+            prop(SqlPollStepSpecificationImpl::protocol).isEqualTo(Protocol.POSTGRESQL)
+            prop(SqlPollStepSpecificationImpl::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow overriding defaults from SqlDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            sql().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5432
+                    database = "default-db"
+                    username = "default-user"
+                }
+                protocol(Protocol.POSTGRESQL)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        scenario.sql().poll {
+            name = "my-step"
+            connection {
+                host = "override-host"
+            }
+            protocol(Protocol.MYSQL)
+            monitoring {
+                events = false
+            }
+            query("SELECT * FROM test")
+            pollDelay(Duration.ofSeconds(10))
+        }
+
+        assertThat(scenario.rootSteps[0]).isInstanceOf(SqlPollStepSpecificationImpl::class).all {
+            prop(SqlPollStepSpecificationImpl::connection).all {
+                prop(SqlConnection::host).isEqualTo("override-host")
+                prop(SqlConnection::port).isEqualTo(5432)
+                prop(SqlConnection::database).isEqualTo("default-db")
+                prop(SqlConnection::username).isEqualTo("default-user")
+            }
+            prop(SqlPollStepSpecificationImpl::protocol).isEqualTo(Protocol.MYSQL)
+            prop(SqlPollStepSpecificationImpl::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
     }

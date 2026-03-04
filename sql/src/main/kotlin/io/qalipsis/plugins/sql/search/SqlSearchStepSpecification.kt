@@ -28,6 +28,7 @@ import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.datasource.DatasourceRecord
 import io.qalipsis.plugins.sql.SqlConnection
 import io.qalipsis.plugins.sql.SqlStepSpecification
+import io.qalipsis.plugins.sql.configuration.findSqlDefaults
 import io.qalipsis.plugins.sql.dialect.Protocol
 import org.jetbrains.annotations.NotNull
 
@@ -92,7 +93,7 @@ internal class SqlSearchStepSpecificationImpl<I> :
     @field:NotNull
     internal var parametersFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<*>)? = null
 
-    internal val monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration()
 
     override fun connection(configBlock: SqlConnection.() -> Unit) {
         connection.configBlock()
@@ -125,6 +126,7 @@ fun <I> SqlStepSpecification<*, I, *>.search(
     configurationBlock: SqlSearchStepSpecification<I>.() -> Unit
 ): SqlSearchStepSpecification<I> {
     val step = SqlSearchStepSpecificationImpl<I>()
+    findSqlDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
     this.add(step)
     return step

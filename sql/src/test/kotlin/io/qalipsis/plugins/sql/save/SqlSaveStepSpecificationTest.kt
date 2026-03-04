@@ -21,16 +21,25 @@ package io.qalipsis.plugins.sql.save
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isSameAs
+import assertk.assertions.isTrue
+import assertk.assertions.prop
 import io.qalipsis.api.context.StepContext
+import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.sql.SqlConnection
+import io.qalipsis.plugins.sql.configuration.defaults
 import io.qalipsis.plugins.sql.dialect.Protocol
 import io.qalipsis.plugins.sql.sql
 import io.qalipsis.test.mockk.relaxedMockk
-import org.junit.jupiter.api.Test
 import java.time.Duration
+import org.junit.jupiter.api.Test
 
 /**
  * @author Fiodar Hmyza
@@ -122,6 +131,158 @@ internal class SqlSaveStepSpecificationTest {
                 prop(SqlConnection::maxIdleTime).isEqualTo(Duration.ofMinutes(5))
                 prop(SqlConnection::maxCreateConnectionTime).isEqualTo(Duration.ofSeconds(10))
             }
+            prop(SqlSaveStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should apply defaults from SqlDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            sql().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5432
+                    database = "default-db"
+                    username = "default-user"
+                }
+                protocol(Protocol.POSTGRESQL)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        val tableNameFactory: suspend (ctx: StepContext<*, *>, input: Int) -> String = relaxedMockk()
+        val columnsFactory: suspend (ctx: StepContext<*, *>, input: Int) -> List<String> = relaxedMockk()
+        val rowsFactory: suspend (ctx: StepContext<*, *>, input: Int) -> List<SqlSaveRecord> = relaxedMockk()
+        previousStep.sql().save {
+            tableName(tableNameFactory)
+            columns(columnsFactory)
+            values(rowsFactory)
+        }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(SqlSaveStepSpecificationImpl::class).all {
+            prop(SqlSaveStepSpecificationImpl<*>::connection).all {
+                prop(SqlConnection::host).isEqualTo("default-host")
+                prop(SqlConnection::port).isEqualTo(5432)
+                prop(SqlConnection::database).isEqualTo("default-db")
+                prop(SqlConnection::username).isEqualTo("default-user")
+            }
+            prop(SqlSaveStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.POSTGRESQL)
+            prop(SqlSaveStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow overriding defaults from SqlDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            sql().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5432
+                    database = "default-db"
+                    username = "default-user"
+                }
+                protocol(Protocol.POSTGRESQL)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        val tableNameFactory: suspend (ctx: StepContext<*, *>, input: Int) -> String = relaxedMockk()
+        val columnsFactory: suspend (ctx: StepContext<*, *>, input: Int) -> List<String> = relaxedMockk()
+        val rowsFactory: suspend (ctx: StepContext<*, *>, input: Int) -> List<SqlSaveRecord> = relaxedMockk()
+        previousStep.sql().save {
+            connection {
+                host = "override-host"
+            }
+            protocol(Protocol.MYSQL)
+            monitoring {
+                events = false
+            }
+            tableName(tableNameFactory)
+            columns(columnsFactory)
+            values(rowsFactory)
+        }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(SqlSaveStepSpecificationImpl::class).all {
+            prop(SqlSaveStepSpecificationImpl<*>::connection).all {
+                prop(SqlConnection::host).isEqualTo("override-host")
+                prop(SqlConnection::port).isEqualTo(5432)
+                prop(SqlConnection::database).isEqualTo("default-db")
+                prop(SqlConnection::username).isEqualTo("default-user")
+            }
+            prop(SqlSaveStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.MYSQL)
+            prop(SqlSaveStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow successive overwriting of defaults`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            sql().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5432
+                    database = "default-db"
+                    username = "default-user"
+                }
+                protocol(Protocol.POSTGRESQL)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        val tableNameFactory: suspend (ctx: StepContext<*, *>, input: Int) -> String = relaxedMockk()
+        val columnsFactory: suspend (ctx: StepContext<*, *>, input: Int) -> List<String> = relaxedMockk()
+        val rowsFactory: suspend (ctx: StepContext<*, *>, input: Int) -> List<SqlSaveRecord> = relaxedMockk()
+        previousStep
+            .sql().defaults {
+                connection {
+                    host = "step-default-host"
+                    database = "step-db"
+                }
+            }
+            .sql().save {
+                connection {
+                    host = "override-host"
+                }
+                monitoring {
+                    events = false
+                }
+                tableName(tableNameFactory)
+                columns(columnsFactory)
+                values(rowsFactory)
+            }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(SqlSaveStepSpecificationImpl::class).all {
+            prop(SqlSaveStepSpecificationImpl<*>::connection).all {
+                prop(SqlConnection::host).isEqualTo("override-host")
+                prop(SqlConnection::port).isEqualTo(5432)
+                prop(SqlConnection::database).isEqualTo("step-db")
+                prop(SqlConnection::username).isEqualTo("default-user")
+            }
+            prop(SqlSaveStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.POSTGRESQL)
             prop(SqlSaveStepSpecificationImpl<*>::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isFalse()
                 prop(StepMonitoringConfiguration::meters).isTrue()
