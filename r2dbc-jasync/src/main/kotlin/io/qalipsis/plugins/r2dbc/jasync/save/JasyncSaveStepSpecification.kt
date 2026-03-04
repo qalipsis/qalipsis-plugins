@@ -27,6 +27,7 @@ import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.r2dbc.jasync.JasyncConnection
 import io.qalipsis.plugins.r2dbc.jasync.R2dbcJasyncStepSpecification
+import io.qalipsis.plugins.r2dbc.jasync.configuration.findR2dbcJasyncDefaults
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Protocol
 import org.jetbrains.annotations.NotNull
 
@@ -93,7 +94,7 @@ internal class JasyncSaveStepSpecificationImpl<I> :
     internal var rowsFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<JasyncSaveRecord>) =
         { _, _ -> emptyList() }
 
-    internal val monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration()
 
     override fun connection(configBlock: JasyncConnection.() -> Unit) {
         connection.configBlock()
@@ -132,6 +133,7 @@ fun <I> R2dbcJasyncStepSpecification<*, I, *>.save(
     configurationBlock: JasyncSaveStepSpecification<I>.() -> Unit
 ): JasyncSaveStepSpecification<I> {
     val step = JasyncSaveStepSpecificationImpl<I>()
+    findR2dbcJasyncDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
     this.add(step)
     return step

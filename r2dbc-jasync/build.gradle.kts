@@ -64,7 +64,9 @@ dependencies {
     implementation("com.github.jasync-sql:jasync-postgresql:${jasyncVersion}") {
         exclude("org.jetbrains.kotlin", "kotlin-stdlib")
         exclude("org.jetbrains.kotlin", "kotlin-stdlib-jdk8")
+        exclude("com.ongres.scram", "client")
     }
+    implementation("com.ongres.scram:scram-client:3.2")
 
     api("io.qalipsis:qalipsis-api-common")
     api("io.qalipsis:qalipsis-api-dsl")

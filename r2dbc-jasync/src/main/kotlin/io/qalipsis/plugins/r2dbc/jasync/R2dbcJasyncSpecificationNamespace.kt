@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.r2dbc.jasync
 
+import io.qalipsis.api.scenario.ConfigurableScenarioSpecification
 import io.qalipsis.api.scenario.ScenarioSpecification
 import io.qalipsis.api.steps.AbstractPluginStepWrapper
 import io.qalipsis.api.steps.AbstractScenarioSpecificationWrapper
@@ -50,6 +51,16 @@ fun <INPUT, OUTPUT> StepSpecification<INPUT, OUTPUT, *>.r2dbcJasync(): R2dbcJasy
  *
  * @author Eric Jessé
  */
-class R2dbcJasyncScenarioSpecification(scenario: ScenarioSpecification) : AbstractScenarioSpecificationWrapper(scenario)
+class R2dbcJasyncScenarioSpecification(internal val scenario: ScenarioSpecification) :
+    AbstractScenarioSpecificationWrapper(scenario)
 
 fun ScenarioSpecification.r2dbcJasync() = R2dbcJasyncScenarioSpecification(this)
+
+/**
+ * Wrapper to access the R2DBC-Jasync namespace from a [ConfigurableScenarioSpecification].
+ *
+ * @author Eric Jessé
+ */
+class R2dbcJasyncConfigurableScenarioSpecification(internal val scenario: ConfigurableScenarioSpecification)
+
+fun ConfigurableScenarioSpecification.r2dbcJasync() = R2dbcJasyncConfigurableScenarioSpecification(this)

@@ -37,13 +37,14 @@ import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.r2dbc.jasync.JasyncConnection
+import io.qalipsis.plugins.r2dbc.jasync.configuration.defaults
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Protocol
 import io.qalipsis.plugins.r2dbc.jasync.r2dbcJasync
-import org.junit.jupiter.api.Test
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.time.LocalDate
+import org.junit.jupiter.api.Test
 
 /**
  *
@@ -159,6 +160,91 @@ internal class JasyncPollStepSpecificationImplTest {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.BROADCAST)
                 prop(SingletonConfiguration::bufferSize).isEqualTo(123)
                 prop(SingletonConfiguration::idleTimeout).isEqualTo(Duration.ofSeconds(20))
+            }
+        }
+    }
+
+    @Test
+    internal fun `should apply defaults from R2dbcJasyncDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            r2dbcJasync().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5432
+                    database = "default-db"
+                    username = "default-user"
+                }
+                protocol(Protocol.POSTGRESQL)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        scenario.r2dbcJasync().poll {
+            name = "my-step"
+            query("SELECT * FROM test")
+            pollDelay(Duration.ofSeconds(10))
+        }
+
+        assertThat(scenario.rootSteps[0]).isInstanceOf(JasyncPollStepSpecificationImpl::class).all {
+            prop(JasyncPollStepSpecificationImpl::connection).all {
+                prop(JasyncConnection::host).isEqualTo("default-host")
+                prop(JasyncConnection::port).isEqualTo(5432)
+                prop(JasyncConnection::database).isEqualTo("default-db")
+                prop(JasyncConnection::username).isEqualTo("default-user")
+            }
+            prop(JasyncPollStepSpecificationImpl::protocol).isEqualTo(Protocol.POSTGRESQL)
+            prop(JasyncPollStepSpecificationImpl::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow overriding defaults from R2dbcJasyncDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            r2dbcJasync().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5432
+                    database = "default-db"
+                    username = "default-user"
+                }
+                protocol(Protocol.POSTGRESQL)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        scenario.r2dbcJasync().poll {
+            name = "my-step"
+            connection {
+                host = "override-host"
+            }
+            protocol(Protocol.MYSQL)
+            monitoring {
+                events = false
+            }
+            query("SELECT * FROM test")
+            pollDelay(Duration.ofSeconds(10))
+        }
+
+        assertThat(scenario.rootSteps[0]).isInstanceOf(JasyncPollStepSpecificationImpl::class).all {
+            prop(JasyncPollStepSpecificationImpl::connection).all {
+                prop(JasyncConnection::host).isEqualTo("override-host")
+                prop(JasyncConnection::port).isEqualTo(5432)
+                prop(JasyncConnection::database).isEqualTo("default-db")
+                prop(JasyncConnection::username).isEqualTo("default-user")
+            }
+            prop(JasyncPollStepSpecificationImpl::protocol).isEqualTo(Protocol.MYSQL)
+            prop(JasyncPollStepSpecificationImpl::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
     }

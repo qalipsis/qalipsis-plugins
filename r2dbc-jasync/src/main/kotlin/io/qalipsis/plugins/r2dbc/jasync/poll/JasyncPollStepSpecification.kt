@@ -34,10 +34,11 @@ import io.qalipsis.api.steps.datasource.DatasourceRecord
 import io.qalipsis.plugins.r2dbc.jasync.JasyncConnection
 import io.qalipsis.plugins.r2dbc.jasync.R2dbcJasyncScenarioSpecification
 import io.qalipsis.plugins.r2dbc.jasync.R2dbcJasyncStepSpecification
+import io.qalipsis.plugins.r2dbc.jasync.configuration.findR2dbcJasyncDefaults
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Protocol
-import org.jetbrains.annotations.NotNull
 import java.time.Duration
 import javax.validation.constraints.NotBlank
+import org.jetbrains.annotations.NotNull
 
 /**
  * Specification for an [io.qalipsis.api.steps.datasource.IterativeDatasourceStep] to poll data from a PostgreSQL,
@@ -132,7 +133,7 @@ internal class JasyncPollStepSpecificationImpl :
 
     internal var flattenOutput = false
 
-    internal val monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration()
 
     override fun connection(configBlock: JasyncConnection.() -> Unit) {
         connection.configBlock()
@@ -180,6 +181,7 @@ fun R2dbcJasyncScenarioSpecification.poll(
     configurationBlock: JasyncPollStepSpecification.() -> Unit
 ): JasyncPollStepSpecification {
     val step = JasyncPollStepSpecificationImpl()
+    findR2dbcJasyncDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
 
     (this as StepSpecificationRegistry).add(step)

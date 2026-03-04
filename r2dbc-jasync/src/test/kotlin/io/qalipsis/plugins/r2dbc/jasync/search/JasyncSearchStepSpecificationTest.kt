@@ -21,19 +21,29 @@ package io.qalipsis.plugins.r2dbc.jasync.search
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNull
+import assertk.assertions.isSameAs
+import assertk.assertions.isTrue
+import assertk.assertions.prop
 import com.github.jasync.sql.db.SSLConfiguration
 import io.qalipsis.api.context.StepContext
+import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.r2dbc.jasync.JasyncConnection
+import io.qalipsis.plugins.r2dbc.jasync.configuration.defaults
 import io.qalipsis.plugins.r2dbc.jasync.dialect.Protocol
 import io.qalipsis.plugins.r2dbc.jasync.r2dbcJasync
 import io.qalipsis.test.mockk.relaxedMockk
-import org.junit.jupiter.api.Test
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.time.Duration
+import org.junit.jupiter.api.Test
 
 /**
  * @author Fiodar Hmyza
@@ -186,6 +196,146 @@ internal class JasyncSearchStepSpecificationTest {
             prop(JasyncSearchStepSpecificationImpl<*>::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
                 prop(StepMonitoringConfiguration::meters).isFalse()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should apply defaults from R2dbcJasyncDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            r2dbcJasync().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5432
+                    database = "default-db"
+                    username = "default-user"
+                }
+                protocol(Protocol.POSTGRESQL)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        val queryFactory: suspend (ctx: StepContext<*, *>, input: Int) -> String = relaxedMockk()
+        previousStep.r2dbcJasync().search {
+            query(queryFactory)
+        }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(JasyncSearchStepSpecificationImpl::class).all {
+            prop(JasyncSearchStepSpecificationImpl<*>::connection).all {
+                prop(JasyncConnection::host).isEqualTo("default-host")
+                prop(JasyncConnection::port).isEqualTo(5432)
+                prop(JasyncConnection::database).isEqualTo("default-db")
+                prop(JasyncConnection::username).isEqualTo("default-user")
+            }
+            prop(JasyncSearchStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.POSTGRESQL)
+            prop(JasyncSearchStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow overriding defaults from R2dbcJasyncDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            r2dbcJasync().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5432
+                    database = "default-db"
+                    username = "default-user"
+                }
+                protocol(Protocol.POSTGRESQL)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        val queryFactory: suspend (ctx: StepContext<*, *>, input: Int) -> String = relaxedMockk()
+        previousStep.r2dbcJasync().search {
+            connection {
+                host = "override-host"
+            }
+            protocol(Protocol.MYSQL)
+            monitoring {
+                events = false
+            }
+            query(queryFactory)
+        }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(JasyncSearchStepSpecificationImpl::class).all {
+            prop(JasyncSearchStepSpecificationImpl<*>::connection).all {
+                prop(JasyncConnection::host).isEqualTo("override-host")
+                prop(JasyncConnection::port).isEqualTo(5432)
+                prop(JasyncConnection::database).isEqualTo("default-db")
+                prop(JasyncConnection::username).isEqualTo("default-user")
+            }
+            prop(JasyncSearchStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.MYSQL)
+            prop(JasyncSearchStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow successive overwriting of defaults`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            r2dbcJasync().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5432
+                    database = "default-db"
+                    username = "default-user"
+                }
+                protocol(Protocol.POSTGRESQL)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        val queryFactory: suspend (ctx: StepContext<*, *>, input: Int) -> String = relaxedMockk()
+        previousStep
+            .r2dbcJasync().defaults {
+                connection {
+                    host = "step-default-host"
+                    database = "step-db"
+                }
+            }
+            .r2dbcJasync().search {
+                connection {
+                    host = "override-host"
+                }
+                monitoring {
+                    events = false
+                }
+                query(queryFactory)
+            }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(JasyncSearchStepSpecificationImpl::class).all {
+            prop(JasyncSearchStepSpecificationImpl<*>::connection).all {
+                prop(JasyncConnection::host).isEqualTo("override-host")
+                prop(JasyncConnection::port).isEqualTo(5432)
+                prop(JasyncConnection::database).isEqualTo("step-db")
+                prop(JasyncConnection::username).isEqualTo("default-user")
+            }
+            prop(JasyncSearchStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.POSTGRESQL)
+            prop(JasyncSearchStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
     }
