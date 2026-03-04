@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.jms
 
+import io.qalipsis.api.scenario.ConfigurableScenarioSpecification
 import io.qalipsis.api.scenario.ScenarioSpecification
 import io.qalipsis.api.steps.AbstractPluginStepWrapper
 import io.qalipsis.api.steps.AbstractScenarioSpecificationWrapper
@@ -50,7 +51,16 @@ fun <INPUT, OUTPUT> StepSpecification<INPUT, OUTPUT, *>.jms(): JmsStepSpecificat
  *
  * @author Alexander Sosnovsky
  */
-class JmsScenarioSpecification(scenario: ScenarioSpecification) :
+class JmsScenarioSpecification(internal val scenario: ScenarioSpecification) :
     AbstractScenarioSpecificationWrapper(scenario)
 
 fun ScenarioSpecification.jms() = JmsScenarioSpecification(this)
+
+/**
+ * Scenario wrapper to enter the namespace for the JMS defaults configuration.
+ *
+ * @author Eric Jesse
+ */
+class JmsConfigurableScenarioSpecification(internal val scenario: ConfigurableScenarioSpecification)
+
+fun ConfigurableScenarioSpecification.jms() = JmsConfigurableScenarioSpecification(this)

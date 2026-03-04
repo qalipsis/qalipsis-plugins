@@ -26,8 +26,9 @@ import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.jms.JmsStepSpecification
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import io.qalipsis.plugins.jms.configuration.findJmsDefaults
 import javax.jms.Connection
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /**
  * Specification for a [JmsProducerStep] to produce native JMS [Message]s.
@@ -136,6 +137,7 @@ fun <I> JmsStepSpecification<*, I, *>.produce(
     configurationBlock: JmsProducerStepSpecification<I>.() -> Unit
 ): JmsProducerStepSpecification<I> {
     val step = JmsProducerStepSpecificationImpl<I>()
+    findJmsDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
 
     this.add(step)

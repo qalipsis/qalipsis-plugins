@@ -31,6 +31,7 @@ import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.UnicastSpecification
 import io.qalipsis.plugins.jms.JmsDeserializer
 import io.qalipsis.plugins.jms.JmsScenarioSpecification
+import io.qalipsis.plugins.jms.configuration.findJmsDefaults
 import io.qalipsis.plugins.jms.deserializer.JmsStringDeserializer
 import java.time.Duration
 import javax.jms.QueueConnection
@@ -107,7 +108,7 @@ internal class JmsConsumerStepSpecification<O : Any> internal constructor(
 
     internal val metrics = JmsConsumerMetricsConfiguration()
 
-    internal val monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration()
 
     override val singletonConfiguration: SingletonConfiguration = SingletonConfiguration(SingletonType.UNICAST)
 
@@ -224,6 +225,7 @@ fun JmsScenarioSpecification.consume(
     configurationBlock: JmsConsumerSpecification<String>.() -> Unit
 ): JmsConsumerSpecification<String> {
     val step = JmsConsumerStepSpecification(JmsStringDeserializer())
+    findJmsDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
     (this as StepSpecificationRegistry).add(step)
     return step
