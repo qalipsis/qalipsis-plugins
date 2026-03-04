@@ -25,9 +25,11 @@ import io.qalipsis.api.scenario.StepSpecificationRegistry
 import io.qalipsis.api.steps.AbstractStepSpecification
 import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
+import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.netty.NettyPluginSpecification
 import io.qalipsis.plugins.netty.NettyScenarioSpecification
 import io.qalipsis.plugins.netty.configuration.ConnectionConfiguration
+import io.qalipsis.plugins.netty.configuration.findNettyDefaults
 import io.qalipsis.plugins.netty.udp.UdpResult
 
 /**
@@ -45,7 +47,7 @@ class UdpClientStepSpecification<INPUT> :
 
     internal val connectionConfiguration = ConnectionConfiguration()
 
-    internal val monitoringConfiguration = StepMonitoringConfiguration()
+    internal var monitoringConfiguration = StepMonitoringConfiguration()
 
     fun request(requestFactory: suspend (StepContext<*, *>, INPUT) -> ByteArray) {
         this.requestFactory = requestFactory
@@ -64,6 +66,7 @@ fun <INPUT> NettyPluginSpecification<*, INPUT, *>.udp(
     configurationBlock: UdpClientStepSpecification<INPUT>.() -> Unit
 ): UdpClientStepSpecification<INPUT> {
     val step = UdpClientStepSpecification<INPUT>()
+    findNettyDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
     this.add(step)
     return step
@@ -73,6 +76,7 @@ fun NettyScenarioSpecification.udp(
     configurationBlock: UdpClientStepSpecification<Unit>.() -> Unit
 ): UdpClientStepSpecification<Unit> {
     val step = UdpClientStepSpecification<Unit>()
+    findNettyDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
     (this as StepSpecificationRegistry).add(step)
     return step

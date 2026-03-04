@@ -24,7 +24,9 @@ import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
 import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
+import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.netty.NettyPluginSpecification
+import io.qalipsis.plugins.netty.configuration.findNettyDefaults
 import io.qalipsis.plugins.netty.mqtt.publisher.MqttPublishRecord
 import io.qalipsis.plugins.netty.mqtt.publisher.MqttPublishResult
 import io.qalipsis.plugins.netty.mqtt.spec.MqttAuthentication
@@ -127,6 +129,7 @@ fun <I> NettyPluginSpecification<*, I, *>.mqttPublish(
     configurationBlock: MqttPublishStepSpecification<I>.() -> Unit
 ): MqttPublishStepSpecification<I> {
     val step = MqttPublishStepSpecificationImpl<I>()
+    findNettyDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
     this.add(step)
     return step

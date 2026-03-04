@@ -32,6 +32,7 @@ import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.UnicastSpecification
 import io.qalipsis.plugins.netty.NettyPluginSpecification
 import io.qalipsis.plugins.netty.NettyScenarioSpecification
+import io.qalipsis.plugins.netty.configuration.findNettyDefaults
 import io.qalipsis.plugins.netty.mqtt.spec.MqttAuthentication
 import io.qalipsis.plugins.netty.mqtt.spec.MqttConnectionConfiguration
 import io.qalipsis.plugins.netty.mqtt.spec.MqttQoS
@@ -222,6 +223,7 @@ fun NettyScenarioSpecification.mqttSubscribe(
     configurationBlock: MqttSubscribeStepSpecification<ByteArray>.() -> Unit
 ): MqttDeserializerSpecification<ByteArray> {
     val step = MqttSubscribeStepSpecificationImpl(MqttByteArrayDeserializer())
+    findNettyDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
     (this as StepSpecificationRegistry).add(step)
     return step

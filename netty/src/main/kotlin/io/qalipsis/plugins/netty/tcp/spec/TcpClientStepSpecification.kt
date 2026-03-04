@@ -25,10 +25,12 @@ import io.qalipsis.api.scenario.StepSpecificationRegistry
 import io.qalipsis.api.steps.AbstractStepSpecification
 import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
+import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.netty.ByteArrayRequestBuilder
 import io.qalipsis.plugins.netty.NettyPluginSpecification
 import io.qalipsis.plugins.netty.NettyScenarioSpecification
 import io.qalipsis.plugins.netty.RequestResult
+import io.qalipsis.plugins.netty.configuration.findNettyDefaults
 import io.qalipsis.plugins.netty.tcp.ConnectionAndRequestResult
 
 interface TcpClientStepSpecification<INPUT> :
@@ -75,7 +77,7 @@ internal class TcpClientStepSpecificationImpl<INPUT> :
 
     var poolConfiguration: SocketClientPoolConfiguration? = null
 
-    val monitoringConfiguration = StepMonitoringConfiguration()
+    var monitoringConfiguration = StepMonitoringConfiguration()
 
     override fun request(requestFactory: suspend ByteArrayRequestBuilder.(StepContext<*, *>, INPUT) -> ByteArray) {
         this.requestFactory = requestFactory
@@ -108,6 +110,7 @@ fun <INPUT> NettyPluginSpecification<*, INPUT, *>.tcp(
     configurationBlock: TcpClientStepSpecification<INPUT>.() -> Unit
 ): TcpClientStepSpecification<INPUT> {
     val step = TcpClientStepSpecificationImpl<INPUT>()
+    findNettyDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
     this.add(step)
     return step
@@ -126,6 +129,7 @@ fun NettyScenarioSpecification.tcp(
     configurationBlock: TcpClientStepSpecification<Unit>.() -> Unit
 ): TcpClientStepSpecification<Unit> {
     val step = TcpClientStepSpecificationImpl<Unit>()
+    findNettyDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
     (this as StepSpecificationRegistry).add(step)
     return step

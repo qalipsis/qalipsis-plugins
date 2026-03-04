@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.netty
 
+import io.qalipsis.api.scenario.ConfigurableScenarioSpecification
 import io.qalipsis.api.scenario.ScenarioSpecification
 import io.qalipsis.api.steps.AbstractPluginStepWrapper
 import io.qalipsis.api.steps.AbstractScenarioSpecificationWrapper
@@ -50,6 +51,16 @@ fun <INPUT, OUTPUT> StepSpecification<INPUT, OUTPUT, *>.netty(): NettyPluginSpec
  *
  * @author Eric Jessé
  */
-class NettyScenarioSpecification(scenario: ScenarioSpecification) : AbstractScenarioSpecificationWrapper(scenario)
+class NettyScenarioSpecification(internal val scenario: ScenarioSpecification) :
+    AbstractScenarioSpecificationWrapper(scenario)
 
 fun ScenarioSpecification.netty() = NettyScenarioSpecification(this)
+
+/**
+ * Wrapper to access the Netty namespace from a [ConfigurableScenarioSpecification].
+ *
+ * @author Eric Jesse
+ */
+class NettyConfigurableScenarioSpecification(internal val scenario: ConfigurableScenarioSpecification)
+
+fun ConfigurableScenarioSpecification.netty() = NettyConfigurableScenarioSpecification(this)
