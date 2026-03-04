@@ -34,6 +34,7 @@ import io.qalipsis.api.steps.UnicastSpecification
 import io.qalipsis.plugins.rabbitmq.RabbitMqScenarioSpecification
 import io.qalipsis.plugins.rabbitmq.RabbitMqStepSpecification
 import io.qalipsis.plugins.rabbitmq.configuration.RabbitMqConnectionConfiguration
+import io.qalipsis.plugins.rabbitmq.configuration.findRabbitMqDefaults
 import java.time.Duration
 import javax.validation.constraints.Min
 import javax.validation.constraints.NotBlank
@@ -201,6 +202,7 @@ fun RabbitMqScenarioSpecification.consume(
     configurationBlock: RabbitMqConsumerStepSpecification<String>.() -> Unit
 ): RabbitMqDeserializerSpecification<String> {
     val step = RabbitMqConsumerStepSpecificationImpl(MessageStringDeserializer())
+    findRabbitMqDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
     (this as StepSpecificationRegistry).add(step)
     return step

@@ -28,8 +28,9 @@ import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.rabbitmq.RabbitMqStepSpecification
 import io.qalipsis.plugins.rabbitmq.configuration.RabbitMqConnectionConfiguration
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import io.qalipsis.plugins.rabbitmq.configuration.findRabbitMqDefaults
 import javax.validation.constraints.Min
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /**
  * Specification for a [RabbitMqProducerStep] to produce messages to the RabbitMQ broker.
@@ -113,6 +114,7 @@ fun <I> RabbitMqStepSpecification<*, I, *>.produce(
     configurationBlock: RabbitMqProducerStepSpecification<I>.() -> Unit
 ): RabbitMqProducerStepSpecification<I> {
     val step = RabbitMqProducerStepSpecificationImpl<I>()
+    findRabbitMqDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
 
     this.add(step)

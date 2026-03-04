@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.rabbitmq
 
+import io.qalipsis.api.scenario.ConfigurableScenarioSpecification
 import io.qalipsis.api.scenario.ScenarioSpecification
 import io.qalipsis.api.steps.AbstractPluginStepWrapper
 import io.qalipsis.api.steps.AbstractScenarioSpecificationWrapper
@@ -52,6 +53,18 @@ fun <INPUT, OUTPUT> StepSpecification<INPUT, OUTPUT, *>.rabbitmq(): RabbitMqStep
  *
  * @author Gabriel Moraes
  */
-class RabbitMqScenarioSpecification(scenario: ScenarioSpecification) : AbstractScenarioSpecificationWrapper(scenario)
+class RabbitMqScenarioSpecification(internal val scenario: ScenarioSpecification) :
+    AbstractScenarioSpecificationWrapper(scenario)
 
 fun ScenarioSpecification.rabbitmq() = RabbitMqScenarioSpecification(this)
+
+/**
+ * Scenario wrapper to enter the namespace for the RabbitMQ step specifications in the [ConfigurableScenarioSpecification].
+ *
+ * You can learn more about RabbitMQ on [the official website](https://www.rabbitmq.com/#getstarted).
+ *
+ * @author Gabriel Moraes
+ */
+class RabbitMqConfigurableScenarioSpecification(internal val scenario: ConfigurableScenarioSpecification)
+
+fun ConfigurableScenarioSpecification.rabbitmq() = RabbitMqConfigurableScenarioSpecification(this)

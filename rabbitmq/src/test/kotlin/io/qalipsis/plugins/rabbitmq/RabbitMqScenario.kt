@@ -30,6 +30,7 @@ import io.qalipsis.api.steps.filterNotNull
 import io.qalipsis.api.steps.innerJoin
 import io.qalipsis.api.steps.map
 import io.qalipsis.api.steps.onEach
+import io.qalipsis.plugins.rabbitmq.configuration.defaults
 import io.qalipsis.plugins.rabbitmq.consumer.consume
 import java.beans.ConstructorProperties
 
@@ -100,6 +101,35 @@ internal object RabbitMqScenario {
                     username = "the-user"
                     password = "the-password"
                 }
+                concurrency(2)
+            }.deserialize(MessageStringDeserializer::class)
+            .onEach {
+                receivedMessages.add(it.value!!)
+            }
+    }
+
+    @Scenario("consumer-rabbitmq-with-defaults")
+    fun consumeRecordsWithDefaults() {
+        val scenarioSpec = scenario {
+            minionsCount = minions
+            profile {
+                // Starts all at once.
+                regular(100, minionsCount)
+            }
+            rabbitmq().defaults {
+                connection {
+                    host = hostContainer
+                    port = portContainer
+                    username = "the-user"
+                    password = "the-password"
+                }
+            }
+        }
+            // Register default connection for all RabbitMQ steps in this scenario.
+            .start().rabbitmq()
+            .consume {
+                // Connection inherited from defaults.
+                queue("string-deserializer-defaults")
                 concurrency(2)
             }.deserialize(MessageStringDeserializer::class)
             .onEach {

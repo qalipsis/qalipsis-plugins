@@ -30,6 +30,8 @@ import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.MessageProperties
 import io.qalipsis.plugins.rabbitmq.Constants.DOCKER_IMAGE
 import io.qalipsis.runtime.test.QalipsisTestRunner
+import java.time.Duration
+import kotlin.math.pow
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -39,8 +41,6 @@ import org.testcontainers.containers.RabbitMQContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
-import java.time.Duration
-import kotlin.math.pow
 
 /**
  * @author Gabriel Moraes
@@ -132,6 +132,29 @@ internal class RabbitMqScenarioIntegrationTest {
         assertThat(RabbitMqScenario.receivedMessages).all {
             hasSize(RabbitMqScenario.minions)
             containsOnly("rabbitmq", "rabbitmq2")
+        }
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should run the consumer scenario with defaults`() {
+        val channel = connection.createChannel()
+
+        val queueName = "string-deserializer-defaults"
+        createExchangeAndQueue(channel, queueName)
+
+        channel.basicPublish(queueName, queueName, MessageProperties.PERSISTENT_TEXT_PLAIN, "rabbitmq-d1".toByteArray())
+        channel.basicPublish(queueName, queueName, MessageProperties.PERSISTENT_TEXT_PLAIN, "rabbitmq-d2".toByteArray())
+
+        channel.close()
+
+        RabbitMqScenario.receivedMessages.clear()
+        val exitCode = QalipsisTestRunner.withScenarios("consumer-rabbitmq-with-defaults").execute()
+
+        Assertions.assertEquals(0, exitCode)
+        assertThat(RabbitMqScenario.receivedMessages).all {
+            hasSize(RabbitMqScenario.minions)
+            containsOnly("rabbitmq-d1", "rabbitmq-d2")
         }
     }
 

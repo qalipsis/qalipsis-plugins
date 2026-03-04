@@ -21,17 +21,23 @@ package io.qalipsis.plugins.rabbitmq.consumer
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isTrue
+import assertk.assertions.prop
 import io.qalipsis.api.messaging.deserializer.MessageJsonDeserializer
 import io.qalipsis.api.messaging.deserializer.MessageStringDeserializer
 import io.qalipsis.api.scenario.StepSpecificationRegistry
 import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
+import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.rabbitmq.configuration.RabbitMqConnectionConfiguration
+import io.qalipsis.plugins.rabbitmq.configuration.defaults
 import io.qalipsis.plugins.rabbitmq.rabbitmq
-import org.junit.jupiter.api.Test
 import java.time.Duration
+import org.junit.jupiter.api.Test
 
 
 /**
@@ -135,4 +141,101 @@ internal class RabbitMqConsumerStepSpecificationTest {
             prop(RabbitMqConsumerStepSpecificationImpl<*>::valueDeserializer).isInstanceOf(MessageJsonDeserializer::class)
         }
     }
+
+    @Test
+    internal fun `should apply defaults from RabbitMqDefaultsStepSpecification`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            rabbitmq().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5673
+                    username = "admin"
+                    password = "secret"
+                    virtualHost = "/default"
+                    clientProperties = mapOf("app" to "qalipsis")
+                }
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        })
+
+        scenario.start()
+            .rabbitmq().consume {
+                name = "my-step"
+                queue("test")
+            }
+
+        assertThat((scenario as StepSpecificationRegistry).rootSteps[0]).isInstanceOf(
+            RabbitMqConsumerStepSpecificationImpl::class
+        ).all {
+            prop(RabbitMqConsumerStepSpecificationImpl<*>::name).isEqualTo("my-step")
+            prop(RabbitMqConsumerStepSpecificationImpl<*>::queueName).isEqualTo("test")
+            prop(RabbitMqConsumerStepSpecificationImpl<*>::connectionConfiguration).all {
+                prop(RabbitMqConnectionConfiguration::host).isEqualTo("default-host")
+                prop(RabbitMqConnectionConfiguration::port).isEqualTo(5673)
+                prop(RabbitMqConnectionConfiguration::username).isEqualTo("admin")
+                prop(RabbitMqConnectionConfiguration::password).isEqualTo("secret")
+                prop(RabbitMqConnectionConfiguration::virtualHost).isEqualTo("/default")
+                prop(RabbitMqConnectionConfiguration::clientProperties).isEqualTo(mapOf("app" to "qalipsis"))
+            }
+            prop(RabbitMqConsumerStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow overriding defaults from RabbitMqDefaultsStepSpecification`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            rabbitmq().defaults {
+                connection {
+                    host = "default-host"
+                    port = 5673
+                    username = "admin"
+                    password = "secret"
+                    virtualHost = "/default"
+                }
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        })
+
+        scenario.start().rabbitmq().consume {
+            name = "my-step"
+            queue("test")
+            connection {
+                host = "override-host"
+                // port not set -> inherits 5673 from defaults
+            }
+            monitoring {
+                events = false
+                // meters not set -> inherits true from defaults
+            }
+        }
+
+        assertThat(
+            assertThat((scenario as StepSpecificationRegistry).rootSteps[0]).isInstanceOf(
+                RabbitMqConsumerStepSpecificationImpl::class
+            ).all {
+                prop(RabbitMqConsumerStepSpecificationImpl<*>::name).isEqualTo("my-step")
+                prop(RabbitMqConsumerStepSpecificationImpl<*>::connectionConfiguration).all {
+                    prop(RabbitMqConnectionConfiguration::host).isEqualTo("override-host")
+                    prop(RabbitMqConnectionConfiguration::port).isEqualTo(5673)
+                    prop(RabbitMqConnectionConfiguration::username).isEqualTo("admin")
+                    prop(RabbitMqConnectionConfiguration::password).isEqualTo("secret")
+                    prop(RabbitMqConnectionConfiguration::virtualHost).isEqualTo("/default")
+                }
+                prop(RabbitMqConsumerStepSpecificationImpl<*>::monitoringConfig).all {
+                    prop(StepMonitoringConfiguration::events).isFalse()
+                    prop(StepMonitoringConfiguration::meters).isTrue()
+                }
+            }
+        )
+    }
+
 }
