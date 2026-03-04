@@ -29,6 +29,7 @@ import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.cassandra.CassandraRecord
 import io.qalipsis.plugins.cassandra.CassandraStepSpecification
 import io.qalipsis.plugins.cassandra.configuration.CassandraServerConfiguration
+import io.qalipsis.plugins.cassandra.configuration.findCassandraDefaults
 
 /**
  * Specification for a [io.qalipsis.plugins.cassandra.search.CassandraSearchStep] to search data from a Cassandra.
@@ -112,6 +113,7 @@ fun <I> CassandraStepSpecification<*, I, *>.search(
     configurationBlock: CassandraSearchStepSpecification<I>.() -> Unit
 ): CassandraSearchStepSpecification<I> {
     val step = CassandraSearchStepSpecificationImpl<I>()
+    findCassandraDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
 
     this.add(step)

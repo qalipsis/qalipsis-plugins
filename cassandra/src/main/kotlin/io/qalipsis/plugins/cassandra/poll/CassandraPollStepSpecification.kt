@@ -36,6 +36,7 @@ import io.qalipsis.plugins.cassandra.CassandraRecord
 import io.qalipsis.plugins.cassandra.CassandraStepSpecification
 import io.qalipsis.plugins.cassandra.configuration.CassandraServerConfiguration
 import io.qalipsis.plugins.cassandra.configuration.DefaultValues
+import io.qalipsis.plugins.cassandra.configuration.findCassandraDefaults
 import java.time.Duration
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotEmpty
@@ -128,7 +129,7 @@ internal class CassandraPollStepSpecificationImpl :
     @field:NotNull
     internal var pollPeriod: Duration = Duration.ofSeconds(DefaultValues.pollDurationInSeconds)
 
-    internal val monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration()
 
     internal var flattenOutput = false
 
@@ -180,6 +181,7 @@ fun CassandraNamespaceScenarioSpecification.poll(
     configurationBlock: CassandraPollStepSpecification.() -> Unit
 ): CassandraPollStepSpecification {
     val step = CassandraPollStepSpecificationImpl()
+    findCassandraDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
 
     (this as StepSpecificationRegistry).add(step)

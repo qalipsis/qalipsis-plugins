@@ -27,6 +27,7 @@ import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.cassandra.CassandraStepSpecification
 import io.qalipsis.plugins.cassandra.configuration.CassandraServerConfiguration
+import io.qalipsis.plugins.cassandra.configuration.findCassandraDefaults
 
 /**
  * Specification for a [io.qalipsis.plugins.cassandra.save.CassandraSaveStep] to save records in Cassandra.
@@ -119,6 +120,7 @@ fun <I> CassandraStepSpecification<*, I, *>.save(
     configurationBlock: CassandraSaveStepSpecification<I>.() -> Unit
 ): CassandraSaveStepSpecification<I> {
     val step = CassandraSaveStepSpecificationImpl<I>()
+    findCassandraDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
 
     this.add(step)

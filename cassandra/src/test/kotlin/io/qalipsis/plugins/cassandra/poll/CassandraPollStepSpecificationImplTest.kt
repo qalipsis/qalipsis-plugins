@@ -38,8 +38,9 @@ import io.qalipsis.plugins.cassandra.cassandra
 import io.qalipsis.plugins.cassandra.configuration.CassandraServerConfiguration
 import io.qalipsis.plugins.cassandra.configuration.DefaultValues
 import io.qalipsis.plugins.cassandra.configuration.DriverProfile
-import org.junit.jupiter.api.Test
+import io.qalipsis.plugins.cassandra.configuration.defaults
 import java.time.Duration
+import org.junit.jupiter.api.Test
 
 /**
  *
@@ -146,6 +147,99 @@ internal class CassandraPollStepSpecificationImplTest {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.BROADCAST)
                 prop(SingletonConfiguration::bufferSize).isEqualTo(123)
                 prop(SingletonConfiguration::idleTimeout).isEqualTo(Duration.ofSeconds(20))
+            }
+        }
+    }
+
+    @Test
+    internal fun `should apply defaults from CassandraDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            cassandra().defaults {
+                connect {
+                    servers = listOf("default-host:9042", "default-host:9043")
+                    keyspace = "default_keyspace"
+                    datacenterProfile = DriverProfile.LOCAL
+                    datacenterName = "default_dc"
+                }
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        })
+
+        scenario.start().cassandra().poll {
+            name = "my-step"
+            query("test")
+            parameters(listOf(1, "two"))
+            tieBreaker {
+                name = "name"
+                type = GenericType.STRING
+            }
+        }
+
+        assertThat((scenario as StepSpecificationRegistry).rootSteps.first()).isInstanceOf(
+            CassandraPollStepSpecificationImpl::class
+        ).all {
+            prop(CassandraPollStepSpecificationImpl::serversConfig).all {
+                prop(CassandraServerConfiguration::servers).isEqualTo(listOf("default-host:9042", "default-host:9043"))
+                prop(CassandraServerConfiguration::keyspace).isEqualTo("default_keyspace")
+                prop(CassandraServerConfiguration::datacenterProfile).isEqualTo(DriverProfile.LOCAL)
+                prop(CassandraServerConfiguration::datacenterName).isEqualTo("default_dc")
+            }
+            prop(CassandraPollStepSpecificationImpl::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow overriding defaults from CassandraDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            cassandra().defaults {
+                connect {
+                    servers = listOf("default-host:9042")
+                    keyspace = "default_keyspace"
+                    datacenterProfile = DriverProfile.LOCAL
+                    datacenterName = "default_dc"
+                }
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        })
+
+        scenario.start().cassandra().poll {
+            name = "my-step"
+            connect {
+                servers = listOf("override-host:9042")
+            }
+            monitoring {
+                events = false
+                // meters not set -> inherits true from defaults
+            }
+            query("test")
+            parameters(listOf(1, "two"))
+            tieBreaker {
+                name = "name"
+                type = GenericType.STRING
+            }
+        }
+
+        assertThat((scenario as StepSpecificationRegistry).rootSteps.first()).isInstanceOf(
+            CassandraPollStepSpecificationImpl::class
+        ).all {
+            prop(CassandraPollStepSpecificationImpl::serversConfig).all {
+                prop(CassandraServerConfiguration::servers).isEqualTo(listOf("override-host:9042"))
+                prop(CassandraServerConfiguration::keyspace).isEqualTo("default_keyspace")
+                prop(CassandraServerConfiguration::datacenterProfile).isEqualTo(DriverProfile.LOCAL)
+                prop(CassandraServerConfiguration::datacenterName).isEqualTo("default_dc")
+            }
+            prop(CassandraPollStepSpecificationImpl::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
     }

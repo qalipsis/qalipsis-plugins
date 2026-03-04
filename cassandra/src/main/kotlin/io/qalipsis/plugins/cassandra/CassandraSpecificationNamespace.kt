@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.cassandra
 
+import io.qalipsis.api.scenario.ConfigurableScenarioSpecification
 import io.qalipsis.api.scenario.ScenarioSpecification
 import io.qalipsis.api.steps.AbstractPluginStepWrapper
 import io.qalipsis.api.steps.AbstractScenarioSpecificationWrapper
@@ -50,7 +51,16 @@ fun <INPUT, OUTPUT> StepSpecification<INPUT, OUTPUT, *>.cassandra(): CassandraSt
  *
  * @author Maxim Golokhov
  */
-class CassandraNamespaceScenarioSpecification(scenario: ScenarioSpecification) :
+class CassandraNamespaceScenarioSpecification(internal val scenario: ScenarioSpecification) :
     AbstractScenarioSpecificationWrapper(scenario)
 
 fun ScenarioSpecification.cassandra() = CassandraNamespaceScenarioSpecification(this)
+
+/**
+ * Scenario wrapper to enter the namespace for the Cassandra step specifications in the [ConfigurableScenarioSpecification].
+ *
+ * @author Eric Jessé
+ */
+class CassandraConfigurableScenarioSpecification(internal val scenario: ConfigurableScenarioSpecification)
+
+fun ConfigurableScenarioSpecification.cassandra() = CassandraConfigurableScenarioSpecification(this)

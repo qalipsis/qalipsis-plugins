@@ -31,12 +31,15 @@ import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.aerisconsulting.catadioptre.getProperty
 import io.qalipsis.api.context.StepContext
+import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.cassandra.cassandra
 import io.qalipsis.plugins.cassandra.configuration.CassandraServerConfiguration
 import io.qalipsis.plugins.cassandra.configuration.DefaultValues
 import io.qalipsis.plugins.cassandra.configuration.DriverProfile
+import io.qalipsis.plugins.cassandra.configuration.defaults
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
 import org.junit.jupiter.api.Test
@@ -163,5 +166,145 @@ internal class CassandraSaveStepSpecificationImplTest {
             previousStep.nextSteps[0].getProperty<suspend (ctx: StepContext<*, *>, input: Int) -> List<String>>(
                 "columnsConfig")
         assertThat(columnsConfig(relaxedMockk(), relaxedMockk())).hasSize(4)
+    }
+
+    @Test
+    fun `should apply defaults from CassandraDefaultsExtension`() = testDispatcherProvider.runTest {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            cassandra().defaults {
+                connect {
+                    servers = listOf("default-host:9042", "default-host:9043")
+                    keyspace = "default_keyspace"
+                    datacenterProfile = DriverProfile.LOCAL
+                    datacenterName = "default_dc"
+                }
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        previousStep.cassandra().save {
+            name = "my-save-step"
+            table { _, _ -> "test" }
+            columns { _, _ -> listOf("column") }
+            rows { _, _ -> listOf(CassandraSaveRow()) }
+        }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(CassandraSaveStepSpecificationImpl::class).all {
+            prop(CassandraSaveStepSpecificationImpl<*>::serversConfig).all {
+                prop(CassandraServerConfiguration::servers).isEqualTo(listOf("default-host:9042", "default-host:9043"))
+                prop(CassandraServerConfiguration::keyspace).isEqualTo("default_keyspace")
+                prop(CassandraServerConfiguration::datacenterProfile).isEqualTo(DriverProfile.LOCAL)
+                prop(CassandraServerConfiguration::datacenterName).isEqualTo("default_dc")
+            }
+            prop(CassandraSaveStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    fun `should allow overriding defaults from CassandraDefaultsExtension`() = testDispatcherProvider.runTest {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            cassandra().defaults {
+                connect {
+                    servers = listOf("default-host:9042")
+                    keyspace = "default_keyspace"
+                    datacenterProfile = DriverProfile.LOCAL
+                    datacenterName = "default_dc"
+                }
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        previousStep.cassandra().save {
+            name = "my-save-step"
+            connect {
+                servers = listOf("override-host:9042")
+            }
+            monitoring {
+                events = false
+            }
+            table { _, _ -> "test" }
+            columns { _, _ -> listOf("column") }
+            rows { _, _ -> listOf(CassandraSaveRow()) }
+        }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(CassandraSaveStepSpecificationImpl::class).all {
+            prop(CassandraSaveStepSpecificationImpl<*>::serversConfig).all {
+                prop(CassandraServerConfiguration::servers).isEqualTo(listOf("override-host:9042"))
+                prop(CassandraServerConfiguration::keyspace).isEqualTo("default_keyspace")
+                prop(CassandraServerConfiguration::datacenterProfile).isEqualTo(DriverProfile.LOCAL)
+                prop(CassandraServerConfiguration::datacenterName).isEqualTo("default_dc")
+            }
+            prop(CassandraSaveStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    fun `should allow successive overwriting of defaults`() = testDispatcherProvider.runTest {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            cassandra().defaults {
+                connect {
+                    servers = listOf("default-host:9042")
+                    keyspace = "default_keyspace"
+                    datacenterProfile = DriverProfile.LOCAL
+                    datacenterName = "default_dc"
+                }
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        previousStep
+            .cassandra().defaults {
+                connect {
+                    servers = listOf("step-default-host:9042")
+                    keyspace = "step_keyspace"
+                }
+            }
+            .cassandra().save {
+                name = "my-save-step"
+                connect {
+                    servers = listOf("override-host:9042")
+                }
+                monitoring {
+                    events = false
+                    // meters not set -> inherits true from scenario-level defaults
+                }
+                table { _, _ -> "test" }
+                columns { _, _ -> listOf("column") }
+                rows { _, _ -> listOf(CassandraSaveRow()) }
+            }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(CassandraSaveStepSpecificationImpl::class).all {
+            prop(CassandraSaveStepSpecificationImpl<*>::serversConfig).all {
+                prop(CassandraServerConfiguration::servers).isEqualTo(listOf("override-host:9042"))
+                prop(CassandraServerConfiguration::keyspace).isEqualTo("step_keyspace")
+                prop(CassandraServerConfiguration::datacenterProfile).isEqualTo(DriverProfile.LOCAL)
+                prop(CassandraServerConfiguration::datacenterName).isEqualTo("default_dc")
+            }
+            prop(CassandraSaveStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
     }
 }
