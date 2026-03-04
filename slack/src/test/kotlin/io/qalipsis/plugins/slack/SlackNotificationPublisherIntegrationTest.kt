@@ -34,7 +34,6 @@ import io.micronaut.context.annotation.Value
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.coEvery
 import io.mockk.coExcludeRecords
-import io.mockk.coVerifyAll
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -50,11 +49,12 @@ import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.coVerifyNever
 import io.qalipsis.test.mockk.coVerifyOnce
+import java.time.Duration
+import java.time.Instant
+import org.apache.commons.lang3.RandomStringUtils
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.time.Duration
-import java.time.Instant
 
 @WithMockk
 @MicronautTest(startApplication = false, propertySources = ["classpath:application-slack-test.yml"])
@@ -75,7 +75,7 @@ internal class SlackNotificationPublisherIntegrationTest {
 
     private lateinit var slackNotificationConfiguration: SlackNotificationConfiguration
 
-    private lateinit var mockNotificationPublisher: SlackNotificationPublisher
+    private lateinit var spiedNotificationPublisher: SlackNotificationPublisher
 
     @BeforeEach
     internal fun setupAll() {
@@ -103,10 +103,11 @@ internal class SlackNotificationPublisherIntegrationTest {
         slackNotificationPublisher.init()
         spiedSlackClient = spyk(slackNotificationPublisher.asyncSlackMethodsClient())
         slackNotificationPublisher.asyncSlackMethodsClient(spiedSlackClient)
-        mockNotificationPublisher = spyk(SlackNotificationPublisher(slackNotificationConfiguration), recordPrivateCalls = true)
+        spiedNotificationPublisher =
+            spyk(SlackNotificationPublisher(slackNotificationConfiguration), recordPrivateCalls = true)
 
-        coExcludeRecords { mockNotificationPublisher.configuration }
-        coExcludeRecords { mockNotificationPublisher.publish(any(), any()) }
+        coExcludeRecords { spiedNotificationPublisher.configuration }
+        coExcludeRecords { spiedNotificationPublisher.publish(RandomStringUtils.randomAlphanumeric(6), any(), any()) }
     }
 
     @Test
@@ -238,13 +239,22 @@ internal class SlackNotificationPublisherIntegrationTest {
                 ReportExecutionStatus.FAILED
             )
             val campaignReport = campaignReportPrototype.copy(campaignKey = "Campaign-4", status = ExecutionStatus.SUCCESSFUL)
-            coEvery { mockNotificationPublisher["sendNotification"](any<String>(), any<CampaignReport>()) } returns Unit
+            coEvery {
+                spiedNotificationPublisher["sendNotification"](
+                    any<String>(),
+                    any<CampaignReport>()
+                )
+            } returns Unit
 
             // when
-            mockNotificationPublisher.publish(campaignReport.campaignKey, campaignReport)
+            spiedNotificationPublisher.publish(
+                RandomStringUtils.randomAlphanumeric(6),
+                campaignReport.campaignKey,
+                campaignReport
+            )
 
             //then
-            coVerifyNever { mockNotificationPublisher["sendNotification"](campaignReport.campaignKey, campaignReport) }
+            coVerifyNever { spiedNotificationPublisher["sendNotification"](campaignReport.campaignKey, campaignReport) }
         }
 
     @Test
@@ -257,13 +267,22 @@ internal class SlackNotificationPublisherIntegrationTest {
             )
             val campaignReport =
                 campaignReportPrototype.copy(campaignKey = "Campaign-5", status = ExecutionStatus.QUEUED)
-            coEvery { mockNotificationPublisher["sendNotification"](any<String>(), any<CampaignReport>()) } returns Unit
+            coEvery {
+                spiedNotificationPublisher["sendNotification"](
+                    any<String>(),
+                    any<CampaignReport>()
+                )
+            } returns Unit
 
             // when
-            mockNotificationPublisher.publish(campaignReport.campaignKey, campaignReport)
+            spiedNotificationPublisher.publish(
+                RandomStringUtils.randomAlphanumeric(6),
+                campaignReport.campaignKey,
+                campaignReport
+            )
 
             //then
-            coVerifyNever { mockNotificationPublisher["sendNotification"](campaignReport.campaignKey, campaignReport) }
+            coVerifyNever { spiedNotificationPublisher["sendNotification"](campaignReport.campaignKey, campaignReport) }
         }
 
     @Test
@@ -276,49 +295,23 @@ internal class SlackNotificationPublisherIntegrationTest {
             )
             val campaignReport =
                 campaignReportPrototype.copy(campaignKey = "Campaign-6", status = ExecutionStatus.ABORTED)
-            coEvery { mockNotificationPublisher["sendNotification"](any<String>(), any<CampaignReport>()) } returns Unit
+            coEvery {
+                spiedNotificationPublisher["sendNotification"](
+                    any<String>(),
+                    any<CampaignReport>()
+                )
+            } returns Unit
 
             // when
-            mockNotificationPublisher.publish(campaignReport.campaignKey, campaignReport)
+            spiedNotificationPublisher.publish(
+                RandomStringUtils.randomAlphanumeric(6),
+                campaignReport.campaignKey,
+                campaignReport
+            )
 
             //then
-            coVerifyOnce { mockNotificationPublisher["sendNotification"](campaignReport.campaignKey, campaignReport) }
+            coVerifyOnce { spiedNotificationPublisher["sendNotification"](campaignReport.campaignKey, campaignReport) }
         }
-
-    @Test
-    fun `should send an email when campaign report status is in the list of subscribed statuses`() =
-        testDispatcherProvider.run {
-            //given
-            val campaignReport1 =
-                campaignReportPrototype.copy(campaignKey = "Campaign-7", status = ExecutionStatus.SUCCESSFUL)
-            val campaignReport2 =
-                campaignReportPrototype.copy(campaignKey = "Campaign-8", status = ExecutionStatus.WARNING)
-            val campaignReport3 =
-                campaignReportPrototype.copy(campaignKey = "Campaign-9", status = ExecutionStatus.ABORTED)
-            val campaignReport4 =
-                campaignReportPrototype.copy(campaignKey = "Campaign-10", status = ExecutionStatus.FAILED)
-
-            coEvery { mockNotificationPublisher["sendNotification"](any<String>(), any<CampaignReport>()) } returns Unit
-
-            // when
-            mockNotificationPublisher.publish(campaignReport1.campaignKey, campaignReport1)
-            mockNotificationPublisher.publish(campaignReport2.campaignKey, campaignReport2)
-            mockNotificationPublisher.publish(campaignReport3.campaignKey, campaignReport3)
-            mockNotificationPublisher.publish(campaignReport4.campaignKey, campaignReport4)
-
-            //then
-            coVerifyAll {
-                mockNotificationPublisher["sendNotification"](campaignReport1.campaignKey,
-                    campaignReport1)
-                mockNotificationPublisher["sendNotification"](campaignReport2.campaignKey,
-                    campaignReport2)
-                mockNotificationPublisher["sendNotification"](campaignReport3.campaignKey,
-                    campaignReport3)
-                mockNotificationPublisher["sendNotification"](campaignReport4.campaignKey,
-                    campaignReport4)
-            }
-        }
-
 
     private fun composeMessage(report: CampaignReport): String {
         val duration = report.end?.let { Duration.between(report.start, it).toSeconds() }

@@ -69,7 +69,7 @@ internal class SlackNotificationPublisher(
         asyncSlackMethodsClient = Slack.getInstance().methodsAsync(configuration.token)
     }
 
-    override suspend fun publish(campaignKey: CampaignKey, report: CampaignReport) {
+    override suspend fun publish(tenant: String, campaignKey: CampaignKey, report: CampaignReport) {
         // subscribe to notification
         val reportStatus = runCatching { ReportExecutionStatus.valueOf("${report.status}") }.getOrNull()
         if (reportStatus != null && ((configuration.status.contains(ReportExecutionStatus.ALL)) || configuration.status.contains(
