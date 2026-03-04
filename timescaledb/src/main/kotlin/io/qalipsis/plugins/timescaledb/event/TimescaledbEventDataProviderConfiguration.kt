@@ -51,7 +51,7 @@ interface TimescaledbEventDataProviderConfiguration : DataProviderConfiguration 
     @get:NotBlank
     override val database: String
 
-    @get:Bindable(defaultValue = "meters")
+    @get:Bindable(defaultValue = "events")
     @get:NotBlank
     override val schema: String
 

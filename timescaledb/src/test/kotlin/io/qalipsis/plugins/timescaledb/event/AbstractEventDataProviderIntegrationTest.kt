@@ -41,6 +41,8 @@ import io.r2dbc.postgresql.PostgresqlConnectionFactory
 import io.r2dbc.postgresql.client.SSLMode
 import io.r2dbc.spi.Connection
 import jakarta.inject.Inject
+import java.time.Duration
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -53,8 +55,6 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.testcontainers.junit.jupiter.Testcontainers
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.time.Duration
-import java.util.concurrent.TimeUnit
 
 @Testcontainers
 @MicronautTest(environments = ["timescaledb", "head"], startApplication = false, transactional = false)

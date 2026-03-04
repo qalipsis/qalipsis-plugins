@@ -21,12 +21,12 @@ package io.qalipsis.plugins.timescaledb.dataprovider
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.validation.Validated
+import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.query.QueryDescription
 import io.qalipsis.api.report.DataField
 import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.spi.Connection
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import reactor.core.publisher.Flux
 
 @Validated
@@ -56,11 +56,15 @@ internal abstract class AbstractDataProvider(
             sql.append(""" AND "name" ILIKE any (array[$2])""")
         }
         sql.append(""" ORDER BY "name" LIMIT $size""")
+        val query = sql.toString()
 
+        log.debug { "Acquiring a connection" }
         return Flux.usingWhen(
-            connectionPool.create(),
+            connectionPool.create()
+                .doOnNext { log.debug { "Acquired a connection" } },
             { connection ->
-                Flux.from(connection.createStatement(sql.toString()).bind("$1", tenant).also {
+                log.debug { "Executing the SQL query: $query" }
+                Flux.from(connection.createStatement(query).bind("$1", tenant).also {
                     if (filters.isNotEmpty()) {
                         it.bind("$2", filters.map(this::convertWildcards).toTypedArray())
                     }
@@ -69,7 +73,9 @@ internal abstract class AbstractDataProvider(
                 }
             },
             Connection::close
-        ).asFlow().toList(mutableListOf<String>())
+        ).collectList().awaitSingleOrNull().orEmpty().also {
+            log.debug { "Found ${it.size} names" }
+        }
     }
 
     suspend fun searchTagsAndValues(
@@ -100,12 +106,16 @@ internal abstract class AbstractDataProvider(
             sql.append(""" AND (tags.key ILIKE any (array[$binding]) OR tags.value ILIKE any (array[$binding]))""")
         }
         sql.append(""" GROUP BY tags.key ORDER BY tags.key LIMIT $size""")
+        val query = sql.toString()
 
+        log.debug { "Acquiring a connection" }
         return Flux.usingWhen(
-            connectionPool.create(),
+            connectionPool.create()
+                .doOnNext { log.debug { "Acquired a connection" } },
             { connection ->
+                log.debug { "Executing the SQL query: $query" }
                 Flux.from(
-                    connection.createStatement(sql.toString())
+                    connection.createStatement(query)
                         .also {
                             params.forEach { (binding, value) ->
                                 it.bind(binding, value)
@@ -119,9 +129,15 @@ internal abstract class AbstractDataProvider(
                 }
             },
             Connection::close
-        ).asFlow().toList(mutableListOf<Pair<String, List<String>>>()).toMap()
+        ).collectList().awaitSingleOrNull()?.toMap().orEmpty().also {
+            log.debug { "Found ${it.size} tags and values" }
+        }
     }
 
     private fun convertWildcards(clause: String) = clause.replace('*', '%').replace('?', '_')
+
+    private companion object {
+        val log = logger()
+    }
 
 }
