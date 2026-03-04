@@ -35,6 +35,7 @@ import io.qalipsis.plugins.influxdb.InfluxDbStepConnection
 import io.qalipsis.plugins.influxdb.InfluxDbStepConnectionImpl
 import io.qalipsis.plugins.influxdb.InfluxdbScenarioSpecification
 import io.qalipsis.plugins.influxdb.InfluxdbStepSpecification
+import io.qalipsis.plugins.influxdb.configuration.findInfluxDbDefaults
 import java.time.Duration
 import javax.validation.constraints.NotNull
 
@@ -81,9 +82,9 @@ internal class InfluxDbPollStepSpecificationImpl(
 
     override val singletonConfiguration: SingletonConfiguration = SingletonConfiguration(SingletonType.UNICAST)
 
-    val connectionConfiguration = InfluxDbStepConnectionImpl()
+    var connectionConfiguration = InfluxDbStepConnectionImpl()
 
-    val monitoringConfiguration = StepMonitoringConfiguration()
+    var monitoringConfiguration = StepMonitoringConfiguration()
 
     @field:NotNull
     internal lateinit var query: String
@@ -128,6 +129,7 @@ fun InfluxdbScenarioSpecification.poll(
     configurationBlock: InfluxDbPollStepSpecification.() -> Unit
 ): InfluxDbPollStepSpecification {
     val step = InfluxDbPollStepSpecificationImpl()
+    findInfluxDbDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
 
     (this as StepSpecificationRegistry).add(step)

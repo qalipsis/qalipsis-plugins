@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.influxdb
 
+import io.qalipsis.api.scenario.ConfigurableScenarioSpecification
 import io.qalipsis.api.scenario.ScenarioSpecification
 import io.qalipsis.api.steps.AbstractPluginStepWrapper
 import io.qalipsis.api.steps.AbstractScenarioSpecificationWrapper
@@ -50,7 +51,16 @@ fun <INPUT, OUTPUT> StepSpecification<INPUT, OUTPUT, *>.influxdb(): InfluxdbStep
  *
  * @author Eric Jessé
  */
-class InfluxdbScenarioSpecification(scenario: ScenarioSpecification) :
+class InfluxdbScenarioSpecification(internal val scenario: ScenarioSpecification) :
     AbstractScenarioSpecificationWrapper(scenario)
 
 fun ScenarioSpecification.influxdb() = InfluxdbScenarioSpecification(this)
+
+/**
+ * Wrapper to access the InfluxDB namespace from a [ConfigurableScenarioSpecification].
+ *
+ * @author Eric Jessé
+ */
+class InfluxdbConfigurableScenarioSpecification(internal val scenario: ConfigurableScenarioSpecification)
+
+fun ConfigurableScenarioSpecification.influxdb() = InfluxdbConfigurableScenarioSpecification(this)

@@ -32,9 +32,10 @@ import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.influxdb.InfluxDbStepConnectionImpl
+import io.qalipsis.plugins.influxdb.configuration.defaults
 import io.qalipsis.plugins.influxdb.influxdb
-import org.junit.jupiter.api.Test
 import java.time.Duration
+import org.junit.jupiter.api.Test
 
 internal class InfluxDbSpecificationImplTest {
 
@@ -96,6 +97,84 @@ internal class InfluxDbSpecificationImplTest {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.BROADCAST)
                 prop(SingletonConfiguration::bufferSize).isEqualTo(123)
                 prop(SingletonConfiguration::idleTimeout).isEqualTo(Duration.ofSeconds(20))
+            }
+        }
+    }
+
+    @Test
+    internal fun `should apply defaults from InfluxDbDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            influxdb().defaults {
+                connect {
+                    server("http://default-server:8086", "default-bucket", "default-org")
+                    basic("default-user", "default-password")
+                }
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        scenario.influxdb().poll {
+            name = "my-step"
+            query("SELECT * FROM test")
+            pollDelay(Duration.ofSeconds(10))
+        }
+
+        assertThat(scenario.rootSteps.first()).isInstanceOf(InfluxDbPollStepSpecificationImpl::class).all {
+            prop(InfluxDbPollStepSpecificationImpl::connectionConfiguration).all {
+                prop(InfluxDbStepConnectionImpl::url).isEqualTo("http://default-server:8086")
+                prop(InfluxDbStepConnectionImpl::bucket).isEqualTo("default-bucket")
+                prop(InfluxDbStepConnectionImpl::org).isEqualTo("default-org")
+                prop(InfluxDbStepConnectionImpl::user).isEqualTo("default-user")
+                prop(InfluxDbStepConnectionImpl::password).isEqualTo("default-password")
+            }
+            prop(InfluxDbPollStepSpecificationImpl::monitoringConfiguration).all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow overriding defaults from InfluxDbDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            influxdb().defaults {
+                connect {
+                    server("http://default-server:8086", "default-bucket", "default-org")
+                    basic("default-user", "default-password")
+                }
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        scenario.influxdb().poll {
+            name = "my-step"
+            connect {
+                server("http://override-server:8086", "override-bucket", "override-org")
+            }
+            monitoring {
+                events = false
+            }
+            query("SELECT * FROM test")
+            pollDelay(Duration.ofSeconds(10))
+        }
+
+        assertThat(scenario.rootSteps.first()).isInstanceOf(InfluxDbPollStepSpecificationImpl::class).all {
+            prop(InfluxDbPollStepSpecificationImpl::connectionConfiguration).all {
+                prop(InfluxDbStepConnectionImpl::url).isEqualTo("http://override-server:8086")
+                prop(InfluxDbStepConnectionImpl::bucket).isEqualTo("override-bucket")
+                prop(InfluxDbStepConnectionImpl::org).isEqualTo("override-org")
+                prop(InfluxDbStepConnectionImpl::user).isEqualTo("default-user")
+                prop(InfluxDbStepConnectionImpl::password).isEqualTo("default-password")
+            }
+            prop(InfluxDbPollStepSpecificationImpl::monitoringConfiguration).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
     }

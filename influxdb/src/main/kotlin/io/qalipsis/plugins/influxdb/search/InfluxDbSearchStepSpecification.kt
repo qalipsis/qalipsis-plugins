@@ -27,6 +27,7 @@ import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.influxdb.InfluxDbStepConnectionImpl
 import io.qalipsis.plugins.influxdb.InfluxdbStepSpecification
+import io.qalipsis.plugins.influxdb.configuration.findInfluxDbDefaults
 
 /**
  * Specification for a [io.qalipsis.plugins.influxdb.search.InfluxDbSearchStep] to search data from a InfluxDB.
@@ -92,6 +93,7 @@ fun <I> InfluxdbStepSpecification<*, I, *>.search(
     configurationBlock: InfluxDbSearchStepSpecification<I>.() -> Unit
 ): InfluxDbSearchStepSpecification<I> {
     val step = InfluxDbSearchStepSpecificationImpl<I>()
+    findInfluxDbDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
     this.add(step)
     return step

@@ -31,6 +31,7 @@ import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.influxdb.InfluxDbStepConnectionImpl
 import io.qalipsis.plugins.influxdb.InfluxdbStepSpecification
+import io.qalipsis.plugins.influxdb.configuration.findInfluxDbDefaults
 
 /**
  * Specification for a [io.qalipsis.plugins.influxdb.save.InfluxDbSaveStep] to save data to a InfluxDB.
@@ -124,6 +125,7 @@ fun <I> InfluxdbStepSpecification<*, I, *>.save(
     configurationBlock: InfluxDbSaveStepSpecification<I>.() -> Unit
 ): InfluxDbSaveStepSpecification<I> {
     val step = InfluxDbSaveStepSpecificationImpl<I>()
+    findInfluxDbDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
 
     this.add(step)
