@@ -30,10 +30,13 @@ import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.aerisconsulting.catadioptre.getProperty
 import io.qalipsis.api.context.StepContext
+import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType
+import io.qalipsis.plugins.redis.lettuce.configuration.defaults
 import io.qalipsis.plugins.redis.lettuce.redisLettuce
 import io.qalipsis.plugins.redis.lettuce.save.records.HashRecord
 import io.qalipsis.plugins.redis.lettuce.save.records.SortedRecord
@@ -136,5 +139,141 @@ internal class LettuceSaveStepSpecificationImplTest {
         val recordsFactory = previousStep.nextSteps[0].getProperty<suspend (ctx: StepContext<*, *>, input: Int) ->
         List<LettuceStreamsProduceRecord>>("recordsFactory")
         assertThat(recordsFactory(relaxedMockk(), relaxedMockk())).hasSize(2)
+    }
+
+    @Test
+    fun `should apply defaults from RedisLettuceDefaultsExtension`() = testDispatcherProvider.runTest {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            redisLettuce().defaults {
+                connection {
+                    nodes = listOf("default-host:6380", "default-host:6381")
+                    database = 5
+                    redisConnectionType = RedisConnectionType.CLUSTER
+                    authUser = "admin"
+                    authPassword = "secret"
+                }
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        previousStep.redisLettuce().save {
+            name = "my-step"
+            records { _, _ -> listOf(HashRecord("test", mapOf("test" to "test"))) }
+        }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(LettuceSaveStepSpecificationImpl::class).all {
+            prop(LettuceSaveStepSpecificationImpl<*>::connectionConfiguration).all {
+                prop(RedisConnectionConfiguration::nodes).isEqualTo(listOf("default-host:6380", "default-host:6381"))
+                prop(RedisConnectionConfiguration::database).isEqualTo(5)
+                prop(RedisConnectionConfiguration::redisConnectionType).isEqualTo(RedisConnectionType.CLUSTER)
+                prop(RedisConnectionConfiguration::authUser).isEqualTo("admin")
+                prop(RedisConnectionConfiguration::authPassword).isEqualTo("secret")
+            }
+            prop(LettuceSaveStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    fun `should allow overriding defaults from RedisLettuceDefaultsExtension`() = testDispatcherProvider.runTest {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            redisLettuce().defaults {
+                connection {
+                    nodes = listOf("default-host:6380")
+                    database = 5
+                    authUser = "admin"
+                    authPassword = "secret"
+                }
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        previousStep.redisLettuce().save {
+            name = "my-step"
+            connection {
+                nodes = listOf("override-host:6379")
+            }
+            monitoring {
+                events = false
+            }
+            records { _, _ -> listOf(HashRecord("test", mapOf("test" to "test"))) }
+        }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(LettuceSaveStepSpecificationImpl::class).all {
+            prop(LettuceSaveStepSpecificationImpl<*>::connectionConfiguration).all {
+                prop(RedisConnectionConfiguration::nodes).isEqualTo(listOf("override-host:6379"))
+                prop(RedisConnectionConfiguration::database).isEqualTo(5)
+                prop(RedisConnectionConfiguration::authUser).isEqualTo("admin")
+                prop(RedisConnectionConfiguration::authPassword).isEqualTo("secret")
+            }
+            prop(LettuceSaveStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    fun `should allow successive overwriting of defaults`() = testDispatcherProvider.runTest {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            redisLettuce().defaults {
+                connection {
+                    nodes = listOf("default-host:6380")
+                    database = 5
+                    authUser = "admin"
+                    authPassword = "secret"
+                }
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        previousStep
+            .redisLettuce().defaults {
+                connection {
+                    nodes = listOf("step-default-host:6381")
+                    database = 7
+                }
+            }
+            .redisLettuce().save {
+                name = "my-step"
+                connection {
+                    nodes = listOf("override-host:6379")
+                }
+                monitoring {
+                    events = false
+                    // meters not set -> inherits true from scenario-level defaults
+                }
+                records { _, _ -> listOf(HashRecord("test", mapOf("test" to "test"))) }
+            }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(LettuceSaveStepSpecificationImpl::class).all {
+            prop(LettuceSaveStepSpecificationImpl<*>::connectionConfiguration).all {
+                prop(RedisConnectionConfiguration::nodes).isEqualTo(listOf("override-host:6379"))
+                prop(RedisConnectionConfiguration::database).isEqualTo(7)
+                prop(RedisConnectionConfiguration::authUser).isEqualTo("admin")
+                prop(RedisConnectionConfiguration::authPassword).isEqualTo("secret")
+            }
+            prop(LettuceSaveStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
     }
 }

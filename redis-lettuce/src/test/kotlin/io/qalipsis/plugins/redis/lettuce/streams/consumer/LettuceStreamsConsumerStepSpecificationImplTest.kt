@@ -33,11 +33,12 @@ import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfiguration
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType
+import io.qalipsis.plugins.redis.lettuce.configuration.defaults
 import io.qalipsis.plugins.redis.lettuce.redisLettuce
 import io.qalipsis.test.coroutines.TestDispatcherProvider
+import java.time.Duration
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.time.Duration
 
 internal class LettuceStreamsConsumerStepSpecificationImplTest {
 
@@ -141,6 +142,94 @@ internal class LettuceStreamsConsumerStepSpecificationImplTest {
                 }
             }
 
+    }
+
+    @Test
+    internal fun `should apply defaults from RedisLettuceDefaultsExtension`() = testDispatcherProvider.runTest {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            redisLettuce().defaults {
+                connection {
+                    nodes = listOf("default-host:6380", "default-host:6381")
+                    database = 5
+                    redisConnectionType = RedisConnectionType.CLUSTER
+                    authUser = "admin"
+                    authPassword = "secret"
+                }
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        })
+
+        scenario.start().redisLettuce().streamsConsume {
+            name = "my-step"
+            streamKey("test")
+            group("group")
+        }
+
+        assertThat((scenario as StepSpecificationRegistry).rootSteps.first()).isInstanceOf(
+            LettuceStreamsConsumerStepSpecificationImpl::class
+        ).all {
+            prop(LettuceStreamsConsumerStepSpecificationImpl::connection).all {
+                prop(RedisConnectionConfiguration::nodes).isEqualTo(listOf("default-host:6380", "default-host:6381"))
+                prop(RedisConnectionConfiguration::database).isEqualTo(5)
+                prop(RedisConnectionConfiguration::redisConnectionType).isEqualTo(RedisConnectionType.CLUSTER)
+                prop(RedisConnectionConfiguration::authUser).isEqualTo("admin")
+                prop(RedisConnectionConfiguration::authPassword).isEqualTo("secret")
+            }
+            prop(LettuceStreamsConsumerStepSpecificationImpl::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow overriding defaults from RedisLettuceDefaultsExtension`() =
+        testDispatcherProvider.runTest {
+            val scenario = TestScenarioFactory.scenario("my-scenario", {
+                redisLettuce().defaults {
+                    connection {
+                        nodes = listOf("default-host:6380")
+                        database = 5
+                        authUser = "admin"
+                        authPassword = "secret"
+                    }
+                    monitoring {
+                        events = true
+                        meters = true
+                    }
+                }
+            })
+
+            scenario.start().redisLettuce().streamsConsume {
+                name = "my-step"
+                streamKey("test")
+                group("group")
+                connection {
+                    nodes = listOf("override-host:6379")
+                }
+                monitoring {
+                    events = false
+                    // meters not set -> inherits true from defaults
+                }
+            }
+
+            assertThat((scenario as StepSpecificationRegistry).rootSteps.first()).isInstanceOf(
+                LettuceStreamsConsumerStepSpecificationImpl::class
+            ).all {
+                prop(LettuceStreamsConsumerStepSpecificationImpl::connection).all {
+                    prop(RedisConnectionConfiguration::nodes).isEqualTo(listOf("override-host:6379"))
+                    prop(RedisConnectionConfiguration::database).isEqualTo(5)
+                    prop(RedisConnectionConfiguration::authUser).isEqualTo("admin")
+                    prop(RedisConnectionConfiguration::authPassword).isEqualTo("secret")
+                }
+                prop(LettuceStreamsConsumerStepSpecificationImpl::monitoringConfig).all {
+                    prop(StepMonitoringConfiguration::events).isFalse()
+                    prop(StepMonitoringConfiguration::meters).isTrue()
+                }
+            }
     }
 
 }

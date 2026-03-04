@@ -30,22 +30,21 @@ import io.lettuce.core.codec.ByteArrayCodec
 import io.lettuce.core.codec.RedisCodec
 import io.qalipsis.plugins.redis.lettuce.Constants.REDIS_CLUSTER_IMAGE_NAME
 import io.qalipsis.runtime.test.QalipsisTestRunner
+import java.time.Duration
+import kotlin.math.pow
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
-import org.junit.jupiter.api.condition.DisabledOnOs
-import org.junit.jupiter.api.condition.OS
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.time.Duration
-import kotlin.math.pow
 
 @Testcontainers
-@DisabledOnOs(value = [OS.MAC]) // Docker on Mac does not support the required networking configuration.
+@Disabled // Docker images for Redis cluster are no longer available.
 internal class RedisLettuceConsumerClusterScenarioIntegrationTest {
 
     lateinit var redisClusterClient: RedisClusterClient

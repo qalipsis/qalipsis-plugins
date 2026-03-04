@@ -37,6 +37,7 @@ import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfigurat
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.CLUSTER
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.SENTINEL
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.SINGLE
+import io.qalipsis.plugins.redis.lettuce.configuration.findRedisLettuceDefaults
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import javax.validation.constraints.NotBlank
@@ -174,6 +175,7 @@ fun RedisLettuceScenarioSpecification.pollScan(
     configurationBlock: LettucePollStepSpecification<String>.() -> Unit
 ): LettucePollStepSpecification<String> {
     val step = LettucePollStepSpecificationImpl<String>(RedisLettuceScanMethod.SCAN)
+    findRedisLettuceDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
 
     (this as StepSpecificationRegistry).add(step)
@@ -194,6 +196,7 @@ fun RedisLettuceScenarioSpecification.pollSscan(
     configurationBlock: LettucePollStepSpecification<String>.() -> Unit
 ): LettucePollStepSpecification<String> {
     val step = LettucePollStepSpecificationImpl<String>(RedisLettuceScanMethod.SSCAN)
+    findRedisLettuceDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
 
     (this as StepSpecificationRegistry).add(step)
@@ -214,6 +217,7 @@ fun RedisLettuceScenarioSpecification.pollZscan(
     configurationBlock: LettucePollStepSpecification<Pair<Double, String>>.() -> Unit
 ): LettucePollStepSpecification<Pair<Double, String>> {
     val step = LettucePollStepSpecificationImpl<Pair<Double, String>>(RedisLettuceScanMethod.ZSCAN)
+    findRedisLettuceDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
 
     (this as StepSpecificationRegistry).add(step)
@@ -234,6 +238,7 @@ fun RedisLettuceScenarioSpecification.pollHscan(
     configurationBlock: LettucePollStepSpecification<Pair<String, String>>.() -> Unit
 ): LettucePollStepSpecification<Pair<String, String>> {
     val step = LettucePollStepSpecificationImpl<Pair<String, String>>(RedisLettuceScanMethod.HSCAN)
+    findRedisLettuceDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
 
     (this as StepSpecificationRegistry).add(step)

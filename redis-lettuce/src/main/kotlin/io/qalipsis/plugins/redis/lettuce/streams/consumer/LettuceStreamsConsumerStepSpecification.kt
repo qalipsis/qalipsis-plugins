@@ -34,6 +34,7 @@ import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfigurat
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.CLUSTER
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.SENTINEL
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.SINGLE
+import io.qalipsis.plugins.redis.lettuce.configuration.findRedisLettuceDefaults
 import java.time.Duration
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.Positive
@@ -185,6 +186,7 @@ fun RedisLettuceScenarioSpecification.streamsConsume(
     configurationBlock: LettuceStreamsConsumerStepSpecification.() -> Unit
 ): LettuceStreamsConsumerStepSpecification {
     val step = LettuceStreamsConsumerStepSpecificationImpl()
+    findRedisLettuceDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
 
     (this as StepSpecificationRegistry).add(step)

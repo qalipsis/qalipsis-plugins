@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.redis.lettuce
 
+import io.qalipsis.api.scenario.ConfigurableScenarioSpecification
 import io.qalipsis.api.scenario.ScenarioSpecification
 import io.qalipsis.api.steps.AbstractPluginStepWrapper
 import io.qalipsis.api.steps.AbstractScenarioSpecificationWrapper
@@ -50,7 +51,16 @@ fun <INPUT, OUTPUT> StepSpecification<INPUT, OUTPUT, *>.redisLettuce(): RedisLet
  *
  * @author Gabriel Moraes
  */
-class RedisLettuceScenarioSpecification(scenario: ScenarioSpecification) :
+class RedisLettuceScenarioSpecification(internal val scenario: ScenarioSpecification) :
     AbstractScenarioSpecificationWrapper(scenario)
 
 fun ScenarioSpecification.redisLettuce() = RedisLettuceScenarioSpecification(this)
+
+/**
+ * Scenario wrapper to enter the namespace for the Redis-Lettuce step specifications in the [ConfigurableScenarioSpecification].
+ *
+ * @author Eric Jessé
+ */
+class RedisLettuceConfigurableScenarioSpecification(internal val scenario: ConfigurableScenarioSpecification)
+
+fun ConfigurableScenarioSpecification.redisLettuce() = RedisLettuceConfigurableScenarioSpecification(this)

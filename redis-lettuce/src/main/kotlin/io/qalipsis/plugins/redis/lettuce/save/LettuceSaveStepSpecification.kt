@@ -30,6 +30,7 @@ import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfigurat
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.CLUSTER
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.SENTINEL
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.SINGLE
+import io.qalipsis.plugins.redis.lettuce.configuration.findRedisLettuceDefaults
 
 /**
  * Specification for a [LettuceSaveStep] to save data onto a Redis database.
@@ -114,6 +115,7 @@ fun <I> RedisLettuceStepSpecification<*, I, *>.save(
     configurationBlock: LettuceSaveStepSpecification<I>.() -> Unit
 ): LettuceSaveStepSpecification<I> {
     val step = LettuceSaveStepSpecificationImpl<I>()
+    findRedisLettuceDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
 
     this.add(step)

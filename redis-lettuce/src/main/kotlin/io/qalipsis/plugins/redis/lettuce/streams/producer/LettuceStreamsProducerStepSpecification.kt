@@ -30,6 +30,7 @@ import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionConfigurat
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.CLUSTER
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.SENTINEL
 import io.qalipsis.plugins.redis.lettuce.configuration.RedisConnectionType.SINGLE
+import io.qalipsis.plugins.redis.lettuce.configuration.findRedisLettuceDefaults
 
 /**
  * Specification for a [LettuceStreamsProducerStep] to produce data onto a Redis stream.
@@ -109,6 +110,7 @@ fun <I> RedisLettuceStepSpecification<*, I, *>.streamsProduce(
     configurationBlock: LettuceStreamsProducerStepSpecification<I>.() -> Unit
 ): LettuceStreamsProducerStepSpecification<I> {
     val step = LettuceStreamsProducerStepSpecificationImpl<I>()
+    findRedisLettuceDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
 
     this.add(step)
