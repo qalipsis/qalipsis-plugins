@@ -25,6 +25,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
+import assertk.assertions.isSameAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import com.mongodb.reactivestreams.client.MongoClients
@@ -34,10 +35,12 @@ import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.mongodb.Sorting
+import io.qalipsis.plugins.mongodb.configuration.defaults
 import io.qalipsis.plugins.mongodb.mongodb
+import io.qalipsis.test.mockk.relaxedMockk
+import java.time.Duration
 import org.bson.Document
 import org.junit.jupiter.api.Test
-import java.time.Duration
 
 internal class MongoDbSpecificationImplTest {
 
@@ -132,4 +135,76 @@ internal class MongoDbSpecificationImplTest {
         }
     }
 
+    @Test
+    internal fun `should apply defaults from MongoDbDefaultsExtension`() {
+        val clientFactory: () -> com.mongodb.reactivestreams.client.MongoClient = relaxedMockk()
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            mongodb().defaults {
+                connect(clientFactory)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        scenario.mongodb().poll {
+            name = "my-step"
+            search {
+                database = "db"
+                collection = "col"
+                query = Document()
+                sort = linkedMapOf("device" to Sorting.ASC)
+                tieBreaker = "device"
+            }
+            pollDelay(Duration.ofSeconds(10))
+        }
+
+        assertThat(scenario.rootSteps.first()).isInstanceOf(MongoDbPollStepSpecificationImpl::class).all {
+            prop(MongoDbPollStepSpecificationImpl::client).isSameAs(clientFactory)
+            prop(MongoDbPollStepSpecificationImpl::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow overriding defaults from MongoDbDefaultsExtension`() {
+        val defaultClient: () -> com.mongodb.reactivestreams.client.MongoClient = relaxedMockk()
+        val overrideClient: () -> com.mongodb.reactivestreams.client.MongoClient = relaxedMockk()
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            mongodb().defaults {
+                connect(defaultClient)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        scenario.mongodb().poll {
+            name = "my-step"
+            connect(overrideClient)
+            monitoring {
+                events = false
+            }
+            search {
+                database = "db"
+                collection = "col"
+                query = Document()
+                sort = linkedMapOf("device" to Sorting.ASC)
+                tieBreaker = "device"
+            }
+            pollDelay(Duration.ofSeconds(10))
+        }
+
+        assertThat(scenario.rootSteps.first()).isInstanceOf(MongoDbPollStepSpecificationImpl::class).all {
+            prop(MongoDbPollStepSpecificationImpl::client).isSameAs(overrideClient)
+            prop(MongoDbPollStepSpecificationImpl::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
 }

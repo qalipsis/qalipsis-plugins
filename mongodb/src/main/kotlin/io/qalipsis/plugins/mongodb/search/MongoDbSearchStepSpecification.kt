@@ -28,6 +28,7 @@ import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.mongodb.MongoDbStepSpecification
 import io.qalipsis.plugins.mongodb.Sorting
+import io.qalipsis.plugins.mongodb.configuration.findMongoDbDefaults
 import org.bson.Document
 
 /**
@@ -136,6 +137,7 @@ fun <I> MongoDbStepSpecification<*, I, *>.search(
     configurationBlock: MongoDbSearchStepSpecification<I>.() -> Unit
 ): MongoDbSearchStepSpecification<I> {
     val step = MongoDbSearchStepSpecificationImpl<I>()
+    findMongoDbDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
     this.add(step)
     return step

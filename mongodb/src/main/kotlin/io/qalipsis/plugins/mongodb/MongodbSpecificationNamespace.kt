@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.mongodb
 
+import io.qalipsis.api.scenario.ConfigurableScenarioSpecification
 import io.qalipsis.api.scenario.ScenarioSpecification
 import io.qalipsis.api.steps.AbstractPluginStepWrapper
 import io.qalipsis.api.steps.AbstractScenarioSpecificationWrapper
@@ -50,7 +51,16 @@ fun <INPUT, OUTPUT> StepSpecification<INPUT, OUTPUT, *>.mongodb(): MongoDbStepSp
  *
  * @author Maxim Golokhov
  */
-class MongoDbScenarioSpecification(scenario: ScenarioSpecification) :
+class MongoDbScenarioSpecification(internal val scenario: ScenarioSpecification) :
     AbstractScenarioSpecificationWrapper(scenario)
 
 fun ScenarioSpecification.mongodb() = MongoDbScenarioSpecification(this)
+
+/**
+ * Wrapper to access the MongoDB namespace from a [ConfigurableScenarioSpecification].
+ *
+ * @author Eric Jessé
+ */
+class MongoDbConfigurableScenarioSpecification(internal val scenario: ConfigurableScenarioSpecification)
+
+fun ConfigurableScenarioSpecification.mongodb() = MongoDbConfigurableScenarioSpecification(this)

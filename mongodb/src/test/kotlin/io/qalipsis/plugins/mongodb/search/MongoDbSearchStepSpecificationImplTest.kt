@@ -25,14 +25,18 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
+import assertk.assertions.isSameAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import com.mongodb.reactivestreams.client.MongoClients
 import io.aerisconsulting.catadioptre.getProperty
 import io.qalipsis.api.context.StepContext
+import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.mongodb.Sorting
+import io.qalipsis.plugins.mongodb.configuration.defaults
 import io.qalipsis.plugins.mongodb.mongodb
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
@@ -159,5 +163,121 @@ internal class MongoDbSearchStepSpecificationImplTest {
                 "sort"
             )
         assertThat(sort(relaxedMockk(), relaxedMockk())).isEqualTo(linkedMapOf("desc" to Sorting.DESC))
+    }
+
+    @Test
+    fun `should apply defaults from MongoDbDefaultsExtension`() = testDispatcherProvider.run {
+        val clientFactory: () -> com.mongodb.reactivestreams.client.MongoClient = relaxedMockk()
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            mongodb().defaults {
+                connect(clientFactory)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        previousStep.mongodb().search {
+            name = "my-search-step"
+            search {
+                database = { _, _ -> "db" }
+                collection = { _, _ -> "col" }
+                query = { _, _ -> Document() }
+                sort = { _, _ -> linkedMapOf("asc" to Sorting.ASC) }
+            }
+        }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(MongoDbSearchStepSpecificationImpl::class).all {
+            prop(MongoDbSearchStepSpecificationImpl<*>::clientFactory).isSameAs(clientFactory)
+            prop(MongoDbSearchStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    fun `should allow overriding defaults from MongoDbDefaultsExtension`() = testDispatcherProvider.run {
+        val defaultClient: () -> com.mongodb.reactivestreams.client.MongoClient = relaxedMockk()
+        val overrideClient: () -> com.mongodb.reactivestreams.client.MongoClient = relaxedMockk()
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            mongodb().defaults {
+                connect(defaultClient)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        previousStep.mongodb().search {
+            name = "my-search-step"
+            connect(overrideClient)
+            monitoring {
+                events = false
+            }
+            search {
+                database = { _, _ -> "db" }
+                collection = { _, _ -> "col" }
+                query = { _, _ -> Document() }
+                sort = { _, _ -> linkedMapOf("asc" to Sorting.ASC) }
+            }
+        }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(MongoDbSearchStepSpecificationImpl::class).all {
+            prop(MongoDbSearchStepSpecificationImpl<*>::clientFactory).isSameAs(overrideClient)
+            prop(MongoDbSearchStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    fun `should allow successive overwriting of defaults`() = testDispatcherProvider.run {
+        val defaultClient: () -> com.mongodb.reactivestreams.client.MongoClient = relaxedMockk()
+        val stepDefaultClient: () -> com.mongodb.reactivestreams.client.MongoClient = relaxedMockk()
+        val overrideClient: () -> com.mongodb.reactivestreams.client.MongoClient = relaxedMockk()
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            mongodb().defaults {
+                connect(defaultClient)
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        previousStep
+            .mongodb().defaults {
+                connect(stepDefaultClient)
+            }
+            .mongodb().search {
+                connect(overrideClient)
+                monitoring {
+                    events = false
+                }
+                search {
+                    database = { _, _ -> "db" }
+                    collection = { _, _ -> "col" }
+                    query = { _, _ -> Document() }
+                    sort = { _, _ -> linkedMapOf("asc" to Sorting.ASC) }
+                }
+            }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(MongoDbSearchStepSpecificationImpl::class).all {
+            prop(MongoDbSearchStepSpecificationImpl<*>::clientFactory).isSameAs(overrideClient)
+            prop(MongoDbSearchStepSpecificationImpl<*>::monitoringConfig).all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
     }
 }

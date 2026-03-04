@@ -35,11 +35,12 @@ import io.qalipsis.plugins.mongodb.MongoDbRecord
 import io.qalipsis.plugins.mongodb.MongoDbScenarioSpecification
 import io.qalipsis.plugins.mongodb.MongoDbStepSpecification
 import io.qalipsis.plugins.mongodb.Sorting
-import org.bson.Document
+import io.qalipsis.plugins.mongodb.configuration.findMongoDbDefaults
 import java.time.Duration
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotEmpty
 import javax.validation.constraints.NotNull
+import org.bson.Document
 
 /**
  * Specification for an [io.qalipsis.api.steps.datasource.IterativeDatasourceStep] to poll data from MongoDb.
@@ -167,6 +168,7 @@ fun MongoDbScenarioSpecification.poll(
     configurationBlock: MongoDbPollStepSpecification.() -> Unit
 ): MongoDbPollStepSpecification {
     val step = MongoDbPollStepSpecificationImpl()
+    findMongoDbDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
 
     (this as StepSpecificationRegistry).add(step)

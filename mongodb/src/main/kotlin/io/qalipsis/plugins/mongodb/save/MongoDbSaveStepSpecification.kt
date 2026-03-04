@@ -27,6 +27,7 @@ import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.mongodb.MongoDbStepSpecification
+import io.qalipsis.plugins.mongodb.configuration.findMongoDbDefaults
 import org.bson.Document
 
 /**
@@ -131,6 +132,7 @@ fun <I> MongoDbStepSpecification<*, I, *>.save(
     configurationBlock: MongoDbSaveStepSpecification<I>.() -> Unit
 ): MongoDbSaveStepSpecification<I> {
     val step = MongoDbSaveStepSpecificationImpl<I>()
+    findMongoDbDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
 
     this.add(step)
