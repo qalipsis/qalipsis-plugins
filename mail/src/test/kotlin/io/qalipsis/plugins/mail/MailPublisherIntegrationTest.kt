@@ -47,6 +47,10 @@ import io.qalipsis.plugins.mail.notification.ReportExecutionStatus
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import jakarta.inject.Inject
+import java.time.Duration
+import java.time.Instant
+import kotlin.math.pow
+import org.apache.commons.lang3.RandomStringUtils
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -57,9 +61,6 @@ import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.time.Duration
-import java.time.Instant
-import kotlin.math.pow
 
 
 @Testcontainers
@@ -136,7 +137,11 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             val htmlMessage = composeMessage(campaignReport)
 
             // when
-            mailNotificationPublisher.publish(campaignReport.campaignKey, campaignReport)
+            mailNotificationPublisher.publish(
+                RandomStringUtils.randomAlphanumeric(6),
+                campaignReport.campaignKey,
+                campaignReport
+            )
 
             // then
             val response = retrieveBySubject("${campaignReport.campaignKey}+${campaignReport.status}")
@@ -167,7 +172,11 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             val htmlMessage = composeMessage(campaignReport)
 
             // when
-            mailNotificationPublisher.publish(campaignReport.campaignKey, campaignReport)
+            mailNotificationPublisher.publish(
+                RandomStringUtils.randomAlphanumeric(6),
+                campaignReport.campaignKey,
+                campaignReport
+            )
 
             // then
             val response = retrieveBySubject("${campaignReport.campaignKey}+${campaignReport.status}")
@@ -209,7 +218,11 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             val htmlMessage = composeMessage(campaignReport)
 
             // when
-            mailNotificationPublisher.publish(campaignReport.campaignKey, campaignReport)
+            mailNotificationPublisher.publish(
+                RandomStringUtils.randomAlphanumeric(6),
+                campaignReport.campaignKey,
+                campaignReport
+            )
 
             // then
             val response = retrieveBySubject("${campaignReport.campaignKey}+${campaignReport.status}")
@@ -247,7 +260,11 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             val htmlMessage = composeMessage(campaignReport)
 
             // when
-            mailNotificationPublisher.publish(campaignReport.campaignKey, campaignReport)
+            mailNotificationPublisher.publish(
+                RandomStringUtils.randomAlphanumeric(6),
+                campaignReport.campaignKey,
+                campaignReport
+            )
 
             // then
             val response = retrieveBySubject("${campaignReport.campaignKey}+${campaignReport.status}")
@@ -281,7 +298,11 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             val htmlMessage = composeMessage(campaignReport)
 
             // when
-            mailNotificationPublisher.publish(campaignReport.campaignKey, campaignReport)
+            mailNotificationPublisher.publish(
+                RandomStringUtils.randomAlphanumeric(6),
+                campaignReport.campaignKey,
+                campaignReport
+            )
 
             // then
             val response = retrieveBySubject("${campaignReport.campaignKey}+${campaignReport.status}")
@@ -313,7 +334,11 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
                 campaignReportPrototype.copy(campaignKey = "Campaign-4", status = ExecutionStatus.SUCCESSFUL)
 
             // when
-            mailNotificationPublisher.publish(campaignReport.campaignKey, campaignReport)
+            mailNotificationPublisher.publish(
+                RandomStringUtils.randomAlphanumeric(6),
+                campaignReport.campaignKey,
+                campaignReport
+            )
 
             //then
             val response = retrieveBySubject("${campaignReport.campaignKey}+${campaignReport.status}")
@@ -332,7 +357,11 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
                 campaignReportPrototype.copy(campaignKey = "Campaign-5", status = ExecutionStatus.QUEUED)
 
             // when
-            mailNotificationPublisher.publish(campaignReport.campaignKey, campaignReport)
+            mailNotificationPublisher.publish(
+                RandomStringUtils.randomAlphanumeric(6),
+                campaignReport.campaignKey,
+                campaignReport
+            )
 
             // then
             val response = retrieveBySubject("${campaignReport.campaignKey}+${campaignReport.status}")
@@ -353,7 +382,11 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             val htmlMessage = composeMessage(campaignReport)
 
             // when
-            mailNotificationPublisher.publish(campaignReport.campaignKey, campaignReport)
+            mailNotificationPublisher.publish(
+                RandomStringUtils.randomAlphanumeric(6),
+                campaignReport.campaignKey,
+                campaignReport
+            )
 
             // then
             val response = retrieveBySubject("${campaignReport.campaignKey}+${campaignReport.status}")
@@ -387,7 +420,11 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             val htmlMessage = composeMessage(campaignReport)
 
             // when
-            mailNotificationPublisher.publish(campaignReport.campaignKey, campaignReport)
+            mailNotificationPublisher.publish(
+                RandomStringUtils.randomAlphanumeric(6),
+                campaignReport.campaignKey,
+                campaignReport
+            )
 
             // then
             val response = retrieveBySubject("${campaignReport.campaignKey}+${campaignReport.status}")

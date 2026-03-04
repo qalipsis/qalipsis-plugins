@@ -26,12 +26,15 @@ import io.qalipsis.api.context.CampaignKey
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.report.CampaignReport
 import io.qalipsis.api.report.CampaignReportPublisher
+import io.qalipsis.plugins.mail.notification.MailNotificationPublisher.Companion.CHARSET
+import io.qalipsis.plugins.mail.notification.MailNotificationPublisher.Companion.CONTENT_TYPE
+import io.qalipsis.plugins.mail.notification.MailNotificationPublisher.Companion.RUNNING_INDICATOR
+import io.qalipsis.plugins.mail.notification.MailNotificationPublisher.Companion.TRANSPORT_PROTOCOL
+import io.qalipsis.plugins.mail.notification.MailNotificationPublisher.Companion.logger
 import jakarta.inject.Singleton
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.Duration
-import java.util.*
+import java.util.Properties
 import javax.activation.DataHandler
 import javax.activation.FileDataSource
 import javax.mail.Authenticator
@@ -44,6 +47,8 @@ import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeBodyPart
 import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 
 /**
@@ -63,7 +68,7 @@ internal class MailNotificationPublisher(
 
     private val properties = Properties()
 
-    override suspend fun publish(campaignKey: CampaignKey, report: CampaignReport) {
+    override suspend fun publish(tenant: String, campaignKey: CampaignKey, report: CampaignReport) {
         val reportStatus = ReportExecutionStatus.values().firstOrNull { it.name == report.status.toString() }
         if (reportStatus != null && ((mailConfiguration.status.contains(ReportExecutionStatus.ALL)) || mailConfiguration.status.contains(
                 ReportExecutionStatus.valueOf(reportStatus.toString())
