@@ -33,6 +33,7 @@ import io.qalipsis.api.steps.UnicastSpecification
 import io.qalipsis.plugins.graphite.GraphiteHttpConnectionSpecificationImpl
 import io.qalipsis.plugins.graphite.GraphiteScenarioSpecification
 import io.qalipsis.plugins.graphite.GraphiteStepSpecification
+import io.qalipsis.plugins.graphite.configuration.findGraphiteDefaults
 import io.qalipsis.plugins.graphite.search.GraphiteHttpConnectionSpecification
 import io.qalipsis.plugins.graphite.search.GraphiteQuery
 import java.time.Duration
@@ -80,9 +81,9 @@ internal class GraphitePollStepSpecificationImpl :
 
     override val singletonConfiguration: SingletonConfiguration = SingletonConfiguration(SingletonType.UNICAST)
 
-    val connectionConfiguration = GraphiteHttpConnectionSpecificationImpl()
+    var connectionConfiguration = GraphiteHttpConnectionSpecificationImpl()
 
-    val monitoringConfiguration = StepMonitoringConfiguration()
+    var monitoringConfiguration = StepMonitoringConfiguration()
 
     @field:NotNull
     internal var queryBuilder: GraphiteQuery.() -> Unit = {}
@@ -119,6 +120,7 @@ fun GraphiteScenarioSpecification.poll(
     configurationBlock: GraphitePollStepSpecification.() -> Unit
 ): GraphitePollStepSpecification {
     val step = GraphitePollStepSpecificationImpl()
+    findGraphiteDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
 
     (this as StepSpecificationRegistry).add(step)

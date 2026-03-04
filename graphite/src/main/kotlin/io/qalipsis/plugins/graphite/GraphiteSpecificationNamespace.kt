@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.graphite
 
+import io.qalipsis.api.scenario.ConfigurableScenarioSpecification
 import io.qalipsis.api.scenario.ScenarioSpecification
 import io.qalipsis.api.steps.AbstractPluginStepWrapper
 import io.qalipsis.api.steps.AbstractScenarioSpecificationWrapper
@@ -50,7 +51,16 @@ fun <INPUT, OUTPUT> StepSpecification<INPUT, OUTPUT, *>.graphite(): GraphiteStep
  *
  * @author Palina Bril
  */
-class GraphiteScenarioSpecification(scenario: ScenarioSpecification) :
+class GraphiteScenarioSpecification(internal val scenario: ScenarioSpecification) :
     AbstractScenarioSpecificationWrapper(scenario)
 
 fun ScenarioSpecification.graphite() = GraphiteScenarioSpecification(this)
+
+/**
+ * Wrapper to access the Graphite namespace from a [ConfigurableScenarioSpecification].
+ *
+ * @author Eric Jesse
+ */
+class GraphiteConfigurableScenarioSpecification(internal val scenario: ConfigurableScenarioSpecification)
+
+fun ConfigurableScenarioSpecification.graphite() = GraphiteConfigurableScenarioSpecification(this)

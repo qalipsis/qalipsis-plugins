@@ -29,6 +29,7 @@ import io.qalipsis.plugins.graphite.GraphiteConnectionSpecification
 import io.qalipsis.plugins.graphite.GraphiteConnectionSpecificationImpl
 import io.qalipsis.plugins.graphite.GraphiteStepSpecification
 import io.qalipsis.plugins.graphite.client.GraphiteRecord
+import io.qalipsis.plugins.graphite.configuration.findGraphiteDefaults
 
 /**
  * Specification for a [io.qalipsis.plugins.graphite.save.GraphiteSaveStep] to save data to a Graphite.
@@ -94,6 +95,7 @@ fun <I> GraphiteStepSpecification<*, I, *>.save(
     configurationBlock: GraphiteSaveStepSpecification<I>.() -> Unit
 ): GraphiteSaveStepSpecification<I> {
     val step = GraphiteSaveStepSpecificationImpl<I>()
+    findGraphiteDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
 
     this.add(step)
