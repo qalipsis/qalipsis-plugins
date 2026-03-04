@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.kafka
 
+import io.qalipsis.api.scenario.ConfigurableScenarioSpecification
 import io.qalipsis.api.scenario.ScenarioSpecification
 import io.qalipsis.api.steps.AbstractPluginStepWrapper
 import io.qalipsis.api.steps.AbstractScenarioSpecificationWrapper
@@ -52,7 +53,18 @@ fun <INPUT, OUTPUT> StepSpecification<INPUT, OUTPUT, *>.kafka(): KafkaStepSpecif
  *
  * @author Eric Jessé
  */
-class KafkaScenarioSpecification(scenario: ScenarioSpecification) :
+class KafkaScenarioSpecification(internal val scenario: ScenarioSpecification) :
     AbstractScenarioSpecificationWrapper(scenario)
 
 fun ScenarioSpecification.kafka() = KafkaScenarioSpecification(this)
+
+/**
+ * Scenario wrapper to enter the namespace for the Kafka step specifications in the [ConfigurableScenarioSpecification].
+ *
+ * You can learn more about Apache Kafka on [the official website](https://kafka.apache.org).
+ *
+ * @author Eric Jessé
+ */
+class KafkaConfigurableScenarioSpecification(internal val scenario: ConfigurableScenarioSpecification)
+
+fun ConfigurableScenarioSpecification.kafka() = KafkaConfigurableScenarioSpecification(this)

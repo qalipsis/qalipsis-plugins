@@ -20,7 +20,7 @@
 package io.qalipsis.plugins.kafka.consumer
 
 import io.qalipsis.api.annotations.Scenario
-import io.qalipsis.api.executionprofile.regular
+import io.qalipsis.api.executionprofile.immediate
 import io.qalipsis.api.lang.concurrentSet
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.blackHole
@@ -28,6 +28,7 @@ import io.qalipsis.api.steps.filterNotNull
 import io.qalipsis.api.steps.innerJoin
 import io.qalipsis.api.steps.map
 import io.qalipsis.api.steps.onEach
+import io.qalipsis.plugins.kafka.configuration.defaults
 import io.qalipsis.plugins.kafka.kafka
 import org.apache.kafka.clients.consumer.OffsetResetStrategy
 import org.apache.kafka.common.serialization.Serdes
@@ -44,6 +45,8 @@ internal object KafkaConsumerScenario {
 
     const val topicRight = "right"
 
+    const val topicDefaults = "defaults"
+
     val receivedMessages = concurrentSet<String>()
 
     internal var bootstrap: String = ""
@@ -58,7 +61,7 @@ internal object KafkaConsumerScenario {
             minionsCount = minions
             profile {
                 // Starts all at once.
-                regular(100, minionsCount)
+                immediate()
             }
         }
             .start()
@@ -88,6 +91,31 @@ internal object KafkaConsumerScenario {
             .map { joinResult -> joinResult?.first?.let { "${it.record.value} - ${joinResult.second.record.value}" } }
             .filterNotNull()
             .onEach { receivedMessages.add(it) }
+            .blackHole()
+    }
+
+    @Scenario("consumer-kafka-with-defaults")
+    fun consumeRecordsWithDefaults() {
+        scenario {
+            minionsCount = minions
+            profile {
+                immediate()
+            }
+            kafka().defaults {
+                bootstrap(bootstrap)
+            }
+        }
+            .start()
+            .kafka()
+            .consume {
+                name = "kafka-consumer-defaults"
+                // bootstrap inherited from defaults
+                topics(topicDefaults)
+                groupId("kafka-defaults")
+                pollTimeout(100)
+                offsetReset(OffsetResetStrategy.EARLIEST)
+            }.flatten(intDeserializer, stringDeserializer)
+            .onEach { receivedMessages.add("${it.record.key} - ${it.record.value}") }
             .blackHole()
     }
 }

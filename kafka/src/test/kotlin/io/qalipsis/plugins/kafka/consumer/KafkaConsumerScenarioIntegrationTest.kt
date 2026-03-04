@@ -25,6 +25,7 @@ import assertk.assertions.containsOnly
 import assertk.assertions.hasSize
 import io.qalipsis.plugins.kafka.Constants
 import io.qalipsis.runtime.test.QalipsisTestRunner
+import java.util.Properties
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.admin.AdminClientConfig
 import org.apache.kafka.clients.admin.NewTopic
@@ -40,7 +41,6 @@ import org.testcontainers.containers.KafkaContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
-import java.util.Properties
 
 /**
  *
@@ -109,6 +109,33 @@ internal class KafkaConsumerScenarioIntegrationTest {
         assertThat(KafkaConsumerScenario.receivedMessages).all {
             hasSize(KafkaConsumerScenario.minions)
             containsOnly(*generatedLeftRecordsKeys.map { "Left #$it - Right #$it" }.toTypedArray())
+        }
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should run the consumer scenario with defaults`() {
+        // Create the topic for defaults test
+        adminClient.createTopics(listOf(NewTopic(KafkaConsumerScenario.topicDefaults, 1, 1))).all()
+            .whenComplete { _, _ -> }
+        // Wait for the topic to be available
+        while (!adminClient.listTopics().names().get().contains(KafkaConsumerScenario.topicDefaults)) {
+            Thread.sleep(500)
+        }
+
+        val generatedRecordsKeys = (1..KafkaConsumerScenario.minions)
+        generatedRecordsKeys.forEach {
+            kafkaProducer.send(ProducerRecord(KafkaConsumerScenario.topicDefaults, it, "Defaults #$it"))
+        }
+
+        KafkaConsumerScenario.bootstrap = bootstrap
+        KafkaConsumerScenario.receivedMessages.clear()
+        val exitCode = QalipsisTestRunner.withScenarios("consumer-kafka-with-defaults").execute()
+
+        Assertions.assertEquals(0, exitCode)
+        assertThat(KafkaConsumerScenario.receivedMessages).all {
+            hasSize(KafkaConsumerScenario.minions)
+            containsOnly(*generatedRecordsKeys.map { "$it - Defaults #$it" }.toTypedArray())
         }
     }
 

@@ -31,8 +31,11 @@ import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.aerisconsulting.catadioptre.getProperty
 import io.qalipsis.api.context.StepContext
+import io.qalipsis.api.scenario.StepSpecificationRegistry
+import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
+import io.qalipsis.plugins.kafka.configuration.defaults
 import io.qalipsis.plugins.kafka.kafka
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
@@ -136,6 +139,135 @@ internal class KafkaProducerStepSpecificationImplTest {
             .getProperty<suspend (ctx: StepContext<*, *>, input: Int) -> List<KafkaProducerRecord<*, *>>>("recordsFactory")
 
         assertThat(recordsFactory(relaxedMockk(), relaxedMockk())).hasSize(2)
+    }
+
+    @Test
+    fun `should apply defaults from KafkaDefaultsExtension`() = testDispatcherProvider.runTest {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            kafka().defaults {
+                bootstrap("default-host:9092", "default-host:9093")
+                properties("security.protocol" to "SASL_SSL")
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        val keySerializer = relaxedMockk<Serializer<Any>>()
+        val valueSerializer = relaxedMockk<Serializer<Any>>()
+        previousStep.kafka().produce(keySerializer, valueSerializer) {
+            name = "producer-step"
+            clientName("test")
+            records { _, _ -> listOf(KafkaProducerRecord(topic = "records", value = "1")) }
+        }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(KafkaProducerStepSpecificationImpl::class).all {
+            prop(KafkaProducerStepSpecificationImpl<*, *, *>::configuration).all {
+                prop(KafkaProducerConfiguration<*, *, *>::bootstrap).isEqualTo("default-host:9092,default-host:9093")
+                prop(KafkaProducerConfiguration<*, *, *>::properties).isEqualTo(
+                    mutableMapOf<String, Any>("security.protocol" to "SASL_SSL")
+                )
+            }
+            transform { it.monitoringConfig }.all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    fun `should allow overriding defaults from KafkaDefaultsExtension`() = testDispatcherProvider.runTest {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            kafka().defaults {
+                bootstrap("default-host:9092")
+                properties("security.protocol" to "SASL_SSL", "key-1" to "value-1")
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        val keySerializer = relaxedMockk<Serializer<Any>>()
+        val valueSerializer = relaxedMockk<Serializer<Any>>()
+        previousStep.kafka().produce(keySerializer, valueSerializer) {
+            name = "producer-step"
+            bootstrap("override-host:9092")
+            clientName("test")
+            monitoring {
+                events = false
+                // meters not set -> inherits true from defaults
+            }
+            records { _, _ -> listOf(KafkaProducerRecord(topic = "records", value = "1")) }
+        }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(KafkaProducerStepSpecificationImpl::class).all {
+            prop(KafkaProducerStepSpecificationImpl<*, *, *>::configuration).all {
+                prop(KafkaProducerConfiguration<*, *, *>::bootstrap).isEqualTo("override-host:9092")
+                prop(KafkaProducerConfiguration<*, *, *>::properties).isEqualTo(
+                    mutableMapOf<String, Any>("security.protocol" to "SASL_SSL", "key-1" to "value-1")
+                )
+            }
+            transform { it.monitoringConfig }.all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    fun `should allow successive overwriting of defaults`() = testDispatcherProvider.runTest {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            kafka().defaults {
+                bootstrap("default-host:9092")
+                properties("security.protocol" to "SASL_SSL")
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        }) as StepSpecificationRegistry
+
+        val previousStep = DummyStepSpecification()
+        previousStep.scenario = scenario
+        val keySerializer = relaxedMockk<Serializer<Any>>()
+        val valueSerializer = relaxedMockk<Serializer<Any>>()
+        previousStep
+            .kafka().defaults {
+                bootstrap("step-default-host:9092")
+                properties("key-2" to "value-2")
+            }
+            .kafka().produce(keySerializer, valueSerializer) {
+                name = "producer-step"
+                bootstrap("override-host:9092")
+                clientName("test")
+                monitoring {
+                    events = false
+                    // meters not set -> inherits true from scenario-level defaults
+                }
+                records { _, _ -> listOf(KafkaProducerRecord(topic = "records", value = "1")) }
+            }
+
+        assertThat(previousStep.nextSteps[0]).isInstanceOf(KafkaProducerStepSpecificationImpl::class).all {
+            prop(KafkaProducerStepSpecificationImpl<*, *, *>::configuration).all {
+                prop(KafkaProducerConfiguration<*, *, *>::bootstrap).isEqualTo("override-host:9092")
+                prop(KafkaProducerConfiguration<*, *, *>::properties).isEqualTo(
+                    mutableMapOf<String, Any>(
+                        "security.protocol" to "SASL_SSL",
+                        "key-2" to "value-2"
+                    )
+                )
+            }
+            transform { it.monitoringConfig }.all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
     }
 
 }

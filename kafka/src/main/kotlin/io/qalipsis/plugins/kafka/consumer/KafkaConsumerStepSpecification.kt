@@ -32,14 +32,15 @@ import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.UnicastSpecification
 import io.qalipsis.plugins.kafka.KafkaScenarioSpecification
 import io.qalipsis.plugins.kafka.KafkaStepSpecification
-import org.apache.kafka.clients.consumer.OffsetResetStrategy
-import org.apache.kafka.common.serialization.Deserializer
-import org.apache.kafka.common.serialization.Serdes
+import io.qalipsis.plugins.kafka.configuration.findKafkaDefaults
 import java.time.Duration
 import java.util.regex.Pattern
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.Positive
 import kotlin.reflect.KClass
+import org.apache.kafka.clients.consumer.OffsetResetStrategy
+import org.apache.kafka.common.serialization.Deserializer
+import org.apache.kafka.common.serialization.Serdes
 
 interface KafkaConsumerConfigurableSpecification<K : Any, V : Any> : UnicastSpecification,
     ConfigurableStepSpecification<Unit, List<KafkaConsumerResult<K?, V?>>, KafkaDeserializerSpecification<K, V>> {
@@ -346,6 +347,7 @@ fun KafkaScenarioSpecification.consume(
 ): KafkaDeserializerSpecification<ByteArray, ByteArray> {
     val defaultDeserializer = Serdes.ByteArray().deserializer()
     val step = KafkaConsumerStepSpecification(defaultDeserializer, defaultDeserializer)
+    findKafkaDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
     (this as StepSpecificationRegistry).add(step)
     return step

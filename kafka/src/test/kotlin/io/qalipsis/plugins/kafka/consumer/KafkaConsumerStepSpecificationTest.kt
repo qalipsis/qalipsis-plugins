@@ -36,15 +36,16 @@ import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.api.steps.StepMonitoringConfiguration
+import io.qalipsis.plugins.kafka.configuration.defaults
 import io.qalipsis.plugins.kafka.kafka
+import java.time.Duration
+import java.util.regex.Pattern
+import kotlin.reflect.jvm.jvmName
 import org.apache.kafka.clients.consumer.OffsetResetStrategy
 import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.common.serialization.Deserializer
 import org.junit.jupiter.api.Test
-import java.time.Duration
-import java.util.regex.Pattern
-import kotlin.reflect.jvm.jvmName
 
 /**
  *
@@ -316,6 +317,82 @@ internal class KafkaConsumerStepSpecificationTest {
                     ValueDeserializer::class
                 )
                 prop(KafkaConsumerConfiguration<*, *>::flattenOutput).isFalse()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should apply defaults from KafkaDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            kafka().defaults {
+                bootstrap("default-host:9092", "default-host:9093")
+                properties("security.protocol" to "SASL_SSL")
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        })
+
+        scenario.start().kafka().consume {
+            name = "my-step"
+            topics("topic-1")
+            groupId("my-group")
+        }
+
+        assertThat((scenario as StepSpecificationRegistry).rootSteps[0]).isInstanceOf(
+            KafkaConsumerStepSpecification::class
+        ).all {
+            prop(KafkaConsumerStepSpecification<*, *>::configuration).all {
+                prop(KafkaConsumerConfiguration<*, *>::bootstrap).isEqualTo("default-host:9092,default-host:9093")
+                prop(KafkaConsumerConfiguration<*, *>::properties).all {
+                    key("security.protocol").isEqualTo("SASL_SSL")
+                }
+            }
+            transform { it.monitoringConfig }.all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow overriding defaults from KafkaDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            kafka().defaults {
+                bootstrap("default-host:9092")
+                properties("security.protocol" to "SASL_SSL", "key-1" to "value-1")
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        })
+
+        scenario.start().kafka().consume {
+            name = "my-step"
+            topics("topic-1")
+            groupId("my-group")
+            bootstrap("override-host:9092")
+            monitoring {
+                events = false
+                // meters not set -> inherits true from defaults
+            }
+        }
+
+        assertThat((scenario as StepSpecificationRegistry).rootSteps[0]).isInstanceOf(
+            KafkaConsumerStepSpecification::class
+        ).all {
+            prop(KafkaConsumerStepSpecification<*, *>::configuration).all {
+                prop(KafkaConsumerConfiguration<*, *>::bootstrap).isEqualTo("override-host:9092")
+                prop(KafkaConsumerConfiguration<*, *>::properties).all {
+                    key("security.protocol").isEqualTo("SASL_SSL")
+                    key("key-1").isEqualTo("value-1")
+                }
+            }
+            transform { it.monitoringConfig }.all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
     }

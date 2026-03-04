@@ -24,9 +24,11 @@ import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.AbstractStepSpecification
 import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
+import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.kafka.KafkaStepSpecification
-import org.apache.kafka.common.serialization.Serializer
+import io.qalipsis.plugins.kafka.configuration.findKafkaDefaults
 import javax.validation.constraints.NotBlank
+import org.apache.kafka.common.serialization.Serializer
 
 /**
  * Specification for a [KafkaProducerStep] to produce data onto a Kafka topic.
@@ -159,6 +161,7 @@ fun <I, K, V> KafkaStepSpecification<*, I, *>.produce(
     configurationBlock: KafkaProducerStepSpecification<I, K, V>.() -> Unit
 ): KafkaProducerStepSpecification<I, K, V> {
     val step = KafkaProducerStepSpecificationImpl<I, K, V>(keySerializer, valueSerializer)
+    findKafkaDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
     this.add(step)
     return step
