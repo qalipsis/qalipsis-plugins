@@ -26,6 +26,7 @@ import io.qalipsis.api.steps.ConfigurableStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.jakarta.JakartaStepSpecification
+import io.qalipsis.plugins.jakarta.configuration.findJakartaDefaults
 import jakarta.jms.Connection
 import jakarta.jms.Session
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -122,6 +123,7 @@ fun <I> JakartaStepSpecification<*, I, *>.produce(
     configurationBlock: JakartaProducerStepSpecification<I>.() -> Unit
 ): JakartaProducerStepSpecification<I> {
     val step = JakartaProducerStepSpecificationImpl<I>()
+    findJakartaDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
 
     this.add(step)

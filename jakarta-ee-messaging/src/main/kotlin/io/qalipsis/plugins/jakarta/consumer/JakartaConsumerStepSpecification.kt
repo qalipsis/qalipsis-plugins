@@ -31,6 +31,7 @@ import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.UnicastSpecification
 import io.qalipsis.plugins.jakarta.JakartaDeserializer
 import io.qalipsis.plugins.jakarta.JakartaScenarioSpecification
+import io.qalipsis.plugins.jakarta.configuration.findJakartaDefaults
 import io.qalipsis.plugins.jakarta.deserializer.JakartaStringDeserializer
 import jakarta.jms.Connection
 import jakarta.jms.QueueConnection
@@ -107,7 +108,7 @@ internal class JakartaConsumerStepSpecification<O : Any> internal constructor(
 
     internal val configuration = JakartaConsumerConfiguration()
 
-    internal val monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration()
 
     override val singletonConfiguration: SingletonConfiguration = SingletonConfiguration(SingletonType.UNICAST)
 
@@ -202,6 +203,7 @@ fun JakartaScenarioSpecification.consume(
     configurationBlock: JakartaConsumerSpecification<String>.() -> Unit
 ): JakartaConsumerSpecification<String> {
     val step = JakartaConsumerStepSpecification(JakartaStringDeserializer())
+    findJakartaDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
     (this as StepSpecificationRegistry).add(step)
     return step

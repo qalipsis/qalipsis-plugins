@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.jakarta
 
+import io.qalipsis.api.scenario.ConfigurableScenarioSpecification
 import io.qalipsis.api.scenario.ScenarioSpecification
 import io.qalipsis.api.steps.AbstractPluginStepWrapper
 import io.qalipsis.api.steps.AbstractScenarioSpecificationWrapper
@@ -50,7 +51,16 @@ fun <INPUT, OUTPUT> StepSpecification<INPUT, OUTPUT, *>.jakarta(): JakartaStepSp
  *
  * @author Alexander Sosnovsky
  */
-class JakartaScenarioSpecification(scenario: ScenarioSpecification) :
+class JakartaScenarioSpecification(internal val scenario: ScenarioSpecification) :
     AbstractScenarioSpecificationWrapper(scenario)
 
 fun ScenarioSpecification.jakarta() = JakartaScenarioSpecification(this)
+
+/**
+ * Scenario wrapper to enter the namespace for the Jakarta defaults configuration.
+ *
+ * @author Eric Jesse
+ */
+class JakartaConfigurableScenarioSpecification(internal val scenario: ConfigurableScenarioSpecification)
+
+fun ConfigurableScenarioSpecification.jakarta() = JakartaConfigurableScenarioSpecification(this)
