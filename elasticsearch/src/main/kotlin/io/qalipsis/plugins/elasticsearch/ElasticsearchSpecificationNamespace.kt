@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.elasticsearch
 
+import io.qalipsis.api.scenario.ConfigurableScenarioSpecification
 import io.qalipsis.api.scenario.ScenarioSpecification
 import io.qalipsis.api.steps.AbstractPluginStepWrapper
 import io.qalipsis.api.steps.AbstractScenarioSpecificationWrapper
@@ -50,7 +51,16 @@ fun <INPUT, OUTPUT> StepSpecification<INPUT, OUTPUT, *>.elasticsearch(): Elastic
  *
  * @author Eric Jessé
  */
-class ElasticsearchScenarioSpecification(scenario: ScenarioSpecification) :
+class ElasticsearchScenarioSpecification(internal val scenario: ScenarioSpecification) :
     AbstractScenarioSpecificationWrapper(scenario)
 
 fun ScenarioSpecification.elasticsearch() = ElasticsearchScenarioSpecification(this)
+
+/**
+ * Wrapper to access the Elasticsearch namespace from a [ConfigurableScenarioSpecification].
+ *
+ * @author Eric Jessé
+ */
+class ElasticsearchConfigurableScenarioSpecification(internal val scenario: ConfigurableScenarioSpecification)
+
+fun ConfigurableScenarioSpecification.elasticsearch() = ElasticsearchConfigurableScenarioSpecification(this)

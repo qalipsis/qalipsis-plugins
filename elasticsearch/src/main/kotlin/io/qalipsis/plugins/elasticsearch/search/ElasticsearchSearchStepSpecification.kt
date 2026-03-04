@@ -29,6 +29,7 @@ import io.qalipsis.plugins.elasticsearch.AbstractElasticsearchQueryStepSpecifica
 import io.qalipsis.plugins.elasticsearch.Deserializable
 import io.qalipsis.plugins.elasticsearch.ElasticsearchDocument
 import io.qalipsis.plugins.elasticsearch.ElasticsearchStepSpecification
+import io.qalipsis.plugins.elasticsearch.configuration.findElasticsearchDefaults
 import io.qalipsis.plugins.elasticsearch.query.SearchResult
 import org.elasticsearch.client.RestClient
 import org.jetbrains.annotations.NotNull
@@ -133,6 +134,7 @@ fun <I> ElasticsearchStepSpecification<*, I, *>.search(
     configurationBlock: ElasticsearchSearchStepSpecification<I>.() -> Unit
 ): Deserializable<I, Map<String, Any?>> {
     val step = ElasticsearchSearchStepSpecificationImpl<I>()
+    findElasticsearchDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
     this.add(step)
     return step

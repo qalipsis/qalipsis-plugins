@@ -27,6 +27,7 @@ import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.elasticsearch.Document
 import io.qalipsis.plugins.elasticsearch.ElasticsearchStepSpecification
+import io.qalipsis.plugins.elasticsearch.configuration.findElasticsearchDefaults
 import org.apache.http.HttpHost
 import org.elasticsearch.client.RestClient
 
@@ -109,6 +110,7 @@ fun <I> ElasticsearchStepSpecification<*, I, *>.save(
     configurationBlock: ElasticsearchSaveStepSpecification<I>.() -> Unit
 ): ElasticsearchSaveStepSpecification<I> {
     val step = ElasticsearchSaveStepSpecificationImpl<I>()
+    findElasticsearchDefaults(this as StepSpecification<*, *, *>)?.applyTo(step)
     step.configurationBlock()
 
     this.add(step)

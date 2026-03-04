@@ -34,13 +34,14 @@ import io.qalipsis.api.steps.UnicastSpecification
 import io.qalipsis.plugins.elasticsearch.ElasticsearchDocument
 import io.qalipsis.plugins.elasticsearch.ElasticsearchScenarioSpecification
 import io.qalipsis.plugins.elasticsearch.ElasticsearchStepSpecification
-import org.apache.http.HttpHost
-import org.elasticsearch.client.RestClient
-import org.jetbrains.annotations.NotNull
+import io.qalipsis.plugins.elasticsearch.configuration.findElasticsearchDefaults
 import java.time.Duration
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotEmpty
 import kotlin.reflect.KClass
+import org.apache.http.HttpHost
+import org.elasticsearch.client.RestClient
+import org.jetbrains.annotations.NotNull
 
 /**
  * Specification for an [io.qalipsis.api.steps.datasource.IterativeDatasourceStep] to poll data from a Elasticsearch.
@@ -218,6 +219,7 @@ fun ElasticsearchScenarioSpecification.poll(
     configurationBlock: ElasticsearchPollStepSpecification.() -> Unit
 ): PollDeserializable<Map<String, Any?>> {
     val step = ElasticsearchPollStepSpecificationImpl()
+    findElasticsearchDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
 
     (this as StepSpecificationRegistry).add(step)
