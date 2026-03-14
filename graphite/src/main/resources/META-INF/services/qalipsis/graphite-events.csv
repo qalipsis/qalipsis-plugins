@@ -1,3 +1,0 @@
-graphite.save.saving-messages;Int
-graphite.save.successes;Int
-graphite.save.time-to-response;Duration
