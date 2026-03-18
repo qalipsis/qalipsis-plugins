@@ -28,7 +28,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -50,13 +50,13 @@ import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import kotlin.coroutines.CoroutineContext
+import kotlin.reflect.KClass
 import org.elasticsearch.client.RestClient
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import kotlin.coroutines.CoroutineContext
-import kotlin.reflect.KClass
 
 /**
  *
@@ -146,7 +146,7 @@ internal class ElasticsearchMultiGetStepSpecificationConverterTest :
                 prop("retryPolicy").isEqualTo(retryPolicy)
                 prop("restClientBuilder").isEqualTo(clientBuilder)
                 prop("queryParamsFactory").isEqualTo(paramsFactory)
-                prop("queryFactory").isSameAs(queryFactory)
+                prop("queryFactory").isSameInstanceAs(queryFactory)
             }
         }
     }
@@ -181,7 +181,7 @@ internal class ElasticsearchMultiGetStepSpecificationConverterTest :
                 prop("retryPolicy").isNull()
                 prop("restClientBuilder").isEqualTo(clientBuilder)
                 prop("queryParamsFactory").isEqualTo(paramsFactory)
-                prop("queryFactory").isSameAs(queryFactory)
+                prop("queryFactory").isSameInstanceAs(queryFactory)
             }
         }
     }
@@ -219,9 +219,9 @@ internal class ElasticsearchMultiGetStepSpecificationConverterTest :
         // then
         assertThat(queryClient).all {
             prop("endpoint").isEqualTo("_mget")
-            prop("jsonMapper").isSameAs(jsonMapper)
-            prop("documentsExtractor").isSameAs(documentExtractor)
-            prop("converter").isSameAs(documentConverter)
+            prop("jsonMapper").isSameInstanceAs(jsonMapper)
+            prop("documentsExtractor").isSameInstanceAs(documentExtractor)
+            prop("converter").isSameInstanceAs(documentConverter)
         }
         confirmVerified(meterRegistry)
     }
@@ -245,9 +245,9 @@ internal class ElasticsearchMultiGetStepSpecificationConverterTest :
         // then
         assertThat(queryClient).all {
             prop("endpoint").isEqualTo("_mget")
-            prop("jsonMapper").isSameAs(jsonMapper)
-            prop("documentsExtractor").isSameAs(documentExtractor)
-            prop("converter").isSameAs(documentConverter)
+            prop("jsonMapper").isSameInstanceAs(jsonMapper)
+            prop("documentsExtractor").isSameInstanceAs(documentExtractor)
+            prop("converter").isSameInstanceAs(documentConverter)
         }
         confirmVerified(meterRegistry)
     }
@@ -326,7 +326,7 @@ internal class ElasticsearchMultiGetStepSpecificationConverterTest :
         assertThat(queryNodeBuilder(stepContext, 256)).isNotNull().transform { it.toString() }
             .isEqualTo(
                 """{"docs":[{"_index":"index-1","_id":"id-1","_source":true},{"_index":"index-2","_id":"id-2","_source":true}]}""")
-        assertThat(contextSlot.captured).isSameAs(stepContext)
+        assertThat(contextSlot.captured).isSameInstanceAs(stepContext)
         assertThat(inputSlot.captured).isEqualTo(256)
     }
 
@@ -365,7 +365,7 @@ internal class ElasticsearchMultiGetStepSpecificationConverterTest :
                 prop("retryPolicy").isEqualTo(retryPolicy)
                 prop("restClientBuilder").isEqualTo(clientBuilder)
                 prop("queryParamsFactory").isEqualTo(paramsFactory)
-                prop("queryFactory").isSameAs(queryFactory)
+                prop("queryFactory").isSameInstanceAs(queryFactory)
             }
         }
     }
@@ -405,7 +405,7 @@ internal class ElasticsearchMultiGetStepSpecificationConverterTest :
                 prop("retryPolicy").isEqualTo(retryPolicy)
                 prop("restClientBuilder").isEqualTo(clientBuilder)
                 prop("queryParamsFactory").isEqualTo(paramsFactory)
-                prop("queryFactory").isSameAs(queryFactory)
+                prop("queryFactory").isSameInstanceAs(queryFactory)
             }
         }
     }

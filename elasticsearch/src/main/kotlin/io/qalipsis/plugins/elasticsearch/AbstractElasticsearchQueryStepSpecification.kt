@@ -25,9 +25,9 @@ import io.qalipsis.api.steps.AbstractStepSpecification
 import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.elasticsearch.query.SearchResult
+import kotlin.reflect.KClass
 import org.apache.http.HttpHost
 import org.elasticsearch.client.RestClient
-import kotlin.reflect.KClass
 
 /**
  * Parent
@@ -51,7 +51,7 @@ internal abstract class AbstractElasticsearchQueryStepSpecification<I> :
 
     internal var targetClass: KClass<*> = Map::class
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     open fun client(client: () -> RestClient) {
         this.client = client

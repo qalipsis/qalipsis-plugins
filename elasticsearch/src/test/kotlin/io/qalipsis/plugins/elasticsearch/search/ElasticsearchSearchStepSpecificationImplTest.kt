@@ -21,7 +21,16 @@ package io.qalipsis.plugins.elasticsearch.search
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNotNull
+import assertk.assertions.isSameInstanceAs
+import assertk.assertions.isTrue
+import assertk.assertions.prop
 import com.fasterxml.jackson.databind.json.JsonMapper
 import io.aerisconsulting.catadioptre.getProperty
 import io.mockk.confirmVerified
@@ -30,10 +39,10 @@ import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.plugins.elasticsearch.elasticsearch
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
+import kotlin.random.Random
 import org.elasticsearch.client.RestClient
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import kotlin.random.Random
 
 /**
  * @author Eric Jessé
@@ -108,11 +117,11 @@ internal class ElasticsearchSearchStepSpecificationImplTest {
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(ElasticsearchSearchStepSpecificationImpl::class).all {
             prop(ElasticsearchSearchStepSpecificationImpl<*>::name).isEqualTo("my-step")
-            prop(ElasticsearchSearchStepSpecificationImpl<*>::client).isSameAs(clientBuilder)
-            prop(ElasticsearchSearchStepSpecificationImpl<*>::mapper).isSameAs(mapperConfigurer)
-            prop(ElasticsearchSearchStepSpecificationImpl<*>::queryFactory).isSameAs(queryFactory)
-            prop(ElasticsearchSearchStepSpecificationImpl<*>::paramsFactory).isSameAs(paramsFactory)
-            prop(ElasticsearchSearchStepSpecificationImpl<*>::indicesFactory).isSameAs(indicesFactory)
+            prop(ElasticsearchSearchStepSpecificationImpl<*>::client).isSameInstanceAs(clientBuilder)
+            prop(ElasticsearchSearchStepSpecificationImpl<*>::mapper).isSameInstanceAs(mapperConfigurer)
+            prop(ElasticsearchSearchStepSpecificationImpl<*>::queryFactory).isSameInstanceAs(queryFactory)
+            prop(ElasticsearchSearchStepSpecificationImpl<*>::paramsFactory).isSameInstanceAs(paramsFactory)
+            prop(ElasticsearchSearchStepSpecificationImpl<*>::indicesFactory).isSameInstanceAs(indicesFactory)
             prop(ElasticsearchSearchStepSpecificationImpl<*>::convertFullDocument).isFalse()
             prop(ElasticsearchSearchStepSpecificationImpl<*>::targetClass).isEqualTo(Map::class)
             prop(ElasticsearchSearchStepSpecificationImpl<*>::fetchAll).isTrue()
@@ -142,11 +151,11 @@ internal class ElasticsearchSearchStepSpecificationImplTest {
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(ElasticsearchSearchStepSpecificationImpl::class).all {
             prop(ElasticsearchSearchStepSpecificationImpl<*>::name).isEqualTo("my-step")
-            prop(ElasticsearchSearchStepSpecificationImpl<*>::client).isSameAs(clientBuilder)
-            prop(ElasticsearchSearchStepSpecificationImpl<*>::mapper).isSameAs(mapperConfigurer)
-            prop(ElasticsearchSearchStepSpecificationImpl<*>::queryFactory).isSameAs(queryFactory)
-            prop(ElasticsearchSearchStepSpecificationImpl<*>::paramsFactory).isSameAs(paramsFactory)
-            prop(ElasticsearchSearchStepSpecificationImpl<*>::indicesFactory).isSameAs(indicesFactory)
+            prop(ElasticsearchSearchStepSpecificationImpl<*>::client).isSameInstanceAs(clientBuilder)
+            prop(ElasticsearchSearchStepSpecificationImpl<*>::mapper).isSameInstanceAs(mapperConfigurer)
+            prop(ElasticsearchSearchStepSpecificationImpl<*>::queryFactory).isSameInstanceAs(queryFactory)
+            prop(ElasticsearchSearchStepSpecificationImpl<*>::paramsFactory).isSameInstanceAs(paramsFactory)
+            prop(ElasticsearchSearchStepSpecificationImpl<*>::indicesFactory).isSameInstanceAs(indicesFactory)
             prop(ElasticsearchSearchStepSpecificationImpl<*>::convertFullDocument).isFalse()
             prop(ElasticsearchSearchStepSpecificationImpl<*>::targetClass).isEqualTo(Map::class)
             prop(ElasticsearchSearchStepSpecificationImpl<*>::fetchAll).isTrue()

@@ -71,8 +71,8 @@ internal class ElasticsearchSaveStepSpecificationImplTest {
             prop(ElasticsearchSaveStepSpecificationImpl<*>::client).isNotNull()
             prop(ElasticsearchSaveStepSpecificationImpl<*>::documentsFactory).isEqualTo(documentsFactory)
             prop(ElasticsearchSaveStepSpecificationImpl<*>::monitoringConfig).isNotNull().all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
 

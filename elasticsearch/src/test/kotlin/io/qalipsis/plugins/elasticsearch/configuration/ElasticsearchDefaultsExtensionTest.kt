@@ -21,7 +21,7 @@ package io.qalipsis.plugins.elasticsearch.configuration
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.qalipsis.api.steps.StepMonitoringConfiguration
@@ -53,7 +53,7 @@ internal class ElasticsearchDefaultsExtensionTest {
         defaults.applyTo(spec)
 
         assertThat(spec).all {
-            prop(ElasticsearchPollStepSpecificationImpl::client).isSameAs(clientFactory)
+            prop(ElasticsearchPollStepSpecificationImpl::client).isSameInstanceAs(clientFactory)
             prop(ElasticsearchPollStepSpecificationImpl::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
                 prop(StepMonitoringConfiguration::meters).isTrue()
@@ -75,7 +75,7 @@ internal class ElasticsearchDefaultsExtensionTest {
         defaults.applyTo(spec)
 
         assertThat(spec).all {
-            prop(ElasticsearchSaveStepSpecificationImpl<*>::client).isSameAs(clientFactory)
+            prop(ElasticsearchSaveStepSpecificationImpl<*>::client).isSameInstanceAs(clientFactory)
             prop(ElasticsearchSaveStepSpecificationImpl<*>::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
                 prop(StepMonitoringConfiguration::meters).isTrue()
@@ -97,7 +97,7 @@ internal class ElasticsearchDefaultsExtensionTest {
         defaults.applyTo(spec)
 
         assertThat(spec).all {
-            prop(AbstractElasticsearchQueryStepSpecification<*>::client).isSameAs(clientFactory)
+            prop(AbstractElasticsearchQueryStepSpecification<*>::client).isSameInstanceAs(clientFactory)
             prop(AbstractElasticsearchQueryStepSpecification<*>::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
                 prop(StepMonitoringConfiguration::meters).isTrue()
@@ -119,7 +119,7 @@ internal class ElasticsearchDefaultsExtensionTest {
         defaults.applyTo(spec)
 
         assertThat(spec).all {
-            prop(AbstractElasticsearchQueryStepSpecification<*>::client).isSameAs(clientFactory)
+            prop(AbstractElasticsearchQueryStepSpecification<*>::client).isSameInstanceAs(clientFactory)
             prop(AbstractElasticsearchQueryStepSpecification<*>::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
                 prop(StepMonitoringConfiguration::meters).isTrue()
@@ -139,7 +139,7 @@ internal class ElasticsearchDefaultsExtensionTest {
         defaults.applyTo(spec)
 
         assertThat(spec).all {
-            prop(ElasticsearchPollStepSpecificationImpl::client).isSameAs(originalClient)
+            prop(ElasticsearchPollStepSpecificationImpl::client).isSameInstanceAs(originalClient)
             prop(ElasticsearchPollStepSpecificationImpl::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
             }

@@ -26,7 +26,7 @@ import assertk.assertions.index
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import com.fasterxml.jackson.databind.node.ArrayNode
@@ -50,13 +50,13 @@ import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.coVerifyOnce
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.StepTestHelper
+import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import org.elasticsearch.client.RestClient
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.time.Instant
 
 /**
  *
@@ -139,7 +139,7 @@ internal class ElasticsearchDocumentsQueryStepTest {
 
         // then
         assertThat(step).all {
-            prop("restClient").isSameAs(restClient)
+            prop("restClient").isSameInstanceAs(restClient)
         }
     }
 
@@ -234,7 +234,7 @@ internal class ElasticsearchDocumentsQueryStepTest {
         assertThat(input).isEqualTo(123)
         assertThat(searchResult).all {
             prop(SearchResult<String>::totalResults).isEqualTo(100)
-            prop(SearchResult<String>::results).isSameAs(results)
+            prop(SearchResult<String>::results).isSameInstanceAs(results)
             prop(SearchResult<String>::isFailure).isFalse()
             prop(SearchResult<String>::isSuccess).isTrue()
         }
@@ -334,7 +334,7 @@ internal class ElasticsearchDocumentsQueryStepTest {
             prop(SearchResult<*>::results).all {
                 hasSize(10)
                 (0 until 10).forEach { index ->
-                    index(index).isSameAs(results[index])
+                    index(index).isSameInstanceAs(results[index])
                 }
             }
             prop(SearchResult<*>::isFailure).isFalse()
@@ -531,7 +531,7 @@ internal class ElasticsearchDocumentsQueryStepTest {
             prop(SearchResult<*>::results).all {
                 hasSize(10)
                 (0 until 10).forEach { index ->
-                    index(index).isSameAs(results[index])
+                    index(index).isSameInstanceAs(results[index])
                 }
             }
             prop(SearchResult<*>::isFailure).isFalse()

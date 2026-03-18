@@ -21,7 +21,15 @@ package io.qalipsis.plugins.elasticsearch.mget
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNotNull
+import assertk.assertions.isSameInstanceAs
+import assertk.assertions.isTrue
+import assertk.assertions.prop
 import com.fasterxml.jackson.databind.json.JsonMapper
 import io.aerisconsulting.catadioptre.getProperty
 import io.mockk.confirmVerified
@@ -30,11 +38,10 @@ import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.plugins.elasticsearch.elasticsearch
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
+import kotlin.random.Random
 import org.elasticsearch.client.RestClient
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import kotlin.random.Random
 
 /**
  *
@@ -91,10 +98,10 @@ internal class ElasticsearchMultiGetStepSpecificationImplTest {
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(ElasticsearchMultiGetStepSpecificationImpl::class).all {
             prop(ElasticsearchMultiGetStepSpecificationImpl<*>::name).isEqualTo("my-step")
-            prop(ElasticsearchMultiGetStepSpecificationImpl<*>::client).isSameAs(clientFactory)
-            prop(ElasticsearchMultiGetStepSpecificationImpl<*>::mapper).isSameAs(mapperConfigurer)
-            prop(ElasticsearchMultiGetStepSpecificationImpl<*>::queryFactory).isSameAs(queryFactory)
-            prop(ElasticsearchMultiGetStepSpecificationImpl<*>::paramsFactory).isSameAs(paramsFactory)
+            prop(ElasticsearchMultiGetStepSpecificationImpl<*>::client).isSameInstanceAs(clientFactory)
+            prop(ElasticsearchMultiGetStepSpecificationImpl<*>::mapper).isSameInstanceAs(mapperConfigurer)
+            prop(ElasticsearchMultiGetStepSpecificationImpl<*>::queryFactory).isSameInstanceAs(queryFactory)
+            prop(ElasticsearchMultiGetStepSpecificationImpl<*>::paramsFactory).isSameInstanceAs(paramsFactory)
             prop(ElasticsearchMultiGetStepSpecificationImpl<*>::convertFullDocument).isFalse()
             prop(ElasticsearchMultiGetStepSpecificationImpl<*>::targetClass).isEqualTo(Map::class)
         }

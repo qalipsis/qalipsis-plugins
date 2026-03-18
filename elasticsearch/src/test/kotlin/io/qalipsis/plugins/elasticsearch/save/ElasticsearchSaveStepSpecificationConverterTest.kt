@@ -25,7 +25,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.spyk
@@ -105,9 +105,9 @@ internal class ElasticsearchSaveStepSpecificationConverterTest :
         assertThat(creationContext.createdStep!!).all {
             prop("name").isNotNull().isEqualTo("my-step")
             prop("elasticsearchSaveQueryClient").all {
-                prop("clientBuilder").isNotNull().isSameAs(restClientBuilder)
-                prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
-                prop("meterRegistry").isNotNull().isSameAs(meterRegistry)
+                prop("clientBuilder").isNotNull().isSameInstanceAs(restClientBuilder)
+                prop("ioCoroutineScope").isSameInstanceAs(ioCoroutineScope)
+                prop("meterRegistry").isNotNull().isSameInstanceAs(meterRegistry)
                 prop("eventsLogger").isNull()
             }
             prop("retryPolicy").isNotNull()
@@ -142,9 +142,9 @@ internal class ElasticsearchSaveStepSpecificationConverterTest :
         assertThat(creationContext.createdStep!!).all {
             prop("name").isNotNull().isEqualTo("my-step")
             prop("elasticsearchSaveQueryClient").all {
-                prop("clientBuilder").isNotNull().isSameAs(restClientBuilder)
+                prop("clientBuilder").isNotNull().isSameInstanceAs(restClientBuilder)
                 prop("meterRegistry").isNull()
-                prop("eventsLogger").isNotNull().isSameAs(eventsLogger)
+                prop("eventsLogger").isNotNull().isSameInstanceAs(eventsLogger)
             }
             prop("retryPolicy").isNotNull()
             prop("documentsFactory").isEqualTo(documentsFactory)

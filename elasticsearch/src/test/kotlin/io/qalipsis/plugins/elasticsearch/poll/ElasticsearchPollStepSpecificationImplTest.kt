@@ -28,7 +28,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.key
 import assertk.assertions.prop
@@ -41,11 +41,11 @@ import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.plugins.elasticsearch.elasticsearch
 import io.qalipsis.test.mockk.relaxedMockk
+import java.time.Duration
+import kotlin.random.Random
 import org.apache.http.HttpHost
 import org.elasticsearch.client.RestClient
 import org.junit.jupiter.api.Test
-import java.time.Duration
-import kotlin.random.Random
 
 
 /**
@@ -112,9 +112,9 @@ internal class ElasticsearchPollStepSpecificationImplTest {
 
         assertThat(scenario.rootSteps[0]).isInstanceOf(ElasticsearchPollStepSpecificationImpl::class).all {
             prop(ElasticsearchPollStepSpecificationImpl::name).isEqualTo("my-step")
-            prop(ElasticsearchPollStepSpecificationImpl::client).isSameAs(clientBuilder)
-            prop(ElasticsearchPollStepSpecificationImpl::queryFactory).isSameAs(queryBuilder)
-            prop(ElasticsearchPollStepSpecificationImpl::mapper).isSameAs(mapperConfigurer)
+            prop(ElasticsearchPollStepSpecificationImpl::client).isSameInstanceAs(clientBuilder)
+            prop(ElasticsearchPollStepSpecificationImpl::queryFactory).isSameInstanceAs(queryBuilder)
+            prop(ElasticsearchPollStepSpecificationImpl::mapper).isSameInstanceAs(mapperConfigurer)
             prop(ElasticsearchPollStepSpecificationImpl::convertFullDocument).isFalse()
             prop(ElasticsearchPollStepSpecificationImpl::flattenOutput).isFalse()
             prop(ElasticsearchPollStepSpecificationImpl::targetClass).isEqualTo(Map::class)

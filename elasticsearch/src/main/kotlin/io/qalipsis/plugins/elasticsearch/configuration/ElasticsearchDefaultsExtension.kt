@@ -66,7 +66,7 @@ internal class ElasticsearchDefaultsExtensionImpl : ElasticsearchDefaultsExtensi
 
     internal var clientFactory: (() -> RestClient)? = null
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun client(client: () -> RestClient) {
         this.clientFactory = client

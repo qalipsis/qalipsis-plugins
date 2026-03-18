@@ -81,7 +81,7 @@ internal class ElasticsearchSaveStepSpecificationImpl<I> :
 
     internal var keepResponse = false
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun client(client: () -> RestClient) {
         this.client = client

@@ -136,7 +136,7 @@ internal class ElasticsearchPollStepSpecificationImpl :
     @field:NotNull
     internal var pollDelay: Duration? = null
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     internal var flattenOutput = false
 

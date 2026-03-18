@@ -28,7 +28,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -50,13 +50,13 @@ import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import kotlin.coroutines.CoroutineContext
+import kotlin.reflect.KClass
 import kotlinx.coroutines.runBlocking
 import org.elasticsearch.client.RestClient
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import kotlin.coroutines.CoroutineContext
-import kotlin.reflect.KClass
 
 @WithMockk
 internal class ElasticsearchSearchStepSpecificationConverterTest :
@@ -143,7 +143,7 @@ internal class ElasticsearchSearchStepSpecificationConverterTest :
                 prop("restClientBuilder").isEqualTo(clientBuilder)
                 prop("indicesFactory").isEqualTo(indicesFactory)
                 prop("queryParamsFactory").isEqualTo(paramsFactory)
-                prop("queryFactory").isSameAs(queryFactory)
+                prop("queryFactory").isSameInstanceAs(queryFactory)
             }
         }
     }
@@ -183,7 +183,7 @@ internal class ElasticsearchSearchStepSpecificationConverterTest :
                 prop("restClientBuilder").isEqualTo(clientBuilder)
                 prop("indicesFactory").isEqualTo(indicesFactory)
                 prop("queryParamsFactory").isEqualTo(paramsFactory)
-                prop("queryFactory").isSameAs(queryFactory)
+                prop("queryFactory").isSameInstanceAs(queryFactory)
             }
         }
     }
@@ -221,9 +221,9 @@ internal class ElasticsearchSearchStepSpecificationConverterTest :
         // then
         assertThat(queryClient).all {
             prop("endpoint").isEqualTo("_search")
-            prop("jsonMapper").isSameAs(jsonMapper)
-            prop("documentsExtractor").isSameAs(documentExtractor)
-            prop("converter").isSameAs(documentConverter)
+            prop("jsonMapper").isSameInstanceAs(jsonMapper)
+            prop("documentsExtractor").isSameInstanceAs(documentExtractor)
+            prop("converter").isSameInstanceAs(documentConverter)
         }
         confirmVerified(meterRegistry)
     }
@@ -247,9 +247,9 @@ internal class ElasticsearchSearchStepSpecificationConverterTest :
         // then
         assertThat(queryClient).all {
             prop("endpoint").isEqualTo("_search")
-            prop("jsonMapper").isSameAs(jsonMapper)
-            prop("documentsExtractor").isSameAs(documentExtractor)
-            prop("converter").isSameAs(documentConverter)
+            prop("jsonMapper").isSameInstanceAs(jsonMapper)
+            prop("documentsExtractor").isSameInstanceAs(documentExtractor)
+            prop("converter").isSameInstanceAs(documentConverter)
         }
         confirmVerified(meterRegistry)
     }
@@ -298,7 +298,7 @@ internal class ElasticsearchSearchStepSpecificationConverterTest :
         every { jsonMapper.readTree("this is the query") } returns objectNode
 
         // Executes the query builder to verify it builds the JSON request as expected.
-        assertThat(runBlocking { queryNodeBuilder(stepContext, 789) }).isSameAs(objectNode)
+        assertThat(runBlocking { queryNodeBuilder(stepContext, 789) }).isSameInstanceAs(objectNode)
     }
 
     @Test
@@ -341,7 +341,7 @@ internal class ElasticsearchSearchStepSpecificationConverterTest :
                 prop("restClientBuilder").isEqualTo(clientBuilder)
                 prop("indicesFactory").isEqualTo(indicesFactory)
                 prop("queryParamsFactory").isEqualTo(paramsFactory)
-                prop("queryFactory").isSameAs(queryFactory)
+                prop("queryFactory").isSameInstanceAs(queryFactory)
             }
         }
     }
@@ -386,7 +386,7 @@ internal class ElasticsearchSearchStepSpecificationConverterTest :
                 prop("restClientBuilder").isEqualTo(clientBuilder)
                 prop("indicesFactory").isEqualTo(indicesFactory)
                 prop("queryParamsFactory").isEqualTo(paramsFactory)
-                prop("queryFactory").isSameAs(queryFactory)
+                prop("queryFactory").isSameInstanceAs(queryFactory)
             }
         }
     }

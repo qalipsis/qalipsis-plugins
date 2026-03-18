@@ -27,7 +27,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.key
 import com.fasterxml.jackson.databind.JsonNode
@@ -51,6 +51,9 @@ import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import java.time.Duration
+import java.util.Random
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -59,9 +62,6 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.time.Duration
-import java.util.Random
-import kotlin.coroutines.CoroutineContext
 
 /**
  *
@@ -149,10 +149,10 @@ internal class ElasticsearchPollStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
                 prop("name").isEqualTo("my-step")
                 prop("reader").isNotNull().isInstanceOf(ElasticsearchIterativeReader::class).all {
-                    prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
-                    prop("ioCoroutineContext").isSameAs(ioCoroutineContext)
-                    prop("restClientBuilder").isSameAs(restClientBuilder)
-                    prop("elasticsearchPollStatement").isSameAs(mockedElasticsearchPollStatement)
+                    prop("ioCoroutineScope").isSameInstanceAs(ioCoroutineScope)
+                    prop("ioCoroutineContext").isSameInstanceAs(ioCoroutineContext)
+                    prop("restClientBuilder").isSameInstanceAs(restClientBuilder)
+                    prop("elasticsearchPollStatement").isSameInstanceAs(mockedElasticsearchPollStatement)
                     typedProp<Map<String, String>>("queryParams").all {
                         hasSize(2)
                         key("param-1").isEqualTo("val-1")
@@ -160,11 +160,11 @@ internal class ElasticsearchPollStepSpecificationConverterTest :
                     }
                     prop("index").isEqualTo("index-1,ind*2")
                     prop("pollDelay").isEqualTo(Duration.ofSeconds(23))
-                    prop("jsonMapper").isSameAs(mockedJsonMapper)
+                    prop("jsonMapper").isSameInstanceAs(mockedJsonMapper)
                     prop("resultsChannelFactory").isNotNull()
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(mockedDocumentsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(mockedDocumentsConverter)
             }
         }
         val channelFactory = creationContext.createdStep!!
@@ -340,12 +340,12 @@ internal class ElasticsearchPollStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
                 prop("name").isEqualTo("my-step")
                 prop("reader").isNotNull().isInstanceOf(ElasticsearchIterativeReader::class).all {
-                    prop("eventsLogger").isSameAs(eventsLogger)
+                    prop("eventsLogger").isSameInstanceAs(eventsLogger)
                     prop("meterRegistry").isNull()
-                    prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
-                    prop("ioCoroutineContext").isSameAs(ioCoroutineContext)
-                    prop("restClientBuilder").isSameAs(restClientBuilder)
-                    prop("elasticsearchPollStatement").isSameAs(mockedElasticsearchPollStatement)
+                    prop("ioCoroutineScope").isSameInstanceAs(ioCoroutineScope)
+                    prop("ioCoroutineContext").isSameInstanceAs(ioCoroutineContext)
+                    prop("restClientBuilder").isSameInstanceAs(restClientBuilder)
+                    prop("elasticsearchPollStatement").isSameInstanceAs(mockedElasticsearchPollStatement)
                     typedProp<Map<String, String>>("queryParams").all {
                         hasSize(2)
                         key("param-1").isEqualTo("val-1")
@@ -353,11 +353,11 @@ internal class ElasticsearchPollStepSpecificationConverterTest :
                     }
                     prop("index").isEqualTo("index-1,ind*2")
                     prop("pollDelay").isEqualTo(Duration.ofSeconds(23))
-                    prop("jsonMapper").isSameAs(mockedJsonMapper)
+                    prop("jsonMapper").isSameInstanceAs(mockedJsonMapper)
                     prop("resultsChannelFactory").isNotNull()
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(mockedDocumentsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(mockedDocumentsConverter)
             }
         }
         val channelFactory = creationContext.createdStep!!
@@ -408,11 +408,11 @@ internal class ElasticsearchPollStepSpecificationConverterTest :
                 prop("name").isEqualTo("my-step")
                 prop("reader").isNotNull().isInstanceOf(ElasticsearchIterativeReader::class).all {
                     prop("eventsLogger").isNull()
-                    prop("meterRegistry").isSameAs(meterRegistry)
-                    prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
-                    prop("ioCoroutineContext").isSameAs(ioCoroutineContext)
-                    prop("restClientBuilder").isSameAs(restClientBuilder)
-                    prop("elasticsearchPollStatement").isSameAs(mockedElasticsearchPollStatement)
+                    prop("meterRegistry").isSameInstanceAs(meterRegistry)
+                    prop("ioCoroutineScope").isSameInstanceAs(ioCoroutineScope)
+                    prop("ioCoroutineContext").isSameInstanceAs(ioCoroutineContext)
+                    prop("restClientBuilder").isSameInstanceAs(restClientBuilder)
+                    prop("elasticsearchPollStatement").isSameInstanceAs(mockedElasticsearchPollStatement)
                     typedProp<Map<String, String>>("queryParams").all {
                         hasSize(2)
                         key("param-1").isEqualTo("val-1")
@@ -420,11 +420,11 @@ internal class ElasticsearchPollStepSpecificationConverterTest :
                     }
                     prop("index").isEqualTo("index-1,ind*2")
                     prop("pollDelay").isEqualTo(Duration.ofSeconds(23))
-                    prop("jsonMapper").isSameAs(mockedJsonMapper)
+                    prop("jsonMapper").isSameInstanceAs(mockedJsonMapper)
                     prop("resultsChannelFactory").isNotNull()
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(mockedDocumentsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(mockedDocumentsConverter)
             }
         }
         val channelFactory = creationContext.createdStep!!
