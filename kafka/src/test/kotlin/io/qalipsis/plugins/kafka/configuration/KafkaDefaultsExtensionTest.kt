@@ -24,7 +24,6 @@ import assertk.assertThat
 import assertk.assertions.containsOnly
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
-import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
@@ -93,8 +92,8 @@ internal class KafkaDefaultsExtensionTest {
                         prop(KafkaDefaultsExtensionImpl::bootstrap).isEqualTo("kafka-host:9092")
                         prop(KafkaDefaultsExtensionImpl::properties).isEmpty()
                         prop(KafkaDefaultsExtensionImpl::monitoringConfig).all {
-                            prop(StepMonitoringConfiguration::events).isFalse()
-                            prop(StepMonitoringConfiguration::meters).isFalse()
+                            prop(StepMonitoringConfiguration::events).isTrue()
+                            prop(StepMonitoringConfiguration::meters).isTrue()
                         }
                     }
             }

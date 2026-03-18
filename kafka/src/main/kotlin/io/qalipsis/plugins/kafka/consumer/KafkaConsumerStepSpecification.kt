@@ -186,7 +186,7 @@ internal class KafkaConsumerStepSpecification<K : Any, V : Any> internal constru
     KafkaStepSpecification<Unit, List<KafkaConsumerResult<K?, V?>>, KafkaDeserializerSpecification<K, V>>,
     SingletonStepSpecification {
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
     internal val configuration =
         KafkaConsumerConfiguration(keyDeserializer = keyDeserializer, valueDeserializer = valueDeserializer)
 

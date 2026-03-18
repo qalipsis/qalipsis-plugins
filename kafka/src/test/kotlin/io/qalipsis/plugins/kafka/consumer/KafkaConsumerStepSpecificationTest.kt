@@ -27,7 +27,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.key
 import assertk.assertions.prop
@@ -99,7 +99,7 @@ internal class KafkaConsumerStepSpecificationTest {
 
             unicast(6, Duration.ofDays(1))
             monitoring {
-                events = true
+                meters = false
             }
         }
 
@@ -154,7 +154,7 @@ internal class KafkaConsumerStepSpecificationTest {
             unicast(6, Duration.ofDays(1))
 
             monitoring {
-                meters = true
+                events = false
             }
         }
 
@@ -222,8 +222,8 @@ internal class KafkaConsumerStepSpecificationTest {
 
         assertThat(scenario.rootSteps[0]).isInstanceOf(KafkaConsumerStepSpecification::class).all {
             prop(KafkaConsumerStepSpecification<*, *>::configuration).all {
-                prop(KafkaConsumerConfiguration<*, *>::keyDeserializer).isSameAs(keyDeserializer)
-                prop(KafkaConsumerConfiguration<*, *>::valueDeserializer).isSameAs(valueDeserializer)
+                prop(KafkaConsumerConfiguration<*, *>::keyDeserializer).isSameInstanceAs(keyDeserializer)
+                prop(KafkaConsumerConfiguration<*, *>::valueDeserializer).isSameInstanceAs(valueDeserializer)
                 prop(KafkaConsumerConfiguration<*, *>::flattenOutput).isTrue()
             }
         }
@@ -277,8 +277,8 @@ internal class KafkaConsumerStepSpecificationTest {
 
         assertThat(scenario.rootSteps[0]).isInstanceOf(KafkaConsumerStepSpecification::class).all {
             prop(KafkaConsumerStepSpecification<*, *>::configuration).all {
-                prop(KafkaConsumerConfiguration<*, *>::keyDeserializer).isSameAs(keyDeserializer)
-                prop(KafkaConsumerConfiguration<*, *>::valueDeserializer).isSameAs(valueDeserializer)
+                prop(KafkaConsumerConfiguration<*, *>::keyDeserializer).isSameInstanceAs(keyDeserializer)
+                prop(KafkaConsumerConfiguration<*, *>::valueDeserializer).isSameInstanceAs(valueDeserializer)
                 prop(KafkaConsumerConfiguration<*, *>::flattenOutput).isFalse()
             }
         }

@@ -76,7 +76,7 @@ internal class KafkaDefaultsExtensionImpl : KafkaDefaultsExtension {
 
     internal var properties: MutableMap<String, Any> = mutableMapOf()
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun bootstrap(vararg hosts: String) {
         bootstrap = hosts.joinToString(",")

@@ -25,7 +25,7 @@ import assertk.assertions.hasSize
 import assertk.assertions.index
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.key
 import assertk.assertions.prop
 import io.mockk.coEvery
@@ -42,6 +42,7 @@ import io.qalipsis.api.meters.Meter
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.CleanMockkRecordedCalls
 import io.qalipsis.test.mockk.relaxedMockk
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.channels.Channel
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.ConsumerRecords
@@ -54,7 +55,6 @@ import org.apache.kafka.common.serialization.Deserializer
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  *
@@ -224,7 +224,7 @@ internal class KafkaConsumerBatchConverterTest {
                     prop(KafkaConsumerRecord<*, *>::value).isEqualTo(value2.size)
                     prop(KafkaConsumerRecord<*, *>::headers).all {
                         hasSize(1)
-                        key("header2").isSameAs(value2)
+                        key("header2").isSameInstanceAs(value2)
                     }
                     prop(KafkaConsumerRecord<*, *>::consumedTimestamp).isNotNull()
                     prop(KafkaConsumerRecord<*, *>::offset).isEqualTo(22)

@@ -27,7 +27,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.key
 import io.aerisconsulting.catadioptre.getProperty
 import io.aerisconsulting.catadioptre.invokeInvisible
@@ -46,6 +46,9 @@ import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import java.time.Duration
+import java.util.Properties
+import java.util.regex.Pattern
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.OffsetResetStrategy
@@ -53,9 +56,6 @@ import org.apache.kafka.common.serialization.Serdes
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.time.Duration
-import java.util.Properties
-import java.util.regex.Pattern
 
 /**
  *
@@ -136,7 +136,7 @@ internal class KafkaConsumerStepSpecificationConverterTest :
                     typedProp<Pattern>("topicsPattern").isNull()
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
@@ -194,7 +194,7 @@ internal class KafkaConsumerStepSpecificationConverterTest :
                     typedProp<Pattern>("topicsPattern").transform { it.pattern() }.isEqualTo(".*")
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
@@ -209,15 +209,15 @@ internal class KafkaConsumerStepSpecificationConverterTest :
             valueDeserializer = valueDeserializer,
             flattenOutput = true
         )
-        val monitoringConfiguration = StepMonitoringConfiguration()
+        val monitoringConfiguration = StepMonitoringConfiguration().all()
 
         // when
         val recordsConverter = converter.invokeInvisible<DatasourceObjectConverter<ConsumerRecords<ByteArray?, ByteArray?>, out Any?>>("buildConverter", configuration, monitoringConfiguration)
 
         // then
         assertThat(recordsConverter).isNotNull().isInstanceOf(KafkaConsumerSingleConverter::class).all {
-            prop("keyDeserializer").isSameAs(keyDeserializer)
-            prop("valueDeserializer").isSameAs(valueDeserializer)
+            prop("keyDeserializer").isSameInstanceAs(keyDeserializer)
+            prop("valueDeserializer").isSameInstanceAs(valueDeserializer)
             prop("consumedKeyBytesCounter").isNull()
             prop("consumedValueBytesCounter").isNull()
             prop("consumedRecordsCounter").isNull()
@@ -234,15 +234,15 @@ internal class KafkaConsumerStepSpecificationConverterTest :
             valueDeserializer = valueDeserializer,
             flattenOutput = false
         )
-        val monitoringConfiguration = StepMonitoringConfiguration()
+        val monitoringConfiguration = StepMonitoringConfiguration().all()
 
         // when
         val recordsConverter = converter.invokeInvisible<DatasourceObjectConverter<ConsumerRecords<ByteArray?, ByteArray?>, out Any?>>("buildConverter", configuration, monitoringConfiguration)
 
         // then
         assertThat(recordsConverter).isNotNull().isInstanceOf(KafkaConsumerBatchConverter::class).all {
-            prop("keyDeserializer").isSameAs(keyDeserializer)
-            prop("valueDeserializer").isSameAs(valueDeserializer)
+            prop("keyDeserializer").isSameInstanceAs(keyDeserializer)
+            prop("valueDeserializer").isSameInstanceAs(valueDeserializer)
             prop("consumedKeyBytesCounter").isNull()
             prop("consumedValueBytesCounter").isNull()
             prop("consumedRecordsCounter").isNull()

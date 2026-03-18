@@ -84,7 +84,7 @@ internal class KafkaProducerStepSpecificationImpl<I, K, V>(
     KafkaProducerStepSpecification<I, K, V>,
     KafkaStepSpecification<I, KafkaProducerResult<I>, KafkaProducerStepSpecification<I, K, V>> {
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
     internal val configuration = KafkaProducerConfiguration<I, K, V>(
         keySerializer = keySerializer,
         valueSerializer = valueSerializer
