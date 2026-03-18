@@ -27,7 +27,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import io.aerisconsulting.catadioptre.getProperty
 import io.aerisconsulting.catadioptre.invokeInvisible
@@ -52,14 +52,14 @@ import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import java.time.Duration
+import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.time.Duration
-import java.time.LocalDate
 import assertk.assertions.isNull as isNull1
 
 /**
@@ -137,13 +137,13 @@ internal class SqlPollStepSpecificationConverterTest :
                 prop("name").isEqualTo("my-step")
                 prop("reader").isNotNull().isInstanceOf(SqlIterativeReader::class).all {
                     prop("connectionPoolFactory").isNotNull()
-                    prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
-                    prop("sqlPollStatement").isSameAs(sqlPollStatement)
+                    prop("ioCoroutineScope").isSameInstanceAs(ioCoroutineScope)
+                    prop("sqlPollStatement").isSameInstanceAs(sqlPollStatement)
                     prop("pollDelay").isEqualTo(Duration.ofSeconds(23))
                     prop("resultsChannelFactory").isNotNull()
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
         verifyOnce { spiedConverter["buildConverter"](refEq(spec)) }
@@ -179,7 +179,7 @@ internal class SqlPollStepSpecificationConverterTest :
 
         // then
         assertThat(statement).isInstanceOf(SqlPollStatementImpl::class).all {
-            prop("dialect").isSameAs(dialect)
+            prop("dialect").isSameInstanceAs(dialect)
             prop("sql").isEqualTo("select * from myTable order by myTieBreaker")
             prop("initialParameters").isNotNull().isInstanceOf(List::class).hasSize(0)
             prop("tieBreakerName").isEqualTo("myTieBreaker")
@@ -209,7 +209,7 @@ internal class SqlPollStepSpecificationConverterTest :
 
         // then
         assertThat(statement).isInstanceOf(SqlPollStatementImpl::class).all {
-            prop("dialect").isSameAs(dialect)
+            prop("dialect").isSameInstanceAs(dialect)
             prop("sql").isEqualTo("select * from myTable order by myTieBreaker")
             prop("initialParameters").isNotNull().isInstanceOf(List::class).all {
                 hasSize(4)
@@ -224,7 +224,7 @@ internal class SqlPollStepSpecificationConverterTest :
     internal fun `should build batch converter with eventsLogger`() {
         // given
         val spec = SqlPollStepSpecificationImpl()
-        spec.monitoring { events = true }
+        spec.monitoring { meters = false }
 
         // when
         val converter =
@@ -232,7 +232,7 @@ internal class SqlPollStepSpecificationConverterTest :
 
         // then
         assertThat(converter).isInstanceOf(ResultSetBatchConverter::class).all {
-            prop("resultValuesConverter").isSameAs(resultValuesConverter)
+            prop("resultValuesConverter").isSameInstanceAs(resultValuesConverter)
             prop("meterRegistry").isNull1()
             prop("eventsLogger").isNotNull().isEqualTo(eventsLogger)
         }
@@ -242,14 +242,14 @@ internal class SqlPollStepSpecificationConverterTest :
     internal fun `should build batch converter with monitoring`() {
         // given
         val spec = SqlPollStepSpecificationImpl()
-        spec.monitoring { meters = true }
+        spec.monitoring { events = false }
         // when
         val converter =
             converter.invokeInvisible<DatasourceObjectConverter<SqlResultSet, out Any>>("buildConverter", spec)
 
         // then
         assertThat(converter).isInstanceOf(ResultSetBatchConverter::class).all {
-            prop("resultValuesConverter").isSameAs(resultValuesConverter)
+            prop("resultValuesConverter").isSameInstanceAs(resultValuesConverter)
             prop("meterRegistry").isNotNull().isEqualTo(meterRegistry)
             prop("eventsLogger").isNull1()
         }
@@ -261,14 +261,14 @@ internal class SqlPollStepSpecificationConverterTest :
         // given
         val spec = SqlPollStepSpecificationImpl()
         spec.flattenOutput = true
-        spec.monitoring { events = true }
+        spec.monitoring { meters = false }
         // when
         val converter =
             converter.invokeInvisible<DatasourceObjectConverter<SqlResultSet, out Any>>("buildConverter", spec)
 
         // then
         assertThat(converter).isInstanceOf(ResultSetSingleConverter::class).all {
-            prop("resultValuesConverter").isSameAs(resultValuesConverter)
+            prop("resultValuesConverter").isSameInstanceAs(resultValuesConverter)
             prop("eventsLogger").isNotNull().isEqualTo(eventsLogger)
             prop("meterRegistry").isNull1()
         }
@@ -279,14 +279,14 @@ internal class SqlPollStepSpecificationConverterTest :
         // given
         val spec = SqlPollStepSpecificationImpl()
         spec.flattenOutput = true
-        spec.monitoring { meters = true }
+        spec.monitoring { events = false }
         // when
         val converter =
             converter.invokeInvisible<DatasourceObjectConverter<SqlResultSet, out Any>>("buildConverter", spec)
 
         // then
         assertThat(converter).isInstanceOf(ResultSetSingleConverter::class).all {
-            prop("resultValuesConverter").isSameAs(resultValuesConverter)
+            prop("resultValuesConverter").isSameInstanceAs(resultValuesConverter)
             prop("eventsLogger").isNull1()
             prop("meterRegistry").isNotNull().isEqualTo(meterRegistry)
         }

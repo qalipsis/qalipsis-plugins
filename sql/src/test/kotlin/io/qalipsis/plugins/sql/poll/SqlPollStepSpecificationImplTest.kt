@@ -86,8 +86,8 @@ internal class SqlPollStepSpecificationImplTest {
             }
             prop(SqlPollStepSpecificationImpl::pollDelay).isEqualTo(Duration.ofSeconds(12))
             prop(SqlPollStepSpecificationImpl::monitoringConfig).all {
-                prop(StepMonitoringConfiguration::meters).isFalse()
-                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+                prop(StepMonitoringConfiguration::events).isTrue()
             }
             prop(SqlPollStepSpecificationImpl::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.UNICAST)

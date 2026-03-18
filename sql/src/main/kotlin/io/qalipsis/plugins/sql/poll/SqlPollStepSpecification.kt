@@ -130,7 +130,7 @@ internal class SqlPollStepSpecificationImpl :
 
     internal var flattenOutput = false
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connection(configBlock: SqlConnection.() -> Unit) {
         connection.configBlock()

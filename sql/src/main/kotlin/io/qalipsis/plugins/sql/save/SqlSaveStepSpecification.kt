@@ -94,7 +94,7 @@ internal class SqlSaveStepSpecificationImpl<I> :
     internal var rowsFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<SqlSaveRecord>) =
         { _, _ -> emptyList() }
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connection(configBlock: SqlConnection.() -> Unit) {
         connection.configBlock()

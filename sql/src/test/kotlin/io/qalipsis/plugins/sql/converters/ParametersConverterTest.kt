@@ -22,9 +22,8 @@ package io.qalipsis.plugins.sql.converters
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import io.qalipsis.test.mockk.relaxedMockk
-import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -33,6 +32,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
+import org.junit.jupiter.api.Test
 
 /**
  * R2DBC drivers accept Java 8 time types natively, so the converter is an identity function.
@@ -101,7 +101,7 @@ internal class ParametersConverterTest {
     internal fun `should keep non-standard value unchanged`() {
         val value = relaxedMockk<Any>()
         val result = converter.process(value)
-        assertThat(result).isSameAs(value)
+        assertThat(result).isSameInstanceAs(value)
     }
 
 }

@@ -93,7 +93,7 @@ internal class SqlSearchStepSpecificationImpl<I> :
     @field:NotNull
     internal var parametersFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<*>)? = null
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connection(configBlock: SqlConnection.() -> Unit) {
         connection.configBlock()

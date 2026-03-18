@@ -25,7 +25,7 @@ import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.qalipsis.api.context.StepContext
@@ -65,16 +65,16 @@ internal class SqlSaveStepSpecificationTest {
                 password = "my-other-password"
             }
             monitoring {
-                events = true
+                meters = false
             }
         }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(SqlSaveStepSpecificationImpl::class).all {
             prop(SqlSaveStepSpecificationImpl<*>::name).isEmpty()
             prop(SqlSaveStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.POSTGRESQL)
-            prop(SqlSaveStepSpecificationImpl<*>::tableNameFactory).isSameAs(tableNameFactory)
-            prop(SqlSaveStepSpecificationImpl<*>::columnsFactory).isSameAs(columnsFactory)
-            prop(SqlSaveStepSpecificationImpl<*>::rowsFactory).isSameAs(rowsFactory)
+            prop(SqlSaveStepSpecificationImpl<*>::tableNameFactory).isSameInstanceAs(tableNameFactory)
+            prop(SqlSaveStepSpecificationImpl<*>::columnsFactory).isSameInstanceAs(columnsFactory)
+            prop(SqlSaveStepSpecificationImpl<*>::rowsFactory).isSameInstanceAs(rowsFactory)
             prop(SqlSaveStepSpecificationImpl<*>::connection).all {
                 prop(SqlConnection::host).isEqualTo("my-server")
                 prop(SqlConnection::port).isEqualTo(5678)
@@ -111,16 +111,16 @@ internal class SqlSaveStepSpecificationTest {
                 maxCreateConnectionTime = Duration.ofSeconds(10)
             }
             monitoring {
-                meters = true
+                events = false
             }
         }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(SqlSaveStepSpecificationImpl::class).all {
             prop(SqlSaveStepSpecificationImpl<*>::name).isEmpty()
             prop(SqlSaveStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.POSTGRESQL)
-            prop(SqlSaveStepSpecificationImpl<*>::tableNameFactory).isSameAs(tableNameFactory)
-            prop(SqlSaveStepSpecificationImpl<*>::columnsFactory).isSameAs(columnsFactory)
-            prop(SqlSaveStepSpecificationImpl<*>::rowsFactory).isSameAs(rowsFactory)
+            prop(SqlSaveStepSpecificationImpl<*>::tableNameFactory).isSameInstanceAs(tableNameFactory)
+            prop(SqlSaveStepSpecificationImpl<*>::columnsFactory).isSameInstanceAs(columnsFactory)
+            prop(SqlSaveStepSpecificationImpl<*>::rowsFactory).isSameInstanceAs(rowsFactory)
             prop(SqlSaveStepSpecificationImpl<*>::connection).all {
                 prop(SqlConnection::host).isEqualTo("my-server")
                 prop(SqlConnection::port).isEqualTo(5678)
@@ -150,8 +150,7 @@ internal class SqlSaveStepSpecificationTest {
                 }
                 protocol(Protocol.POSTGRESQL)
                 monitoring {
-                    events = true
-                    meters = true
+                    off()
                 }
             }
         }) as StepSpecificationRegistry
@@ -176,8 +175,8 @@ internal class SqlSaveStepSpecificationTest {
             }
             prop(SqlSaveStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.POSTGRESQL)
             prop(SqlSaveStepSpecificationImpl<*>::monitoringConfig).all {
-                prop(StepMonitoringConfiguration::events).isTrue()
-                prop(StepMonitoringConfiguration::meters).isTrue()
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isFalse()
             }
         }
     }
@@ -194,8 +193,7 @@ internal class SqlSaveStepSpecificationTest {
                 }
                 protocol(Protocol.POSTGRESQL)
                 monitoring {
-                    events = true
-                    meters = true
+                    all()
                 }
             }
         }) as StepSpecificationRegistry

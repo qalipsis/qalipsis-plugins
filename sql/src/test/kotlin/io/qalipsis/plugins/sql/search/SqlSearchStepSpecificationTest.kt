@@ -26,7 +26,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.qalipsis.api.context.StepContext
@@ -65,7 +65,7 @@ internal class SqlSearchStepSpecificationTest {
         assertThat(previousStep.nextSteps[0]).isInstanceOf(SqlSearchStepSpecificationImpl::class).all {
             prop(SqlSearchStepSpecificationImpl<*>::name).isEmpty()
             prop(SqlSearchStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.POSTGRESQL)
-            prop(SqlSearchStepSpecificationImpl<*>::queryFactory).isSameAs(queryFactory)
+            prop(SqlSearchStepSpecificationImpl<*>::queryFactory).isSameInstanceAs(queryFactory)
             prop(SqlSearchStepSpecificationImpl<*>::parametersFactory).isNull()
             prop(SqlSearchStepSpecificationImpl<*>::connection).all {
                 prop(SqlConnection::host).isEqualTo("my-server")
@@ -75,8 +75,8 @@ internal class SqlSearchStepSpecificationTest {
                 prop(SqlConnection::password).isEqualTo("my-other-password")
             }
             prop(SqlSearchStepSpecificationImpl<*>::monitoringConfig).all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
     }
@@ -108,8 +108,8 @@ internal class SqlSearchStepSpecificationTest {
         assertThat(previousStep.nextSteps[0]).isInstanceOf(SqlSearchStepSpecificationImpl::class).all {
             prop(SqlSearchStepSpecificationImpl<*>::name).isEqualTo("my-other-step")
             prop(SqlSearchStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.MYSQL)
-            prop(SqlSearchStepSpecificationImpl<*>::queryFactory).isSameAs(queryFactory)
-            prop(SqlSearchStepSpecificationImpl<*>::parametersFactory).isSameAs(paramsFactory)
+            prop(SqlSearchStepSpecificationImpl<*>::queryFactory).isSameInstanceAs(queryFactory)
+            prop(SqlSearchStepSpecificationImpl<*>::parametersFactory).isSameInstanceAs(paramsFactory)
             prop(SqlSearchStepSpecificationImpl<*>::connection).all {
                 prop(SqlConnection::host).isEqualTo("my-server")
                 prop(SqlConnection::port).isEqualTo(5678)
@@ -150,8 +150,8 @@ internal class SqlSearchStepSpecificationTest {
         assertThat(previousStep.nextSteps[0]).isInstanceOf(SqlSearchStepSpecificationImpl::class).all {
             prop(SqlSearchStepSpecificationImpl<*>::name).isEqualTo("my-other-step")
             prop(SqlSearchStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.MYSQL)
-            prop(SqlSearchStepSpecificationImpl<*>::queryFactory).isSameAs(queryFactory)
-            prop(SqlSearchStepSpecificationImpl<*>::parametersFactory).isSameAs(paramsFactory)
+            prop(SqlSearchStepSpecificationImpl<*>::queryFactory).isSameInstanceAs(queryFactory)
+            prop(SqlSearchStepSpecificationImpl<*>::parametersFactory).isSameInstanceAs(paramsFactory)
             prop(SqlSearchStepSpecificationImpl<*>::connection).all {
                 prop(SqlConnection::host).isEqualTo("my-server")
                 prop(SqlConnection::port).isEqualTo(5678)
