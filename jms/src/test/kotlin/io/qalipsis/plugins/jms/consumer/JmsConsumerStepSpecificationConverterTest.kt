@@ -27,7 +27,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import io.aerisconsulting.catadioptre.invokeInvisible
 import io.mockk.every
 import io.mockk.spyk
@@ -42,12 +42,12 @@ import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.assertk.typedProp
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Test
 import javax.jms.Message
 import javax.jms.QueueConnection
 import javax.jms.TopicConnection
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
 
 /**
  *
@@ -105,12 +105,12 @@ internal class JmsConsumerStepSpecificationConverterTest :
                 prop("reader").isNotNull().isInstanceOf(JmsConsumerIterativeReader::class).all {
                     prop("stepId").isEqualTo("my-step")
                     prop("topicConnectionFactory").isNull()
-                    prop("queueConnectionFactory").isSameAs(queueConnectionFactory)
+                    prop("queueConnectionFactory").isSameInstanceAs(queueConnectionFactory)
                     typedProp<Collection<String>>("queues").containsOnly("queue-1", "queue-2")
                     typedProp<Collection<String>>("topics").isEmpty()
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
@@ -148,13 +148,13 @@ internal class JmsConsumerStepSpecificationConverterTest :
                 prop("name").isEqualTo("my-step")
                 prop("reader").isNotNull().isInstanceOf(JmsConsumerIterativeReader::class).all {
                     prop("stepId").isEqualTo("my-step")
-                    prop("topicConnectionFactory").isSameAs(topicConnectionFactory)
+                    prop("topicConnectionFactory").isSameInstanceAs(topicConnectionFactory)
                     prop("queueConnectionFactory").isNull()
                     typedProp<Collection<String>>("topics").containsOnly("topic-1", "topic-2")
                     typedProp<Collection<String>>("queues").isEmpty()
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
@@ -163,7 +163,7 @@ internal class JmsConsumerStepSpecificationConverterTest :
     @Test
     internal fun `should build converter`() {
         // given
-        val monitoringConfiguration = StepMonitoringConfiguration()
+        val monitoringConfiguration = StepMonitoringConfiguration().all()
         val deserializer = JmsStringDeserializer()
 
         // when

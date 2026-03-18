@@ -108,7 +108,7 @@ internal class JmsConsumerStepSpecification<O : Any> internal constructor(
 
     internal val metrics = JmsConsumerMetricsConfiguration()
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override val singletonConfiguration: SingletonConfiguration = SingletonConfiguration(SingletonType.UNICAST)
 

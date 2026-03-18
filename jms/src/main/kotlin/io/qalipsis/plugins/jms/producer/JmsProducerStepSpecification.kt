@@ -79,7 +79,7 @@ internal class JmsProducerStepSpecificationImpl<I> :
         { _, _ -> listOf() }
 
     internal val metrics = JmsProducerMetricsConfiguration()
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connect(connectionFactory: () -> Connection) {
         this.connectionFactory = connectionFactory

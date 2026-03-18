@@ -81,7 +81,7 @@ internal class JmsDefaultsExtensionImpl : JmsDefaultsExtension {
 
     internal var connectionFactory: (() -> Connection)? = null
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun queueConnection(queueConnectionFactory: () -> QueueConnection) {
         this.queueConnectionFactory = queueConnectionFactory
