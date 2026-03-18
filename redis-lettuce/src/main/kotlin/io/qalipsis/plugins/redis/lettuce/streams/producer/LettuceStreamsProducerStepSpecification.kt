@@ -77,7 +77,7 @@ internal class LettuceStreamsProducerStepSpecificationImpl<I> :
     AbstractStepSpecification<I, LettuceStreamsProducerResult<I>, LettuceStreamsProducerStepSpecification<I>>(),
     LettuceStreamsProducerStepSpecification<I> {
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     internal var connection = RedisConnectionConfiguration()
 

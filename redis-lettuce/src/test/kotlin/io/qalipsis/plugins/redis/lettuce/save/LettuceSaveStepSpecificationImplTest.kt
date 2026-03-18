@@ -75,8 +75,8 @@ internal class LettuceSaveStepSpecificationImplTest {
                 }
 
                 prop(LettuceSaveStepSpecificationImpl<*>::monitoringConfig).all {
-                    prop(StepMonitoringConfiguration::events).isFalse()
-                    prop(StepMonitoringConfiguration::meters).isFalse()
+                    prop(StepMonitoringConfiguration::events).isTrue()
+                    prop(StepMonitoringConfiguration::meters).isTrue()
                 }
             }
 

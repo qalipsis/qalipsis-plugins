@@ -76,7 +76,7 @@ internal class LettuceSaveStepSpecificationImpl<I> : AbstractStepSpecification<I
 
     internal var connectionConfiguration = RedisConnectionConfiguration()
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     internal var recordsFactory: (suspend (stepContext: StepContext<*, *>, input: I) -> List<LettuceSaveRecord<*>>) =
         { _, _ -> emptyList() }

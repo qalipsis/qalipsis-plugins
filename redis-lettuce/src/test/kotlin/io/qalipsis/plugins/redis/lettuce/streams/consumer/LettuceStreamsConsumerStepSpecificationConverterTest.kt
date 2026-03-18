@@ -25,7 +25,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import io.aerisconsulting.catadioptre.invokeInvisible
 import io.lettuce.core.StreamMessage
 import io.mockk.confirmVerified
@@ -122,8 +122,8 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
                 prop("name").isEqualTo("my-step")
                 prop("reader").isNotNull().isInstanceOf(LettuceStreamsIterativeReader::class).all {
-                    prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
-                    prop("ioCoroutineDispatcher").isSameAs(ioCoroutineDispatcher)
+                    prop("ioCoroutineScope").isSameInstanceAs(ioCoroutineScope)
+                    prop("ioCoroutineDispatcher").isSameInstanceAs(ioCoroutineDispatcher)
                     prop("groupName").isEqualTo("group")
                     prop("concurrency").isEqualTo(2)
                     prop("streamKey").isEqualTo("name1")
@@ -131,7 +131,7 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
                     prop("connectionFactory").isNotNull()
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
@@ -174,8 +174,8 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
                 prop("name").isEqualTo("")
                 prop("reader").isNotNull().isInstanceOf(LettuceStreamsIterativeReader::class).all {
-                    prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
-                    prop("ioCoroutineDispatcher").isSameAs(ioCoroutineDispatcher)
+                    prop("ioCoroutineScope").isSameInstanceAs(ioCoroutineScope)
+                    prop("ioCoroutineDispatcher").isSameInstanceAs(ioCoroutineDispatcher)
                     prop("groupName").isEqualTo("group1")
                     prop("concurrency").isEqualTo(2)
                     prop("streamKey").isEqualTo("name2")
@@ -183,7 +183,7 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
                     prop("connectionFactory").isNotNull()
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
@@ -205,7 +205,7 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
         assertThat(recordsConverter).isNotNull().isInstanceOf(LettuceStreamsConsumerSingleConverter::class).all {
             prop("recordsCounter").isNull()
             prop("valuesBytesReceived").isNull()
-            prop("meterRegistry").isSameAs(meterRegistry)
+            prop("meterRegistry").isSameInstanceAs(meterRegistry)
         }
     }
 
@@ -224,7 +224,7 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
 
         // then
         assertThat(recordsConverter).isNotNull().isInstanceOf(LettuceStreamsConsumerBatchConverter::class).all {
-            prop("meterRegistry").isSameAs(meterRegistry)
+            prop("meterRegistry").isSameInstanceAs(meterRegistry)
             prop("recordsCounter").isNull()
             prop("valuesBytesReceived").isNull()
         }
@@ -268,7 +268,7 @@ internal class LettuceStreamsConsumerStepSpecificationConverterTest :
         recordsConverter.start(startStopContext)
         // then
         assertThat(recordsConverter).isNotNull().isInstanceOf(LettuceStreamsConsumerBatchConverter::class).all {
-            prop("meterRegistry").isSameAs(meterRegistry)
+            prop("meterRegistry").isSameInstanceAs(meterRegistry)
             prop("recordsCounter").isNotNull()
             prop("valuesBytesReceived").isNotNull()
         }

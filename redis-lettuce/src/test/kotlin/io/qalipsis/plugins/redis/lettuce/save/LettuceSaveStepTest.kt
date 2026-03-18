@@ -24,7 +24,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import assertk.assertions.isNullOrEmpty
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.prop
 import io.aerisconsulting.catadioptre.setProperty
 import io.lettuce.core.api.StatefulRedisConnection
@@ -102,7 +102,7 @@ internal class LettuceSaveStepTest {
         assertThat(result).all {
             prop(LettuceSaveResult<String>::input).isEqualTo("Any")
             prop(LettuceSaveResult<String>::sendingFailures).isNullOrEmpty()
-            prop(LettuceSaveResult<String>::meters).isSameAs(saveResult.meters)
+            prop(LettuceSaveResult<String>::meters).isSameInstanceAs(saveResult.meters)
         }
 
         coVerify {
@@ -110,7 +110,7 @@ internal class LettuceSaveStepTest {
             lettuceSaveStep.execute(refEq(context))
         }
         assertThat(monitoringCollector.captured).all {
-            prop("stepContext").isSameAs(context)
+            prop("stepContext").isSameInstanceAs(context)
             prop("eventsLogger").isNull()
         }
 
@@ -161,7 +161,7 @@ internal class LettuceSaveStepTest {
         assertThat(result).all {
             prop(LettuceSaveResult<String>::input).isEqualTo("Any")
             prop(LettuceSaveResult<String>::sendingFailures).isNullOrEmpty()
-            prop(LettuceSaveResult<String>::meters).isSameAs(saveResult.meters)
+            prop(LettuceSaveResult<String>::meters).isSameInstanceAs(saveResult.meters)
         }
 
         coVerify {
@@ -169,8 +169,8 @@ internal class LettuceSaveStepTest {
             lettuceSaveStep.execute(refEq(context))
         }
         assertThat(monitoringCollector.captured).all {
-            prop("stepContext").isSameAs(context)
-            prop("eventsLogger").isSameAs(eventsLogger)
+            prop("stepContext").isSameInstanceAs(context)
+            prop("eventsLogger").isSameInstanceAs(eventsLogger)
         }
 
         confirmVerified(lettuceSaveStep)

@@ -66,7 +66,7 @@ internal class RedisLettuceDefaultsExtensionImpl : RedisLettuceDefaultsExtension
 
     internal var connectionConfiguration = RedisConnectionConfiguration()
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connection(configurationBlock: RedisConnectionConfiguration.() -> Unit) {
         connectionConfiguration.configurationBlock()

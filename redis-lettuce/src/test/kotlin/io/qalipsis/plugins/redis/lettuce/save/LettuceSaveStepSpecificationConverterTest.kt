@@ -25,7 +25,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.spyk
 import io.qalipsis.api.steps.StepCreationContext
@@ -36,10 +36,10 @@ import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import kotlin.coroutines.CoroutineContext
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import kotlin.coroutines.CoroutineContext
 
 @WithMockk
 @Suppress("UNCHECKED_CAST")
@@ -92,9 +92,9 @@ internal class LettuceSaveStepSpecificationConverterTest: AbstractStepSpecificat
         creationContext.createdStep!!.let {
             assertThat(it).isInstanceOf(LettuceSaveStep::class).all {
                 prop("name").isEqualTo("my-step")
-                prop("meterRegistry").isNull()
-                prop("ioCoroutineContext").isSameAs(ioCoroutineContext)
-                prop("eventsLogger").isNull()
+                prop("meterRegistry").isSameInstanceAs(meterRegistry)
+                prop("ioCoroutineContext").isSameInstanceAs(ioCoroutineContext)
+                prop("eventsLogger").isSameInstanceAs(eventsLogger)
                 prop("connectionFactory").isNotNull()
                 prop("retryPolicy").isNotNull()
                 prop("recordsFactory").isNotNull()
@@ -134,7 +134,7 @@ internal class LettuceSaveStepSpecificationConverterTest: AbstractStepSpecificat
             assertThat(it).isInstanceOf(LettuceSaveStep::class).all {
                 prop("name").isNotNull()
                 prop("connectionFactory").isNotNull()
-                prop("ioCoroutineContext").isSameAs(ioCoroutineContext)
+                prop("ioCoroutineContext").isSameInstanceAs(ioCoroutineContext)
                 prop("meterRegistry").isNotNull().isEqualTo(meterRegistry)
                 prop("eventsLogger").isNotNull().isEqualTo(eventsLogger)
                 prop("retryPolicy").isNull()

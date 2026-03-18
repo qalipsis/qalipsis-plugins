@@ -68,8 +68,8 @@ internal class LettucePollStepSpecificationImplTest {
                 Duration.ofSeconds(10)
             )
             prop(LettucePollStepSpecificationImpl<*>::monitoringConfig).all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
             prop(LettucePollStepSpecificationImpl<*>::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.UNICAST)

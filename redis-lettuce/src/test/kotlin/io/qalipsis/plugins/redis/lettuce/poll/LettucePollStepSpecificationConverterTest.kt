@@ -26,7 +26,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import io.aerisconsulting.catadioptre.getProperty
 import io.aerisconsulting.catadioptre.invokeInvisible
@@ -49,12 +49,12 @@ import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
-import java.time.Duration
 
 /**
  *
@@ -119,7 +119,7 @@ internal class LettucePollStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
                 prop("name").isNotNull().isEqualTo("redis-lettuce-poll-step")
                 prop("reader").isNotNull().isInstanceOf(LettuceIterativeReader::class).all {
-                    prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
+                    prop("ioCoroutineScope").isSameInstanceAs(ioCoroutineScope)
                     prop("connectionFactory").isNotNull()
                     prop("pattern").isEqualTo("test")
                     prop("pollDelay").isEqualTo(Duration.ofSeconds(10))
@@ -127,7 +127,7 @@ internal class LettucePollStepSpecificationConverterTest :
                     prop("resultsChannelFactory").isNotNull()
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
         verifyOnce { spiedConverter["buildConverter"](refEq(spec)) }
@@ -175,7 +175,7 @@ internal class LettucePollStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
                 prop("name").isEqualTo("")
                 prop("reader").isNotNull().isInstanceOf(LettuceIterativeReader::class).all {
-                    prop("ioCoroutineScope").isSameAs(ioCoroutineScope)
+                    prop("ioCoroutineScope").isSameInstanceAs(ioCoroutineScope)
                     prop("connectionFactory").isNotNull()
                     prop("pattern").isEqualTo("test")
                     prop("pollDelay").isEqualTo(Duration.ofSeconds(10))
@@ -183,7 +183,7 @@ internal class LettucePollStepSpecificationConverterTest :
                     prop("resultsChannelFactory").isNotNull()
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
         verifyOnce { spiedConverter["buildConverter"](refEq(spec)) }
@@ -193,7 +193,10 @@ internal class LettucePollStepSpecificationConverterTest :
     fun `should build batch converter without monitor and logger`() {
         // given
         val spec = LettucePollStepSpecificationImpl<Any>(RedisLettuceScanMethod.ZSCAN)
-
+        spec.monitoring {
+            off()
+        }
+        
         // when
         val converter =
             converter.invokeInvisible<DatasourceObjectConverter<PollRawResult<*>, out Any>>("buildConverter", spec)
@@ -233,7 +236,9 @@ internal class LettucePollStepSpecificationConverterTest :
     fun `should build single converter without monitor and logger`() {
         // given
         val spec = LettucePollStepSpecificationImpl<Any>(RedisLettuceScanMethod.ZSCAN)
-
+        spec.monitoring {
+            off()
+        }
         spec.flatten()
 
         // when

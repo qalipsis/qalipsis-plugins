@@ -110,7 +110,7 @@ internal class LettuceStreamsConsumerStepSpecificationImpl :
 
     internal var connection = RedisConnectionConfiguration()
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     @field:NotBlank
     internal var streamKey = ""

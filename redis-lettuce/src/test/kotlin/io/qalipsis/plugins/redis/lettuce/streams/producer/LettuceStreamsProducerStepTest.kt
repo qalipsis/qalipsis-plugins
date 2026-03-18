@@ -24,7 +24,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import assertk.assertions.isNullOrEmpty
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.prop
 import io.aerisconsulting.catadioptre.setProperty
 import io.lettuce.core.api.StatefulRedisConnection
@@ -105,7 +105,7 @@ internal class LettuceStreamsProducerStepTest {
         assertThat(result).all {
             prop(LettuceStreamsProducerResult<String>::input).isEqualTo("Any")
             prop(LettuceStreamsProducerResult<String>::sendingFailures).isNullOrEmpty()
-            prop(LettuceStreamsProducerResult<String>::meters).isSameAs(producerResult.meters)
+            prop(LettuceStreamsProducerResult<String>::meters).isSameInstanceAs(producerResult.meters)
         }
 
         coVerify {
@@ -113,7 +113,7 @@ internal class LettuceStreamsProducerStepTest {
             lettuceStreamsProducerStep.execute(refEq(context))
         }
         assertThat(monitoringCollector.captured).all {
-            prop("stepContext").isSameAs(context)
+            prop("stepContext").isSameInstanceAs(context)
             prop("eventsLogger").isNull()
         }
 
@@ -164,7 +164,7 @@ internal class LettuceStreamsProducerStepTest {
         assertThat(result).all {
             prop(LettuceStreamsProducerResult<String>::input).isEqualTo("Any")
             prop(LettuceStreamsProducerResult<String>::sendingFailures).isNullOrEmpty()
-            prop(LettuceStreamsProducerResult<String>::meters).isSameAs(producerResult.meters)
+            prop(LettuceStreamsProducerResult<String>::meters).isSameInstanceAs(producerResult.meters)
         }
 
         coVerify {
@@ -172,8 +172,8 @@ internal class LettuceStreamsProducerStepTest {
             lettuceStreamsProducerStep.execute(refEq(context))
         }
         assertThat(monitoringCollector.captured).all {
-            prop("stepContext").isSameAs(context)
-            prop("eventsLogger").isSameAs(eventsLogger)
+            prop("stepContext").isSameInstanceAs(context)
+            prop("eventsLogger").isSameInstanceAs(eventsLogger)
         }
 
         confirmVerified(lettuceStreamsProducerStep)

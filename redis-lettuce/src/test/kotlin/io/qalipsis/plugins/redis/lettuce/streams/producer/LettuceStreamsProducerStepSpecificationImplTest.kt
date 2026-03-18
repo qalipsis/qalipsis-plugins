@@ -72,8 +72,8 @@ internal class LettuceStreamsProducerStepSpecificationImplTest {
                 }
 
                 prop(LettuceStreamsProducerStepSpecificationImpl<*>::monitoringConfig).all {
-                    prop(StepMonitoringConfiguration::events).isFalse()
-                    prop(StepMonitoringConfiguration::meters).isFalse()
+                    prop(StepMonitoringConfiguration::events).isTrue()
+                    prop(StepMonitoringConfiguration::meters).isTrue()
                 }
             }
 

@@ -81,8 +81,8 @@ internal class LettuceStreamsConsumerStepSpecificationImplTest {
                 prop(LettuceStreamsConsumerStepSpecificationImpl::streamKey).isEqualTo("test")
 
                 prop(LettuceStreamsConsumerStepSpecificationImpl::monitoringConfig).all {
-                    prop(StepMonitoringConfiguration::events).isFalse()
-                    prop(StepMonitoringConfiguration::meters).isFalse()
+                    prop(StepMonitoringConfiguration::events).isTrue()
+                    prop(StepMonitoringConfiguration::meters).isTrue()
                 }
             }
     }

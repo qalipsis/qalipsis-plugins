@@ -117,7 +117,7 @@ internal class LettucePollStepSpecificationImpl<V : Any>(redisLettuceMethod: Red
 
     internal var flattenOutput = false
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connection(configBlock: RedisConnectionConfiguration.() -> Unit) {
         connection.configBlock()
