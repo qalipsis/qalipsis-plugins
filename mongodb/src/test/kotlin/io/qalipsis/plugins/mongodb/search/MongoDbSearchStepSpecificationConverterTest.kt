@@ -28,7 +28,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import com.mongodb.reactivestreams.client.MongoClient
 import io.mockk.impl.annotations.RelaxedMockK
@@ -97,7 +97,7 @@ internal class MongoDbSearchStepSpecificationConverterTest :
             it.clientFactory = clientFactory
             it.retryPolicy = mockedRetryPolicy
             it.monitoring {
-                meters = true
+                events = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -112,9 +112,9 @@ internal class MongoDbSearchStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(MongoDbSearchStep::class).all {
                 prop("name").isNotNull().isEqualTo("mongodb-search-step")
                 prop("mongoDbQueryClient").all {
-                    prop("clientFactory").isNotNull().isSameAs(clientFactory)
+                    prop("clientFactory").isNotNull().isSameInstanceAs(clientFactory)
                     prop("eventsLogger").isNull()
-                    prop("meterRegistry").isNotNull().isSameAs(meterRegistry)
+                    prop("meterRegistry").isNotNull().isSameInstanceAs(meterRegistry)
                 }
                 prop("retryPolicy").isNotNull()
                 prop("databaseName").isEqualTo(databaseName)
@@ -138,7 +138,7 @@ internal class MongoDbSearchStepSpecificationConverterTest :
             )
             it.clientFactory = clientFactory
             it.monitoring {
-                events = true
+                meters = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -158,9 +158,9 @@ internal class MongoDbSearchStepSpecificationConverterTest :
                 prop("filter").isEqualTo(filter)
                 prop("sorting").isEqualTo(sorting)
                 prop("mongoDbQueryClient").all {
-                    prop("clientFactory").isNotNull().isSameAs(clientFactory)
+                    prop("clientFactory").isNotNull().isSameInstanceAs(clientFactory)
                     prop("meterRegistry").isNull()
-                    prop("eventsLogger").isNotNull().isSameAs(eventsLogger)
+                    prop("eventsLogger").isNotNull().isSameInstanceAs(eventsLogger)
                 }
             }
         }

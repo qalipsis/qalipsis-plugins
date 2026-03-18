@@ -25,7 +25,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import com.mongodb.reactivestreams.client.MongoClients
@@ -76,8 +76,8 @@ internal class MongoDbSpecificationImplTest {
                 Duration.ofSeconds(DefaultValues.pollDurationInSeconds)
             )
             prop(MongoDbPollStepSpecificationImpl::monitoringConfig).all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
             prop(MongoDbPollStepSpecificationImpl::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.UNICAST)
@@ -161,7 +161,7 @@ internal class MongoDbSpecificationImplTest {
         }
 
         assertThat(scenario.rootSteps.first()).isInstanceOf(MongoDbPollStepSpecificationImpl::class).all {
-            prop(MongoDbPollStepSpecificationImpl::client).isSameAs(clientFactory)
+            prop(MongoDbPollStepSpecificationImpl::client).isSameInstanceAs(clientFactory)
             prop(MongoDbPollStepSpecificationImpl::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
                 prop(StepMonitoringConfiguration::meters).isTrue()
@@ -200,7 +200,7 @@ internal class MongoDbSpecificationImplTest {
         }
 
         assertThat(scenario.rootSteps.first()).isInstanceOf(MongoDbPollStepSpecificationImpl::class).all {
-            prop(MongoDbPollStepSpecificationImpl::client).isSameAs(overrideClient)
+            prop(MongoDbPollStepSpecificationImpl::client).isSameInstanceAs(overrideClient)
             prop(MongoDbPollStepSpecificationImpl::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isFalse()
                 prop(StepMonitoringConfiguration::meters).isTrue()

@@ -21,7 +21,7 @@ package io.qalipsis.plugins.mongodb.configuration
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.qalipsis.api.steps.StepMonitoringConfiguration
@@ -50,7 +50,7 @@ internal class MongoDbDefaultsExtensionTest {
         defaults.applyTo(spec)
 
         assertThat(spec).all {
-            prop(MongoDbPollStepSpecificationImpl::client).isSameAs(clientFactory)
+            prop(MongoDbPollStepSpecificationImpl::client).isSameInstanceAs(clientFactory)
             prop(MongoDbPollStepSpecificationImpl::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
                 prop(StepMonitoringConfiguration::meters).isTrue()
@@ -72,7 +72,7 @@ internal class MongoDbDefaultsExtensionTest {
         defaults.applyTo(spec)
 
         assertThat(spec).all {
-            prop(MongoDbSaveStepSpecificationImpl<*>::clientBuilder).isSameAs(clientFactory)
+            prop(MongoDbSaveStepSpecificationImpl<*>::clientBuilder).isSameInstanceAs(clientFactory)
             prop(MongoDbSaveStepSpecificationImpl<*>::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
                 prop(StepMonitoringConfiguration::meters).isTrue()
@@ -94,7 +94,7 @@ internal class MongoDbDefaultsExtensionTest {
         defaults.applyTo(spec)
 
         assertThat(spec).all {
-            prop(MongoDbSearchStepSpecificationImpl<*>::clientFactory).isSameAs(clientFactory)
+            prop(MongoDbSearchStepSpecificationImpl<*>::clientFactory).isSameInstanceAs(clientFactory)
             prop(MongoDbSearchStepSpecificationImpl<*>::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
                 prop(StepMonitoringConfiguration::meters).isTrue()
@@ -114,7 +114,7 @@ internal class MongoDbDefaultsExtensionTest {
         defaults.applyTo(spec)
 
         assertThat(spec).all {
-            prop(MongoDbPollStepSpecificationImpl::client).isSameAs(originalClient)
+            prop(MongoDbPollStepSpecificationImpl::client).isSameInstanceAs(originalClient)
             prop(MongoDbPollStepSpecificationImpl::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
             }

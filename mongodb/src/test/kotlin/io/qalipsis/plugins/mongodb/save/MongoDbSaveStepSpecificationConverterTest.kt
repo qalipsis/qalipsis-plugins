@@ -27,7 +27,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import com.mongodb.reactivestreams.client.MongoClient
 import io.mockk.impl.annotations.RelaxedMockK
@@ -114,14 +114,14 @@ internal class MongoDbSaveStepSpecificationConverterTest :
         assertThat(creationContext.createdStep!!).all {
             prop("name").isNotNull().isEqualTo("mongodb-save-step")
             prop("mongoDbSaveQueryClient").all {
-                prop("clientBuilder").isNotNull().isSameAs(clientBuilder)
-                prop("meterRegistry").isNotNull().isSameAs(meterRegistry)
-                prop("eventsLogger").isNotNull().isSameAs(eventsLogger)
+                prop("clientBuilder").isNotNull().isSameInstanceAs(clientBuilder)
+                prop("meterRegistry").isNotNull().isSameInstanceAs(meterRegistry)
+                prop("eventsLogger").isNotNull().isSameInstanceAs(eventsLogger)
             }
             prop("retryPolicy").isNotNull()
             prop("databaseName").isEqualTo(databaseName)
             prop("collectionName").isEqualTo(collectionName)
-            prop("recordsFactory").isSameAs(recordSupplier)
+            prop("recordsFactory").isSameInstanceAs(recordSupplier)
         }
     }
 
@@ -137,7 +137,7 @@ internal class MongoDbSaveStepSpecificationConverterTest :
             }
             it.clientBuilder = clientBuilder
             it.monitoring {
-                events = true
+                meters = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -154,11 +154,11 @@ internal class MongoDbSaveStepSpecificationConverterTest :
             prop("retryPolicy").isNull()
             prop("databaseName").isEqualTo(databaseName)
             prop("collectionName").isEqualTo(collectionName)
-            prop("recordsFactory").isSameAs(recordSupplier)
+            prop("recordsFactory").isSameInstanceAs(recordSupplier)
             prop("mongoDbSaveQueryClient").all {
-                prop("clientBuilder").isNotNull().isSameAs(clientBuilder)
+                prop("clientBuilder").isNotNull().isSameInstanceAs(clientBuilder)
                 prop("meterRegistry").isNull()
-                prop("eventsLogger").isNotNull().isSameAs(eventsLogger)
+                prop("eventsLogger").isNotNull().isSameInstanceAs(eventsLogger)
             }
         }
     }

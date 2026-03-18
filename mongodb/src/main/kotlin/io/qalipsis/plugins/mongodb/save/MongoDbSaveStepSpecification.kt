@@ -71,7 +71,7 @@ internal class MongoDbSaveStepSpecificationImpl<I> :
 
     internal var queryConfig = MongoDbSaveQueryConfiguration<I>()
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connect(clientBuilder: () -> com.mongodb.reactivestreams.client.MongoClient) {
         this.clientBuilder = clientBuilder

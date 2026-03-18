@@ -65,7 +65,7 @@ internal class MongoDbDefaultsExtensionImpl : MongoDbDefaultsExtension {
 
     internal var clientFactory: (() -> com.mongodb.reactivestreams.client.MongoClient)? = null
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connect(client: () -> com.mongodb.reactivestreams.client.MongoClient) {
         this.clientFactory = client

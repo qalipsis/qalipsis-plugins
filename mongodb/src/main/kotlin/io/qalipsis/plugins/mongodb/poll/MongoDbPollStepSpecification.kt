@@ -106,7 +106,7 @@ internal class MongoDbPollStepSpecificationImpl :
 
     internal var flattenOutput = false
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connect(client: () -> com.mongodb.reactivestreams.client.MongoClient) {
         this.client = client

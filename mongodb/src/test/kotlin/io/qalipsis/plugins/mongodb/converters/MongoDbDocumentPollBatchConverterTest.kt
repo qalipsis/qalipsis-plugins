@@ -24,7 +24,7 @@ import assertk.assertThat
 import assertk.assertions.hasSize
 import assertk.assertions.index
 import assertk.assertions.isEqualTo
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.key
 import assertk.assertions.prop
 import io.mockk.coJustRun
@@ -36,13 +36,13 @@ import io.qalipsis.plugins.mongodb.converters.MongoDbDocumentPollBatchConverter
 import io.qalipsis.plugins.mongodb.poll.MongoDBPollResults
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
+import java.time.Duration
+import java.util.concurrent.atomic.AtomicLong
 import org.bson.Document
 import org.bson.types.ObjectId
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.time.Duration
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  *
@@ -83,7 +83,7 @@ internal class MongoDbDocumentPollBatchConverterTest {
 
         //then
         assertThat(resultCaptor.captured).all {
-            prop(MongoDBPollResults::meters).isSameAs(queryResults.meters)
+            prop(MongoDBPollResults::meters).isSameInstanceAs(queryResults.meters)
             prop(MongoDBPollResults::records).all {
                 hasSize(2)
                 index(0).all {

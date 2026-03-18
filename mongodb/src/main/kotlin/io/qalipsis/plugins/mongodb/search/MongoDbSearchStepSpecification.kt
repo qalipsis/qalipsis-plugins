@@ -71,7 +71,7 @@ internal class MongoDbSearchStepSpecificationImpl<I> :
 
     internal var searchConfig = MongoDbQueryConfiguration<I>()
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connect(clientFactory: () -> com.mongodb.reactivestreams.client.MongoClient) {
         this.clientFactory = clientFactory

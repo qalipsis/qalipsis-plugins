@@ -24,7 +24,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
 import assertk.assertions.isNotSameAs
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import com.mongodb.reactivestreams.client.MongoClient
 import io.aerisconsulting.catadioptre.getProperty
@@ -44,13 +44,13 @@ import io.qalipsis.plugins.mongodb.MongoDBQueryResult
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
+import java.time.Duration
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import org.bson.Document
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.time.Duration
 
 @WithMockk
 internal class MongoDbIterativeReaderTest {
@@ -131,7 +131,7 @@ internal class MongoDbIterativeReaderTest {
         val client = reader.getProperty<MongoClient>("client")
         assertThat(client).isNotNull()
         val resultsChannel = reader.getProperty<Channel<List<Document>>>("resultsChannel")
-        assertThat(resultsChannel).isSameAs(resultsChannel)
+        assertThat(resultsChannel).isSameInstanceAs(resultsChannel)
 
         // when
         reader.stop(startStopContext)
@@ -149,8 +149,8 @@ internal class MongoDbIterativeReaderTest {
         verify { resultsChannelFactory() }
         assertThat(reader.hasNext()).isTrue()
         assertThat(reader.getProperty<Job>("pollingJob")).isNotSameAs(pollingJob)
-        assertThat(reader.getProperty<MongoClient>("client")).isSameAs(client)
-        assertThat(reader.getProperty<Channel<List<Document>>>("resultsChannel")).isSameAs(resultsChannel)
+        assertThat(reader.getProperty<MongoClient>("client")).isSameInstanceAs(client)
+        assertThat(reader.getProperty<Channel<List<Document>>>("resultsChannel")).isSameInstanceAs(resultsChannel)
 
         reader.stop(startStopContext)
     }

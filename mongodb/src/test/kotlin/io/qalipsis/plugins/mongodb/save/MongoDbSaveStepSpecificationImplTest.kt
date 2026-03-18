@@ -25,7 +25,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import com.mongodb.reactivestreams.client.MongoClients
@@ -89,8 +89,8 @@ internal class MongoDbSaveStepSpecificationImplTest {
                 prop(MongoDbSaveQueryConfiguration<*>::documents).isEqualTo(recordSupplier)
             }
             prop(MongoDbSaveStepSpecificationImpl<*>::monitoringConfig).isNotNull().all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
 
@@ -173,7 +173,7 @@ internal class MongoDbSaveStepSpecificationImplTest {
         }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(MongoDbSaveStepSpecificationImpl::class).all {
-            prop(MongoDbSaveStepSpecificationImpl<*>::clientBuilder).isSameAs(clientFactory)
+            prop(MongoDbSaveStepSpecificationImpl<*>::clientBuilder).isSameInstanceAs(clientFactory)
             prop(MongoDbSaveStepSpecificationImpl<*>::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
                 prop(StepMonitoringConfiguration::meters).isTrue()
@@ -211,7 +211,7 @@ internal class MongoDbSaveStepSpecificationImplTest {
         }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(MongoDbSaveStepSpecificationImpl::class).all {
-            prop(MongoDbSaveStepSpecificationImpl<*>::clientBuilder).isSameAs(overrideClient)
+            prop(MongoDbSaveStepSpecificationImpl<*>::clientBuilder).isSameInstanceAs(overrideClient)
             prop(MongoDbSaveStepSpecificationImpl<*>::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isFalse()
                 prop(StepMonitoringConfiguration::meters).isTrue()
@@ -253,7 +253,7 @@ internal class MongoDbSaveStepSpecificationImplTest {
             }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(MongoDbSaveStepSpecificationImpl::class).all {
-            prop(MongoDbSaveStepSpecificationImpl<*>::clientBuilder).isSameAs(overrideClient)
+            prop(MongoDbSaveStepSpecificationImpl<*>::clientBuilder).isSameInstanceAs(overrideClient)
             prop(MongoDbSaveStepSpecificationImpl<*>::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isFalse()
                 prop(StepMonitoringConfiguration::meters).isTrue()
