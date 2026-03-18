@@ -19,20 +19,22 @@
 
 package io.qalipsis.plugins.timescaledb.dataprovider
 
+import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.query.DataRetrievalQueryExecutionContext
 import io.qalipsis.api.query.Page
 import io.qalipsis.api.report.TimeSeriesRecord
 import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.spi.Connection
+import java.math.BigDecimal
+import java.time.Instant
+import kotlin.math.ceil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.math.BigDecimal
-import java.time.Instant
-import kotlin.math.ceil
 
 /**
  * Specific class to retrieve records of time-series data.
@@ -89,7 +91,7 @@ internal class DataRetrievalExecutor(
         val countJob =
             ioCoroutineScope.async { countRecords(sqlCountStatement, actualBoundParameters, actualStart, actualEnd) }
 
-        val totalElements = countJob.await().toLong()
+        val totalElements = countJob.await().first().toLong()
 
         return Page(
             page = context.page,
@@ -102,7 +104,10 @@ internal class DataRetrievalExecutor(
     private suspend fun selectRecords(
         sqlStatement: String, boundParameters: Map<String, BoundParameter>, start: Instant, end: Instant
     ) = Flux.usingWhen(
-        connectionPool.create(), { connection ->
+        connectionPool.create()
+            .doOnNext { log.debug { "Acquired a connection" } },
+        { connection ->
+            log.debug { "Executing the SQL query: $sqlStatement" }
             Mono.from(connection.createStatement(sqlStatement).also { statement ->
                 bindArguments(
                     tenant = context.tenant,
@@ -116,14 +121,18 @@ internal class DataRetrievalExecutor(
                     converter.convert(row, metadata)
                 }
             }
-        }, Connection::close
+        },
+        Connection::close
     ).asFlow().toList(mutableListOf<TimeSeriesRecord>())
 
 
     private suspend fun countRecords(
         sqlStatement: String, boundParameters: Map<String, BoundParameter>, start: Instant, end: Instant
     ) = Flux.usingWhen(
-        connectionPool.create(), { connection ->
+        connectionPool.create()
+            .doOnNext { log.debug { "Acquired a connection" } },
+        { connection ->
+            log.debug { "Executing the SQL query: $sqlStatement" }
             Mono.from(connection.createStatement(sqlStatement).also { statement ->
                 bindArguments(
                     tenant = context.tenant,
@@ -137,6 +146,11 @@ internal class DataRetrievalExecutor(
                     row.get("count", BigDecimal::class.java)
                 }
             }
-        }, Connection::close
-    ).asFlow().toList(mutableListOf()).first()
+        },
+        Connection::close
+    ).collectList().asFlow().first()
+
+    private companion object {
+        val log = logger()
+    }
 }

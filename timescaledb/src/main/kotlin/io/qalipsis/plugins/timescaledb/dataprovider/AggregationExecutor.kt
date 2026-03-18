@@ -25,14 +25,14 @@ import io.qalipsis.api.query.AggregationQueryExecutionContext
 import io.qalipsis.api.report.TimeSeriesAggregationResult
 import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.spi.Connection
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.reactive.asFlow
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.reactive.asFlow
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 
 /**
  * Specific class to execute a single aggregation on time-series data.
@@ -80,6 +80,7 @@ internal class AggregationExecutor(
         return Flux.usingWhen(
             connectionPool.create(),
             { connection ->
+                log.debug { "Executing the SQL query: $sqlStatement" }
                 Mono.from(connection.createStatement(sqlStatement).also { statement ->
                     bindArguments(
                         tenant = context.tenant,

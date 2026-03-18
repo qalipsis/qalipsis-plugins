@@ -118,6 +118,7 @@ internal abstract class AbstractDataProvider(
                     connection.createStatement(query)
                         .also {
                             params.forEach { (binding, value) ->
+                                log.trace { "Binding $binding to $value" }
                                 it.bind(binding, value)
                             }
                         }.execute()
