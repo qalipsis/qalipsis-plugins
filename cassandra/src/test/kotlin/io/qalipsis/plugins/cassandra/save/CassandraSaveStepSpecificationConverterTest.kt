@@ -26,7 +26,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import com.datastax.oss.driver.api.core.CqlSessionBuilder
 import io.mockk.spyk
@@ -94,7 +94,7 @@ internal class CassandraSaveStepSpecificationConverterTest :
             it.retryPolicy = mockedRetryPolicy
 
             it.monitoring {
-                events = true
+                meters = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -114,7 +114,7 @@ internal class CassandraSaveStepSpecificationConverterTest :
             prop("columns").isEqualTo(columns)
             prop("rowsFactory").isEqualTo(rowsFactory)
             prop("cassandraSaveQueryClient").isNotNull().isInstanceOf(CassandraSaveQueryClientImpl::class).all {
-                prop("eventsLogger").isSameAs(eventsLogger)
+                prop("eventsLogger").isSameInstanceAs(eventsLogger)
                 prop("meterRegistry").isNull()
             }
         }
@@ -137,7 +137,7 @@ internal class CassandraSaveStepSpecificationConverterTest :
             it.columnsConfig = columns
             it.rowsFactory = rowsFactory
             it.monitoring {
-                meters = true
+                events = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -158,7 +158,7 @@ internal class CassandraSaveStepSpecificationConverterTest :
             prop("rowsFactory").isEqualTo(rowsFactory)
             prop("cassandraSaveQueryClient").isNotNull().isInstanceOf(CassandraSaveQueryClientImpl::class).all {
                 prop("eventsLogger").isNull()
-                prop("meterRegistry").isSameAs(meterRegistry)
+                prop("meterRegistry").isSameInstanceAs(meterRegistry)
             }
         }
     }

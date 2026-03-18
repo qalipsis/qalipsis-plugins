@@ -129,7 +129,7 @@ internal class CassandraPollStepSpecificationImpl :
     @field:NotNull
     internal var pollPeriod: Duration = Duration.ofSeconds(DefaultValues.pollDurationInSeconds)
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     internal var flattenOutput = false
 

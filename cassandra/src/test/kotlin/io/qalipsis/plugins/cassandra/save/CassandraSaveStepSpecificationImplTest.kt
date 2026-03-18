@@ -92,8 +92,8 @@ internal class CassandraSaveStepSpecificationImplTest {
             prop(CassandraSaveStepSpecificationImpl<*>::columnsConfig).isNotNull()
             prop(CassandraSaveStepSpecificationImpl<*>::rowsFactory).isNotNull()
             prop(CassandraSaveStepSpecificationImpl<*>::monitoringConfig).all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
 

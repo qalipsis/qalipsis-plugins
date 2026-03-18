@@ -87,7 +87,7 @@ internal class CassandraSaveStepSpecificationImpl<I> :
     internal var rowsFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<CassandraSaveRow>) =
         { _, _ -> emptyList() }
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connect(serverConfiguration: CassandraServerConfiguration.() -> Unit) {
         this.serversConfig.serverConfiguration()

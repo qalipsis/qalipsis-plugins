@@ -27,7 +27,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.prop
 import com.datastax.oss.driver.api.core.servererrors.InvalidQueryException
 import io.mockk.confirmVerified
@@ -42,13 +42,13 @@ import io.qalipsis.api.meters.Meter
 import io.qalipsis.api.meters.Timer
 import io.qalipsis.plugins.cassandra.AbstractCassandraIntegrationTest
 import io.qalipsis.test.mockk.relaxedMockk
+import java.time.Duration
+import java.time.Instant
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertThrows
-import java.time.Duration
-import java.time.Instant
 
 /**
  *
@@ -305,7 +305,7 @@ internal class CassandraQueryClientIntegrationTest : AbstractCassandraIntegratio
             failureCounter.increment()
         }
         assertThat(eventCaptor.captured.toList()).all {
-            index(0).isSameAs(exception)
+            index(0).isSameInstanceAs(exception)
             index(1).isNotNull().isInstanceOf(Duration::class.java).isGreaterThan(Duration.ZERO)
         }
 

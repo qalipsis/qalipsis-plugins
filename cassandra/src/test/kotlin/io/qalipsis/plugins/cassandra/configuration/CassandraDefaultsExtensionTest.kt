@@ -103,8 +103,8 @@ internal class CassandraDefaultsExtensionTest {
                             prop(CassandraServerConfiguration::keyspace).isEqualTo("test_keyspace")
                         }
                         prop(CassandraDefaultsExtensionImpl::monitoringConfig).all {
-                            prop(StepMonitoringConfiguration::events).isFalse()
-                            prop(StepMonitoringConfiguration::meters).isFalse()
+                            prop(StepMonitoringConfiguration::events).isTrue()
+                            prop(StepMonitoringConfiguration::meters).isTrue()
                         }
                     }
             }
@@ -112,13 +112,10 @@ internal class CassandraDefaultsExtensionTest {
     }
 
     @Test
-    fun `should create defaults specification with monitoring only`() {
+    fun `should create defaults specification with disabled monitoring`() {
         val scenario = TestScenarioFactory.scenario("my-scenario", {
             cassandra().defaults {
-                monitoring {
-                    events = true
-                    meters = true
-                }
+                monitoring { off() }
             }
         })
 
@@ -132,8 +129,8 @@ internal class CassandraDefaultsExtensionTest {
                             prop(CassandraServerConfiguration::keyspace).isEqualTo("")
                         }
                         prop(CassandraDefaultsExtensionImpl::monitoringConfig).all {
-                            prop(StepMonitoringConfiguration::events).isTrue()
-                            prop(StepMonitoringConfiguration::meters).isTrue()
+                            prop(StepMonitoringConfiguration::events).isFalse()
+                            prop(StepMonitoringConfiguration::meters).isFalse()
                         }
                     }
             }

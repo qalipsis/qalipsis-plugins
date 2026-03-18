@@ -87,8 +87,8 @@ internal class CassandraSearchStepSpecificationImplTest {
             prop(CassandraSearchStepSpecificationImpl<*>::monitoringConfig).isNotNull()
             prop(CassandraSearchStepSpecificationImpl<*>::parametersFactory).isNotNull()
             prop(CassandraSearchStepSpecificationImpl<*>::monitoringConfig).all {
-                prop(StepMonitoringConfiguration::meters).isFalse()
-                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+                prop(StepMonitoringConfiguration::events).isTrue()
             }
         }
 

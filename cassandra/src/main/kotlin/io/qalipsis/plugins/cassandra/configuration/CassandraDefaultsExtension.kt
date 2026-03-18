@@ -65,7 +65,7 @@ internal class CassandraDefaultsExtensionImpl : CassandraDefaultsExtension {
 
     internal var serversConfig = CassandraServerConfiguration()
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connect(configurationBlock: CassandraServerConfiguration.() -> Unit) {
         serversConfig.configurationBlock()

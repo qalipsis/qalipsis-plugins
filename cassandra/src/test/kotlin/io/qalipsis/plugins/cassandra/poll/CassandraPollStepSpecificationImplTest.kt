@@ -86,8 +86,8 @@ internal class CassandraPollStepSpecificationImplTest {
             prop(CassandraPollStepSpecificationImpl::pollPeriod).isEqualTo(
                 Duration.ofSeconds(DefaultValues.pollDurationInSeconds))
             prop(CassandraPollStepSpecificationImpl::monitoringConfig).all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
             prop(CassandraPollStepSpecificationImpl::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.UNICAST)

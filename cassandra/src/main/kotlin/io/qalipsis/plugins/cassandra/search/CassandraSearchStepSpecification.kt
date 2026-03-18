@@ -84,7 +84,7 @@ internal class CassandraSearchStepSpecificationImpl<I> :
     internal var parametersFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<Any>) =
         { _, _ -> emptyList() }
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connect(serverConfiguration: CassandraServerConfiguration.() -> Unit) {
         serversConfig.serverConfiguration()

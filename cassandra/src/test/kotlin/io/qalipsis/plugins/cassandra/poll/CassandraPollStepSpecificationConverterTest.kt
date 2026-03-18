@@ -26,7 +26,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import com.datastax.oss.driver.api.core.cql.Row
 import com.datastax.oss.driver.api.core.type.reflect.GenericType
@@ -51,12 +51,12 @@ import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyNever
 import io.qalipsis.test.mockk.verifyOnce
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import java.time.Duration
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.time.Duration
 
 /**
  *
@@ -103,7 +103,7 @@ internal class CassandraPollStepSpecificationConverterTest :
             pollDelay(10_000L)
             broadcast(123, Duration.ofSeconds(20))
             monitoring {
-                events = true
+                meters = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -125,15 +125,15 @@ internal class CassandraPollStepSpecificationConverterTest :
             prop("name").isEqualTo("my-step")
             prop("reader").isNotNull().isInstanceOf(CassandraIterativeReader::class).all {
                 prop("sessionBuilder").isNotNull()
-                prop("cqlPollStatement").isSameAs(cqlPollStatement)
+                prop("cqlPollStatement").isSameInstanceAs(cqlPollStatement)
                 prop("pollPeriod").isEqualTo(Duration.ofSeconds(10))
                 prop("cassandraQueryClient").isNotNull().isInstanceOf(CassandraQueryClientImpl::class).all {
-                    prop("eventsLogger").isSameAs(eventsLogger)
+                    prop("eventsLogger").isSameInstanceAs(eventsLogger)
                     prop("meterRegistry").isNull()
                 }
             }
             prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-            prop("converter").isNotNull().isSameAs(recordsConverter)
+            prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
         }
         verifyOnce { spiedConverter.buildConverter(eq(creationContext.createdStep!!.name), refEq(spec)) }
         verifyNever { spiedConverter.buildConverter(neq(creationContext.createdStep!!.name), any()) }
@@ -172,7 +172,7 @@ internal class CassandraPollStepSpecificationConverterTest :
             pollDelay(10_000L)
             broadcast(123, Duration.ofSeconds(20))
             monitoring {
-                meters = true
+                events = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -194,15 +194,15 @@ internal class CassandraPollStepSpecificationConverterTest :
             prop("name").isEqualTo("my-step")
             prop("reader").isNotNull().isInstanceOf(CassandraIterativeReader::class).all {
                 prop("sessionBuilder").isNotNull()
-                prop("cqlPollStatement").isSameAs(cqlPollStatement)
+                prop("cqlPollStatement").isSameInstanceAs(cqlPollStatement)
                 prop("pollPeriod").isEqualTo(Duration.ofSeconds(10))
                 prop("cassandraQueryClient").isNotNull().isInstanceOf(CassandraQueryClientImpl::class).all {
                     prop("eventsLogger").isNull()
-                    prop("meterRegistry").isSameAs(meterRegistry)
+                    prop("meterRegistry").isSameInstanceAs(meterRegistry)
                 }
             }
             prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-            prop("converter").isNotNull().isSameAs(recordsConverter)
+            prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
         }
         verifyOnce { spiedConverter.buildConverter(eq(creationContext.createdStep!!.name), refEq(spec)) }
         verifyNever { spiedConverter.buildConverter(neq(creationContext.createdStep!!.name), any()) }
