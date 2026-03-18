@@ -90,8 +90,8 @@ internal class InfluxDbSaveStepSpecificationImplTest {
                 prop(InfluxDbSavePointConfiguration<*>::points).isEqualTo(pointSupplier)
             }
             prop(InfluxDbSaveStepSpecificationImpl<*>::monitoringConfig).isNotNull().all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
 
@@ -129,7 +129,7 @@ internal class InfluxDbSaveStepSpecificationImplTest {
                 points = pointSupplier
             }
             monitoring {
-                events = true
+                meters = false
             }
         }
 

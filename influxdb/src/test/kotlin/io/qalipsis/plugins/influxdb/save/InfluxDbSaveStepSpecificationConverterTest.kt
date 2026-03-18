@@ -27,7 +27,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import com.influxdb.client.write.Point
 import io.mockk.spyk
@@ -98,7 +98,7 @@ internal class InfluxDbSaveStepSpecificationConverterTest :
             }
             it.retryPolicy = mockedRetryPolicy
             it.monitoring {
-                meters = true
+                events = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -113,13 +113,13 @@ internal class InfluxDbSaveStepSpecificationConverterTest :
             prop("name").isEqualTo("influxdb-save-step")
             prop("influxDbSavePointClient").all {
                 prop("clientBuilder").isNotNull()
-                prop("meterRegistry").isSameAs(meterRegistry)
+                prop("meterRegistry").isSameInstanceAs(meterRegistry)
                 prop("eventsLogger").isNull()
             }
             prop("retryPolicy").isNotNull()
             prop("bucketName").isEqualTo(bucketName)
             prop("orgName").isEqualTo(orgName)
-            prop("pointsFactory").isSameAs(pointSupplier)
+            prop("pointsFactory").isSameInstanceAs(pointSupplier)
         }
     }
 
@@ -145,7 +145,7 @@ internal class InfluxDbSaveStepSpecificationConverterTest :
                 points = pointSupplier
             }
             it.monitoring {
-                events = true
+                meters = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -162,11 +162,11 @@ internal class InfluxDbSaveStepSpecificationConverterTest :
             prop("retryPolicy").isNull()
             prop("bucketName").isEqualTo(bucketName)
             prop("orgName").isEqualTo(orgName)
-            prop("pointsFactory").isSameAs(pointSupplier)
+            prop("pointsFactory").isSameInstanceAs(pointSupplier)
             prop("influxDbSavePointClient").all {
                 prop("clientBuilder").isNotNull()
                 prop("meterRegistry").isNull()
-                prop("eventsLogger").isSameAs(eventsLogger)
+                prop("eventsLogger").isSameInstanceAs(eventsLogger)
             }
         }
     }

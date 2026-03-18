@@ -24,7 +24,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
 import assertk.assertions.isNotSameAs
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import com.influxdb.client.kotlin.InfluxDBClientKotlin
 import io.aerisconsulting.catadioptre.getProperty
@@ -44,12 +44,12 @@ import io.qalipsis.plugins.influxdb.InfluxDbStepConnectionImpl
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
+import java.time.Duration
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.time.Duration
 
 @WithMockk
 internal class InfluxDbIterativeReaderTest {
@@ -82,7 +82,7 @@ internal class InfluxDbIterativeReaderTest {
     @RelaxedMockK
     private lateinit var client: InfluxDBClientKotlin
 
-    private val clientBuilder: () -> InfluxDBClientKotlin by lazy { { client } }
+    private val clientBuilder: () -> InfluxDBClientKotlin by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { { client } }
 
     @Test
     @Timeout(7)
@@ -154,7 +154,7 @@ internal class InfluxDbIterativeReaderTest {
         val client = reader.getProperty<InfluxDBClientKotlin>("client")
         assertThat(client).isNotNull()
         val resultsChannel = reader.getProperty<Channel<InfluxDbQueryResult>>("resultsChannel")
-        assertThat(resultsChannel).isSameAs(resultsChannel)
+        assertThat(resultsChannel).isSameInstanceAs(resultsChannel)
 
         // when
         reader.stop(startStopContext)
@@ -172,7 +172,7 @@ internal class InfluxDbIterativeReaderTest {
         assertThat(reader.hasNext()).isTrue()
         assertThat(reader.getProperty<Job>("pollingJob")).isNotSameAs(pollingJob)
         assertThat(reader.getProperty<InfluxDBClientKotlin>("client")).isNotNull()
-        assertThat(reader.getProperty<Channel<InfluxDbQueryResult>>("resultsChannel")).isSameAs(resultsChannel)
+        assertThat(reader.getProperty<Channel<InfluxDbQueryResult>>("resultsChannel")).isSameInstanceAs(resultsChannel)
 
         reader.stop(startStopContext)
     }

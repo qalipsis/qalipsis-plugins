@@ -51,8 +51,8 @@ internal class InfluxDbSpecificationImplTest {
                 Duration.ofSeconds(10L)
             )
             prop(InfluxDbPollStepSpecificationImpl::monitoringConfiguration).all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
             prop(InfluxDbPollStepSpecificationImpl::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.UNICAST)

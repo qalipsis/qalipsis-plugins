@@ -28,7 +28,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.mockk.spyk
@@ -89,7 +89,7 @@ internal class InfluxDbSearchStepSpecificationConverterTest :
             it.query(queryFactory)
             it.retryPolicy = mockedRetryPolicy
             it.monitoring {
-                meters = true
+                events = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -106,10 +106,10 @@ internal class InfluxDbSearchStepSpecificationConverterTest :
                 prop(InfluxDbSearchStep<*>::name).isEqualTo("influxdb-search-step")
                 prop("influxDbQueryClient").all {
                     prop("eventsLogger").isNull()
-                    prop("meterRegistry").isSameAs(meterRegistry)
+                    prop("meterRegistry").isSameInstanceAs(meterRegistry)
                 }
                 prop("retryPolicy").isNotNull()
-                prop("queryFactory").isSameAs(queryFactory)
+                prop("queryFactory").isSameInstanceAs(queryFactory)
             }
         }
     }
@@ -132,7 +132,7 @@ internal class InfluxDbSearchStepSpecificationConverterTest :
             }
             it.query(queryFactory)
             it.monitoring {
-                events = true
+                meters = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -148,10 +148,10 @@ internal class InfluxDbSearchStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(InfluxDbSearchStep::class).all {
                 prop("name").isNotNull()
                 prop("retryPolicy").isNull()
-                prop("queryFactory").isSameAs(queryFactory)
+                prop("queryFactory").isSameInstanceAs(queryFactory)
                 prop("influxDbQueryClient").all {
                     prop("meterRegistry").isNull()
-                    prop("eventsLogger").isSameAs(eventsLogger)
+                    prop("eventsLogger").isSameInstanceAs(eventsLogger)
                 }
             }
         }

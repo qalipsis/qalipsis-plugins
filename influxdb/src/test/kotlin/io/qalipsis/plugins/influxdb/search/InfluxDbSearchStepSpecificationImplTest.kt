@@ -77,8 +77,8 @@ internal class InfluxDbSearchStepSpecificationImplTest {
             prop("name") { InfluxDbSearchStepSpecificationImpl<Int>::name.call(it) }.isEqualTo("my-search-step")
             prop(InfluxDbSearchStepSpecificationImpl<*>::queryFactory).isNotNull()
             prop(InfluxDbSearchStepSpecificationImpl<*>::monitoringConfig).isNotNull().all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
 

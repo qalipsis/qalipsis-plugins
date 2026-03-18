@@ -84,7 +84,7 @@ internal class InfluxDbPollStepSpecificationImpl(
 
     var connectionConfiguration = InfluxDbStepConnectionImpl()
 
-    var monitoringConfiguration = StepMonitoringConfiguration()
+    var monitoringConfiguration = StepMonitoringConfiguration().all()
 
     @field:NotNull
     internal lateinit var query: String

@@ -67,7 +67,7 @@ internal class InfluxDbDefaultsExtensionImpl : InfluxDbDefaultsExtension {
 
     internal var connectionConfiguration = InfluxDbStepConnectionImpl()
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connect(connection: InfluxDbStepConnection.() -> Unit) {
         connectionConfiguration.connection()

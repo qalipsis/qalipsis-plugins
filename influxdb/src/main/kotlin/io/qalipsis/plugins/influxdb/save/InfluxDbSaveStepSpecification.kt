@@ -75,7 +75,7 @@ internal class InfluxDbSaveStepSpecificationImpl<I> :
 
     internal var queryConfiguration = InfluxDbSavePointConfiguration<I>()
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connect(connectionConfiguration: InfluxDbStepConnectionImpl.() -> Unit) {
         connectionConfig.connectionConfiguration();

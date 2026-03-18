@@ -69,7 +69,7 @@ internal class InfluxDbSearchStepSpecificationImpl<I> :
 
     var queryFactory: suspend (ctx: StepContext<*, *>, input: I) -> String = { _, _ -> "" }
 
-    var monitoringConfig = StepMonitoringConfiguration()
+    var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connect(connectionConfiguration: InfluxDbStepConnectionImpl.() -> Unit) {
         connectionConfig.connectionConfiguration()
