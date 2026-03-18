@@ -25,7 +25,7 @@ import assertk.assertions.containsAll
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectReader
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
@@ -47,14 +47,14 @@ import io.qalipsis.test.assertk.typedProp
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import java.io.InputStreamReader
+import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.createTempFile
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.io.InputStreamReader
-import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.createTempFile
 
 /**
  * @author Maxim Golokhov
@@ -109,7 +109,7 @@ internal class XmlReaderStepSpecificationConverterTest :
             assertThat(it).all {
                 isInstanceOf(SequentialDatasourceStep::class)
                 prop("name").isEqualTo("my-step")
-                prop("reader").isSameAs(reader)
+                prop("reader").isSameInstanceAs(reader)
                 typedProp<Any>("processor").isInstanceOf(NoopDatasourceObjectProcessor::class)
                 typedProp<Any>("converter").isInstanceOf(DatasourceRecordObjectConverter::class)
             }
@@ -138,7 +138,7 @@ internal class XmlReaderStepSpecificationConverterTest :
             assertThat(it).all {
                 isInstanceOf(IterativeDatasourceStep::class)
                 prop("name").isNotNull()
-                prop("reader").isSameAs(reader)
+                prop("reader").isSameInstanceAs(reader)
                 typedProp<Any>("processor").isInstanceOf(NoopDatasourceObjectProcessor::class)
                 typedProp<Any>("converter").isInstanceOf(DatasourceRecordObjectConverter::class)
             }
@@ -210,7 +210,7 @@ internal class XmlReaderStepSpecificationConverterTest :
             typedProp<InputStreamReader>("inputStreamReader").all {
                 transform { it.ready() }.isEqualTo(true)
             }
-            prop("objectReader").isSameAs(objectReader)
+            prop("objectReader").isSameInstanceAs(objectReader)
         }
         verifyOrder {
             spiedConverter["createMapper"](refEq(spec))

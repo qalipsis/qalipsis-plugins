@@ -27,7 +27,7 @@ import assertk.assertions.index
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import com.fasterxml.jackson.databind.ObjectReader
 import com.fasterxml.jackson.dataformat.csv.CsvMapper
 import com.fasterxml.jackson.dataformat.csv.CsvSchema
@@ -54,6 +54,11 @@ import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyNever
 import io.qalipsis.test.mockk.verifyOnce
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import java.io.InputStreamReader
+import java.util.stream.Stream
+import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.createTempFile
+import kotlin.reflect.KClass
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -62,11 +67,6 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.io.InputStreamReader
-import java.util.stream.Stream
-import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.createTempFile
-import kotlin.reflect.KClass
 
 /**
  * @author Eric Jessé
@@ -123,8 +123,8 @@ internal class CsvReaderStepSpecificationConverterTest :
             assertThat(it).all {
                 isInstanceOf(IterativeDatasourceStep::class)
                 prop("name").isEqualTo("my-step")
-                prop("reader").isSameAs(reader)
-                prop("processor").isSameAs(processor)
+                prop("reader").isSameInstanceAs(reader)
+                prop("processor").isSameInstanceAs(processor)
                 typedProp<Any>("converter").isInstanceOf(DatasourceRecordObjectConverter::class)
             }
         }
@@ -152,8 +152,8 @@ internal class CsvReaderStepSpecificationConverterTest :
             assertThat(it).all {
                 isInstanceOf(SequentialDatasourceStep::class)
                 prop("name").isNotNull()
-                prop("reader").isSameAs(reader)
-                prop("processor").isSameAs(processor)
+                prop("reader").isSameInstanceAs(reader)
+                prop("processor").isSameInstanceAs(processor)
                 typedProp<Any>("converter").isInstanceOf(DatasourceRecordObjectConverter::class)
             }
         }
@@ -391,7 +391,7 @@ internal class CsvReaderStepSpecificationConverterTest :
             typedProp<InputStreamReader>("inputStreamReader").all {
                 transform { it.ready() }.isEqualTo(true)
             }
-            prop("objectReader").isSameAs(objectReader)
+            prop("objectReader").isSameInstanceAs(objectReader)
         }
         verifyOrder {
             spiedConverter["createMapper"]()
