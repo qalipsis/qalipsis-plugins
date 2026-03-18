@@ -73,7 +73,7 @@ internal class GraphiteDefaultsExtensionImpl : GraphiteDefaultsExtension {
 
     internal var saveConnectionConfig: (GraphiteConnectionSpecification.() -> Unit)? = null
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun pollConnection(connection: GraphiteHttpConnectionSpecification.() -> Unit) {
         this.pollConnectionConfig = connection

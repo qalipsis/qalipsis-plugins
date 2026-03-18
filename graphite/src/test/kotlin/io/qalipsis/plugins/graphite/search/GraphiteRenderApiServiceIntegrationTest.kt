@@ -21,7 +21,6 @@ package io.qalipsis.plugins.graphite.search
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.contains
 import assertk.assertions.containsOnly
 import assertk.assertions.hasSize
 import assertk.assertions.index
@@ -42,6 +41,14 @@ import io.qalipsis.plugins.graphite.client.GraphiteRecord
 import io.qalipsis.plugins.graphite.client.GraphiteTcpClient
 import io.qalipsis.plugins.graphite.client.codecs.PickleEncoder
 import io.qalipsis.test.coroutines.TestDispatcherProvider
+import java.net.URI
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Clock
+import java.time.Duration
+import java.time.ZoneId
+import java.util.concurrent.TimeUnit
+import kotlin.math.pow
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -55,14 +62,6 @@ import org.testcontainers.containers.wait.strategy.HttpWaitStrategy
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
-import java.net.URI
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.time.Clock
-import java.time.Duration
-import java.time.ZoneId
-import java.util.concurrent.TimeUnit
-import kotlin.math.pow
 
 /**
  * @author rklymenko

@@ -43,6 +43,14 @@ import io.qalipsis.plugins.graphite.client.codecs.PlaintextEncoder
 import io.qalipsis.plugins.graphite.search.DataPoints
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.coVerifyNever
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeUnit
+import kotlin.math.pow
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import org.awaitility.kotlin.await
@@ -58,14 +66,6 @@ import org.testcontainers.containers.wait.strategy.HttpWaitStrategy
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.time.Duration
-import java.time.temporal.ChronoUnit
-import java.util.concurrent.TimeUnit
-import kotlin.math.pow
 
 
 @Testcontainers

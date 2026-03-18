@@ -40,8 +40,8 @@ import io.qalipsis.plugins.graphite.poll.converters.GraphitePollBatchConverter
 import io.qalipsis.plugins.graphite.search.GraphiteQuery
 import io.qalipsis.plugins.graphite.search.GraphiteRenderApiService
 import jakarta.inject.Named
-import kotlinx.coroutines.CoroutineScope
 import java.util.*
+import kotlinx.coroutines.CoroutineScope
 
 /**
  * [StepSpecificationConverter] from [GraphitePollStepSpecificationImpl] to [GraphiteIterativeReader] for a data source.

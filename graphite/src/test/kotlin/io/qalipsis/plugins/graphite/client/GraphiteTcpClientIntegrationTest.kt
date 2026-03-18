@@ -41,18 +41,6 @@ import io.qalipsis.plugins.graphite.client.codecs.PickleEncoder
 import io.qalipsis.plugins.graphite.client.codecs.PlaintextEncoder
 import io.qalipsis.plugins.graphite.search.DataPoints
 import io.qalipsis.test.coroutines.TestDispatcherProvider
-import org.awaitility.kotlin.await
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.extension.RegisterExtension
-import org.testcontainers.containers.BindMode
-import org.testcontainers.containers.GenericContainer
-import org.testcontainers.containers.wait.strategy.HttpWaitStrategy
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.utility.DockerImageName
 import java.net.ConnectException
 import java.net.URI
 import java.net.UnknownHostException
@@ -65,6 +53,18 @@ import java.time.Instant
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 import kotlin.math.pow
+import org.awaitility.kotlin.await
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.extension.RegisterExtension
+import org.testcontainers.containers.BindMode
+import org.testcontainers.containers.GenericContainer
+import org.testcontainers.containers.wait.strategy.HttpWaitStrategy
+import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.junit.jupiter.Testcontainers
+import org.testcontainers.utility.DockerImageName
 
 
 @Testcontainers

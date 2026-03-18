@@ -29,7 +29,7 @@ import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
@@ -37,9 +37,6 @@ import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.jsonMapper
 import com.fasterxml.jackson.module.kotlin.kotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
-import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.request.*
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
@@ -59,11 +56,20 @@ import io.qalipsis.plugins.graphite.client.GraphiteTcpClient
 import io.qalipsis.plugins.graphite.client.codecs.PickleEncoder
 import io.qalipsis.plugins.graphite.client.codecs.PlaintextEncoder
 import io.qalipsis.plugins.graphite.search.DataPoints
-import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.StepTestHelper
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.nio.channels.ClosedChannelException
+import java.time.Clock
+import java.time.Duration
+import java.time.ZoneId
+import java.util.concurrent.TimeUnit
+import kotlin.math.pow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.ReceiveChannel
 import org.apache.commons.lang3.RandomStringUtils
@@ -80,16 +86,6 @@ import org.testcontainers.containers.wait.strategy.HttpWaitStrategy
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.nio.channels.ClosedChannelException
-import java.time.Clock
-import java.time.Duration
-import java.time.ZoneId
-import java.util.concurrent.TimeUnit
-import kotlin.math.pow
 
 /**
  *
@@ -223,11 +219,11 @@ internal class GraphiteSaveStepIntegrationTest {
                 assertThat(result).prop(StepContext.StepOutputRecord<GraphiteSaveResult<String>>::value).all {
                     prop(GraphiteSaveResult<*>::input).isEqualTo(input)
                     prop(GraphiteSaveResult<*>::meters).all {
-                        prop("savedMessages").isEqualTo(4)
-                        prop("timeToResult").isNotNull()
+                        prop(GraphiteSaveQueryMeters::savedMessages).isEqualTo(4)
+                        prop(GraphiteSaveQueryMeters::timeToResult).isNotNull()
                     }
                 }
-                assertThat(capturedContext.captured).isSameAs(stepContext)
+                assertThat(capturedContext.captured).isSameInstanceAs(stepContext)
                 assertThat(capturedInput.captured).isEqualTo(input)
 
                 // Wait until the tags are properly created, since the operation is asynchronous.
@@ -366,11 +362,11 @@ internal class GraphiteSaveStepIntegrationTest {
                 assertThat(result).prop(StepContext.StepOutputRecord<GraphiteSaveResult<String>>::value).all {
                     prop(GraphiteSaveResult<*>::input).isEqualTo(input)
                     prop(GraphiteSaveResult<*>::meters).all {
-                        prop("savedMessages").isEqualTo(4)
-                        prop("timeToResult").isNotNull()
+                        prop(GraphiteSaveQueryMeters::savedMessages).isEqualTo(4)
+                        prop(GraphiteSaveQueryMeters::timeToResult).isNotNull()
                     }
                 }
-                assertThat(capturedContext.captured).isSameAs(stepContext)
+                assertThat(capturedContext.captured).isSameInstanceAs(stepContext)
                 assertThat(capturedInput.captured).isEqualTo(input)
 
                 // Wait until the tags are properly created, since the operation is asynchronous.
@@ -543,7 +539,7 @@ internal class GraphiteSaveStepIntegrationTest {
                 assertThat(stepContext.output).isInstanceOf<ReceiveChannel<GraphiteSaveResult<String>>>()
                     .prop(ReceiveChannel<*>::isEmpty).isTrue()
 
-                assertThat(capturedContext.captured).isSameAs(stepContext)
+                assertThat(capturedContext.captured).isSameInstanceAs(stepContext)
                 assertThat(capturedInput.captured).isEqualTo(input)
 
                 confirmVerified(timeToResponse, recordsCount, eventsLogger, campaignMeterRegistry)

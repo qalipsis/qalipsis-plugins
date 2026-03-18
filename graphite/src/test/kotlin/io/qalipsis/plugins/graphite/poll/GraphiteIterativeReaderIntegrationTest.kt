@@ -45,6 +45,15 @@ import io.qalipsis.plugins.graphite.search.GraphiteRenderApiService
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
+import java.net.URI
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.util.concurrent.TimeUnit
+import kotlin.math.pow
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -57,15 +66,6 @@ import org.testcontainers.containers.wait.strategy.HttpWaitStrategy
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
-import java.net.URI
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant
-import java.time.ZoneId
-import java.util.concurrent.TimeUnit
-import kotlin.math.pow
 
 @WithMockk
 @Testcontainers

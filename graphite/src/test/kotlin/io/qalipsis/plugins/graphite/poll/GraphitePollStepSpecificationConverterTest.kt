@@ -27,7 +27,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import io.aerisconsulting.catadioptre.getProperty
 import io.aerisconsulting.catadioptre.invokeInvisible
@@ -48,13 +48,13 @@ import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import java.time.Duration
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.time.Duration
 
 @WithMockk
 internal class GraphitePollStepSpecificationConverterTest :
@@ -115,7 +115,7 @@ internal class GraphitePollStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
                 prop("name").isEqualTo("my-step")
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isSameAs(recordsConverter)
+                prop("converter").isSameInstanceAs(recordsConverter)
                 prop("reader").isNotNull().isInstanceOf(GraphiteIterativeReader::class).all {
                     prop("pollStatement").isNotNull().isInstanceOf(GraphitePollStatement::class).all {
                         prop("graphiteQuery").typedProp<List<String>>("targets").containsOnly("target.key")
@@ -176,7 +176,7 @@ internal class GraphitePollStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
                 prop("name").isEqualTo("")
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isSameAs(recordsConverter)
+                prop("converter").isSameInstanceAs(recordsConverter)
                 prop("reader").isNotNull().isInstanceOf(GraphiteIterativeReader::class).all {
                     prop("pollStatement").isNotNull().isInstanceOf(GraphitePollStatement::class).all {
                         prop("graphiteQuery").typedProp<List<String>>("targets").containsOnly("target.key")

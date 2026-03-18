@@ -24,7 +24,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.mockk.mockk
@@ -36,8 +36,8 @@ import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.graphite.GraphiteHttpConnectionSpecificationImpl
 import io.qalipsis.plugins.graphite.graphite
 import io.qalipsis.plugins.graphite.search.GraphiteQuery
-import org.junit.jupiter.api.Test
 import java.time.Duration
+import org.junit.jupiter.api.Test
 
 internal class GraphitePollStepSpecificationImplTest {
 
@@ -53,8 +53,8 @@ internal class GraphitePollStepSpecificationImplTest {
                 Duration.ofSeconds(10L)
             )
             prop(GraphitePollStepSpecificationImpl::monitoringConfiguration).all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
             prop(GraphitePollStepSpecificationImpl::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.UNICAST)
@@ -103,7 +103,7 @@ internal class GraphitePollStepSpecificationImplTest {
                 prop(SingletonConfiguration::bufferSize).isEqualTo(123)
                 prop(SingletonConfiguration::idleTimeout).isEqualTo(Duration.ofSeconds(20))
             }
-            prop(GraphitePollStepSpecificationImpl::queryBuilder).isSameAs(queryBuilder)
+            prop(GraphitePollStepSpecificationImpl::queryBuilder).isSameInstanceAs(queryBuilder)
         }
     }
 }

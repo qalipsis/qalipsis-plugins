@@ -83,7 +83,7 @@ internal class GraphitePollStepSpecificationImpl :
 
     var connectionConfiguration = GraphiteHttpConnectionSpecificationImpl()
 
-    var monitoringConfiguration = StepMonitoringConfiguration()
+    var monitoringConfiguration = StepMonitoringConfiguration().all()
 
     @field:NotNull
     internal var queryBuilder: GraphiteQuery.() -> Unit = {}

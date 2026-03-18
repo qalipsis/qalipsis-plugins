@@ -27,7 +27,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.mockk.mockk
@@ -43,11 +43,11 @@ import io.qalipsis.plugins.graphite.GraphiteProtocol
 import io.qalipsis.plugins.graphite.client.GraphiteRecord
 import io.qalipsis.plugins.graphite.graphite
 import io.qalipsis.test.coroutines.TestDispatcherProvider
+import kotlin.random.Random
+import kotlin.reflect.KClass
 import org.apache.commons.lang3.RandomStringUtils
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import kotlin.random.Random
-import kotlin.reflect.KClass
 
 
 /**
@@ -92,8 +92,8 @@ internal class GraphiteSaveStepSpecificationImplTest {
             }
             prop(GraphiteSaveStepSpecificationImpl<*>::records).isEqualTo(recordSupplier)
             prop(GraphiteSaveStepSpecificationImpl<*>::monitoringConfig).isNotNull().all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
     }
@@ -106,7 +106,7 @@ internal class GraphiteSaveStepSpecificationImplTest {
         // when
         previousStep.graphite().save {
             records(recordSupplier)
-            monitoring { events = true }
+            monitoring { meters = false }
         }
 
         // then
@@ -158,14 +158,14 @@ internal class GraphiteSaveStepSpecificationImplTest {
         // then
         assertThat(previousStep.nextSteps[0]).isInstanceOf(GraphiteSaveStepSpecificationImpl::class).all {
             prop(GraphiteSaveStepSpecificationImpl<*>::name).isEqualTo(stepName)
-            prop(GraphiteSaveStepSpecificationImpl<*>::retryPolicy).isSameAs(retryPolicy)
+            prop(GraphiteSaveStepSpecificationImpl<*>::retryPolicy).isSameInstanceAs(retryPolicy)
             prop(GraphiteSaveStepSpecificationImpl<*>::connectionConfig).all {
                 prop(GraphiteConnectionSpecificationImpl::host).isEqualTo(server)
                 prop(GraphiteConnectionSpecificationImpl::port).isEqualTo(port)
                 prop(GraphiteConnectionSpecificationImpl::protocol).isEqualTo(GraphiteProtocol.PICKLE)
-                prop(GraphiteConnectionSpecificationImpl::nettyChannelClass).isSameAs(channelClass)
+                prop(GraphiteConnectionSpecificationImpl::nettyChannelClass).isSameInstanceAs(channelClass)
                 prop(GraphiteConnectionSpecificationImpl::nettyWorkerGroup).transform { it.invoke() }
-                    .isSameAs(workerGroup)
+                    .isSameInstanceAs(workerGroup)
             }
             prop(GraphiteSaveStepSpecificationImpl<*>::records).isEqualTo(recordSupplier)
             prop(GraphiteSaveStepSpecificationImpl<*>::monitoringConfig).isNotNull().all {
