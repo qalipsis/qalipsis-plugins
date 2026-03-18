@@ -88,7 +88,7 @@ internal class JakartaProducerStepSpecificationImpl<I> :
     internal var recordsFactory: suspend (ctx: StepContext<*, *>, input: I) -> List<JakartaProducerRecord> =
         { _, _ -> listOf() }
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connect(connectionFactory: () -> Connection) {
         this.connectionFactory = connectionFactory

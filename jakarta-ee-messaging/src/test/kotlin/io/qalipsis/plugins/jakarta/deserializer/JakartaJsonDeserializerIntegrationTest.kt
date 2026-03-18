@@ -31,6 +31,8 @@ import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.qalipsis.plugins.jakarta.Constants
 import jakarta.jms.Message
+import java.time.Instant
+import kotlin.math.pow
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -38,8 +40,6 @@ import org.junit.jupiter.api.assertThrows
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.time.Instant
-import kotlin.math.pow
 
 /**
  * @author Krawist Ngoben

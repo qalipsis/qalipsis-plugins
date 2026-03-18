@@ -20,7 +20,7 @@ import assertk.all
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.prop
 import io.mockk.mockk
 import io.qalipsis.api.context.StepContext
@@ -67,9 +67,9 @@ internal class JakartaProducerStepSpecificationTest {
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(JakartaProducerStepSpecificationImpl::class).all {
             prop(JakartaProducerStepSpecificationImpl<*>::producersCount).isEqualTo(2)
-            prop(JakartaProducerStepSpecificationImpl<*>::recordsFactory).isSameAs(recordSupplier)
-            prop(JakartaProducerStepSpecificationImpl<*>::connectionFactory).isSameAs(connectionFactory)
-            prop(JakartaProducerStepSpecificationImpl<*>::sessionFactory).isSameAs(sessionFactory)
+            prop(JakartaProducerStepSpecificationImpl<*>::recordsFactory).isSameInstanceAs(recordSupplier)
+            prop(JakartaProducerStepSpecificationImpl<*>::connectionFactory).isSameInstanceAs(connectionFactory)
+            prop(JakartaProducerStepSpecificationImpl<*>::sessionFactory).isSameInstanceAs(sessionFactory)
         }
     }
 

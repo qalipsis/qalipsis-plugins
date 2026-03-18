@@ -25,7 +25,7 @@ import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.prop
 import io.mockk.mockk
 import io.qalipsis.api.scenario.StepSpecificationRegistry
@@ -37,8 +37,8 @@ import jakarta.jms.Connection
 import jakarta.jms.QueueConnection
 import jakarta.jms.Session
 import jakarta.jms.TopicConnection
-import org.junit.jupiter.api.Test
 import java.time.Duration
+import org.junit.jupiter.api.Test
 
 /**
  * @author Krawist Ngoben
@@ -61,7 +61,7 @@ internal class JakartaConsumerStepSpecificationTest {
                 prop(JakartaConsumerConfiguration::queues).hasSize(2)
                 prop(JakartaConsumerConfiguration::topics).hasSize(0)
                 prop(JakartaConsumerConfiguration::topicConnectionFactory).isNull()
-                prop(JakartaConsumerConfiguration::sessionFactory).isSameAs(sessionFactory)
+                prop(JakartaConsumerConfiguration::sessionFactory).isSameInstanceAs(sessionFactory)
             }
             transform { it.singletonConfiguration }.all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.UNICAST)
@@ -87,7 +87,7 @@ internal class JakartaConsumerStepSpecificationTest {
                 prop(JakartaConsumerConfiguration::queues).hasSize(0)
                 prop(JakartaConsumerConfiguration::topics).hasSize(2)
                 prop(JakartaConsumerConfiguration::queueConnectionFactory).isNull()
-                prop(JakartaConsumerConfiguration::sessionFactory).isSameAs(sessionFactory)
+                prop(JakartaConsumerConfiguration::sessionFactory).isSameInstanceAs(sessionFactory)
             }
             transform { it.singletonConfiguration }.all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.UNICAST)

@@ -89,7 +89,7 @@ internal class JakartaDefaultsExtensionImpl : JakartaDefaultsExtension {
 
     internal var sessionFactory: ((connection: Connection) -> Session)? = null
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun queueConnection(queueConnectionFactory: () -> QueueConnection) {
         this.queueConnectionFactory = queueConnectionFactory

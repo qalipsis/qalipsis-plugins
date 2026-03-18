@@ -108,7 +108,7 @@ internal class JakartaConsumerStepSpecification<O : Any> internal constructor(
 
     internal val configuration = JakartaConsumerConfiguration()
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override val singletonConfiguration: SingletonConfiguration = SingletonConfiguration(SingletonType.UNICAST)
 

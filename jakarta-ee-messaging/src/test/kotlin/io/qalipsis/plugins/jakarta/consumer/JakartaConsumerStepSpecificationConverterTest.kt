@@ -27,7 +27,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import io.aerisconsulting.catadioptre.invokeInvisible
 import io.mockk.every
 import io.mockk.mockk
@@ -109,13 +109,13 @@ internal class JakartaConsumerStepSpecificationConverterTest :
                 prop("reader").isNotNull().isInstanceOf(JakartaConsumerIterativeReader::class).all {
                     prop("stepId").isEqualTo("my-step")
                     prop("topicConnectionFactory").isNull()
-                    prop("queueConnectionFactory").isSameAs(queueConnectionFactory)
-                    prop("sessionFactory").isSameAs(sessionFactory)
+                    prop("queueConnectionFactory").isSameInstanceAs(queueConnectionFactory)
+                    prop("sessionFactory").isSameInstanceAs(sessionFactory)
                     typedProp<Collection<String>>("queues").containsOnly("queue-1", "queue-2")
                     typedProp<Collection<String>>("topics").isEmpty()
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
@@ -155,14 +155,14 @@ internal class JakartaConsumerStepSpecificationConverterTest :
                 prop("name").isEqualTo("my-step")
                 prop("reader").isNotNull().isInstanceOf(JakartaConsumerIterativeReader::class).all {
                     prop("stepId").isEqualTo("my-step")
-                    prop("topicConnectionFactory").isSameAs(topicConnectionFactory)
-                    prop("sessionFactory").isSameAs(sessionFactory)
+                    prop("topicConnectionFactory").isSameInstanceAs(topicConnectionFactory)
+                    prop("sessionFactory").isSameInstanceAs(sessionFactory)
                     prop("queueConnectionFactory").isNull()
                     typedProp<Collection<String>>("topics").containsOnly("topic-1", "topic-2")
                     typedProp<Collection<String>>("queues").isEmpty()
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
@@ -171,7 +171,7 @@ internal class JakartaConsumerStepSpecificationConverterTest :
     @Test
     internal fun `should build converter`() {
         // given
-        val monitoringConfiguration = StepMonitoringConfiguration()
+        val monitoringConfiguration = StepMonitoringConfiguration().all()
         val deserializer = JakartaStringDeserializer()
 
         // when
