@@ -26,7 +26,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import com.github.jasync.sql.db.SSLConfiguration
@@ -86,8 +86,8 @@ internal class JasyncSearchStepSpecificationTest {
                 prop(JasyncConnection::maximumMessageSize).isEqualTo(16777216)
             }
             prop(JasyncSearchStepSpecificationImpl<*>::monitoringConfig).all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
     }
@@ -135,7 +135,7 @@ internal class JasyncSearchStepSpecificationTest {
                 prop(JasyncConnection::queryTimeout).isEqualTo(Duration.ofSeconds(60))
                 prop(JasyncConnection::ssl).all {
                     prop(SSLConfiguration::mode).isEqualTo(SSLConfiguration.Mode.Prefer)
-                    prop(SSLConfiguration::rootCert).isSameAs(rootCert)
+                    prop(SSLConfiguration::rootCert).isSameInstanceAs(rootCert)
                 }
                 prop(JasyncConnection::charset).isEqualTo(StandardCharsets.ISO_8859_1)
                 prop(JasyncConnection::maximumMessageSize).isEqualTo(151424)
@@ -188,7 +188,7 @@ internal class JasyncSearchStepSpecificationTest {
                 prop(JasyncConnection::queryTimeout).isEqualTo(Duration.ofSeconds(60))
                 prop(JasyncConnection::ssl).all {
                     prop(SSLConfiguration::mode).isEqualTo(SSLConfiguration.Mode.Prefer)
-                    prop(SSLConfiguration::rootCert).isSameAs(rootCert)
+                    prop(SSLConfiguration::rootCert).isSameInstanceAs(rootCert)
                 }
                 prop(JasyncConnection::charset).isEqualTo(StandardCharsets.ISO_8859_1)
                 prop(JasyncConnection::maximumMessageSize).isEqualTo(151424)

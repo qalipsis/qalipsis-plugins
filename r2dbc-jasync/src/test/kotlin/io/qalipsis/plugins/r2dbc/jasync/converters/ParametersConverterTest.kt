@@ -24,9 +24,8 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import io.qalipsis.test.mockk.relaxedMockk
-import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -35,6 +34,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
+import org.junit.jupiter.api.Test
 
 /**
  *
@@ -104,7 +104,7 @@ internal class ParametersConverterTest {
     internal fun `should keep non joda value unchanged`() {
         val java8 = relaxedMockk<Any>()
         val joda = javaToJodaConverter.process(java8)
-        assertThat(joda).isSameAs(joda)
+        assertThat(joda).isSameInstanceAs(joda)
     }
 
 }

@@ -74,7 +74,7 @@ internal class R2dbcJasyncDefaultsExtensionImpl : R2dbcJasyncDefaultsExtension {
 
     internal var protocol: Protocol? = null
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connection(configBlock: JasyncConnection.() -> Unit) {
         connectionConfiguration.configBlock()

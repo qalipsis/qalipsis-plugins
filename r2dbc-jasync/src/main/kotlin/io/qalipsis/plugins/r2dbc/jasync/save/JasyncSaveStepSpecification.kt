@@ -94,7 +94,7 @@ internal class JasyncSaveStepSpecificationImpl<I> :
     internal var rowsFactory: (suspend (ctx: StepContext<*, *>, input: I) -> List<JasyncSaveRecord>) =
         { _, _ -> emptyList() }
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connection(configBlock: JasyncConnection.() -> Unit) {
         connection.configBlock()

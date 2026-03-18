@@ -26,7 +26,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import com.github.jasync.sql.db.SSLConfiguration
@@ -69,16 +69,16 @@ internal class JasyncSaveStepSpecificationTest {
                 password = "my-other-password"
             }
             monitoring {
-                events = true
+                meters = false
             }
         }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(JasyncSaveStepSpecificationImpl::class).all {
             prop(JasyncSaveStepSpecificationImpl<*>::name).isEmpty()
             prop(JasyncSaveStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.POSTGRESQL)
-            prop(JasyncSaveStepSpecificationImpl<*>::tableNameFactory).isSameAs(tableNameFactory)
-            prop(JasyncSaveStepSpecificationImpl<*>::columnsFactory).isSameAs(columnsFactory)
-            prop(JasyncSaveStepSpecificationImpl<*>::rowsFactory).isSameAs(rowsFactory)
+            prop(JasyncSaveStepSpecificationImpl<*>::tableNameFactory).isSameInstanceAs(tableNameFactory)
+            prop(JasyncSaveStepSpecificationImpl<*>::columnsFactory).isSameInstanceAs(columnsFactory)
+            prop(JasyncSaveStepSpecificationImpl<*>::rowsFactory).isSameInstanceAs(rowsFactory)
             prop(JasyncSaveStepSpecificationImpl<*>::connection).all {
                 prop(JasyncConnection::host).isEqualTo("my-server")
                 prop(JasyncConnection::port).isEqualTo(5678)
@@ -124,16 +124,16 @@ internal class JasyncSaveStepSpecificationTest {
                 maximumMessageSize = 151424
             }
             monitoring {
-                meters = true
+                events = false
             }
         }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(JasyncSaveStepSpecificationImpl::class).all {
             prop(JasyncSaveStepSpecificationImpl<*>::name).isEmpty()
             prop(JasyncSaveStepSpecificationImpl<*>::protocol).isEqualTo(Protocol.POSTGRESQL)
-            prop(JasyncSaveStepSpecificationImpl<*>::tableNameFactory).isSameAs(tableNameFactory)
-            prop(JasyncSaveStepSpecificationImpl<*>::columnsFactory).isSameAs(columnsFactory)
-            prop(JasyncSaveStepSpecificationImpl<*>::rowsFactory).isSameAs(rowsFactory)
+            prop(JasyncSaveStepSpecificationImpl<*>::tableNameFactory).isSameInstanceAs(tableNameFactory)
+            prop(JasyncSaveStepSpecificationImpl<*>::columnsFactory).isSameInstanceAs(columnsFactory)
+            prop(JasyncSaveStepSpecificationImpl<*>::rowsFactory).isSameInstanceAs(rowsFactory)
             prop(JasyncSaveStepSpecificationImpl<*>::connection).all {
                 prop(JasyncConnection::host).isEqualTo("my-server")
                 prop(JasyncConnection::port).isEqualTo(5678)
@@ -143,7 +143,7 @@ internal class JasyncSaveStepSpecificationTest {
                 prop(JasyncConnection::queryTimeout).isEqualTo(Duration.ofSeconds(60))
                 prop(JasyncConnection::ssl).all {
                     prop(SSLConfiguration::mode).isEqualTo(SSLConfiguration.Mode.Prefer)
-                    prop(SSLConfiguration::rootCert).isSameAs(rootCert)
+                    prop(SSLConfiguration::rootCert).isSameInstanceAs(rootCert)
                 }
                 prop(JasyncConnection::charset).isEqualTo(StandardCharsets.ISO_8859_1)
                 prop(JasyncConnection::maximumMessageSize).isEqualTo(151424)

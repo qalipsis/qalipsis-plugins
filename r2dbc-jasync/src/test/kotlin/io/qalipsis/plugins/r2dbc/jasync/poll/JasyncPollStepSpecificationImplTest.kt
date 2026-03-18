@@ -27,7 +27,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import com.github.jasync.sql.db.SSLConfiguration
@@ -92,8 +92,8 @@ internal class JasyncPollStepSpecificationImplTest {
             }
             prop(JasyncPollStepSpecificationImpl::pollDelay).isEqualTo(Duration.ofSeconds(12))
             prop(JasyncPollStepSpecificationImpl::monitoringConfig).all {
-                prop(StepMonitoringConfiguration::meters).isFalse()
-                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+                prop(StepMonitoringConfiguration::events).isTrue()
             }
             prop(JasyncPollStepSpecificationImpl::singletonConfiguration).all {
                 prop(SingletonConfiguration::type).isEqualTo(SingletonType.UNICAST)
@@ -144,7 +144,7 @@ internal class JasyncPollStepSpecificationImplTest {
                 prop(JasyncConnection::queryTimeout).isEqualTo(Duration.ofSeconds(30))
                 prop(JasyncConnection::ssl).all {
                     prop(SSLConfiguration::mode).isEqualTo(SSLConfiguration.Mode.Prefer)
-                    prop(SSLConfiguration::rootCert).isSameAs(rootCert)
+                    prop(SSLConfiguration::rootCert).isSameInstanceAs(rootCert)
                 }
                 prop(JasyncConnection::charset).isEqualTo(StandardCharsets.ISO_8859_1)
                 prop(JasyncConnection::maximumMessageSize).isEqualTo(151424)

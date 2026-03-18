@@ -22,10 +22,8 @@ package io.qalipsis.plugins.r2dbc.jasync.converters
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import io.qalipsis.test.mockk.relaxedMockk
-import org.joda.time.DateTimeZone
-import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -34,6 +32,8 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
+import org.joda.time.DateTimeZone
+import org.junit.jupiter.api.Test
 
 internal class ResultValuesConverterTest {
 
@@ -99,7 +99,7 @@ internal class ResultValuesConverterTest {
     internal fun `should keep non joda value unchanged`() {
         val joda = relaxedMockk<Any>()
         val java8 = jodaToJavaConverter.process(joda)
-        assertThat(java8).isSameAs(joda)
+        assertThat(java8).isSameInstanceAs(joda)
     }
 
 }

@@ -133,7 +133,7 @@ internal class JasyncPollStepSpecificationImpl :
 
     internal var flattenOutput = false
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connection(configBlock: JasyncConnection.() -> Unit) {
         connection.configBlock()
