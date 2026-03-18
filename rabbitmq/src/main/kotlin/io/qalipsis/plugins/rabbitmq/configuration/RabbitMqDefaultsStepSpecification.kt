@@ -64,7 +64,7 @@ internal class RabbitMqDefaultsExtensionImpl : RabbitMqDefaultsExtension {
 
     internal var connectionConfiguration = RabbitMqConnectionConfiguration()
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun connection(configurationBlock: RabbitMqConnectionConfiguration.() -> Unit) {
         connectionConfiguration.configurationBlock()

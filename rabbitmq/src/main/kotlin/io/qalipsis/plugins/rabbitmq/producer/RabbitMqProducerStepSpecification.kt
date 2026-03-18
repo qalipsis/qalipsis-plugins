@@ -82,7 +82,7 @@ internal class RabbitMqProducerStepSpecificationImpl<I> :
 
     internal var connectionConfiguration = RabbitMqConnectionConfiguration()
 
-    internal var monitoring = StepMonitoringConfiguration()
+    internal var monitoring = StepMonitoringConfiguration().all()
 
     @field:Min(1)
     internal var concurrency: Int = 1

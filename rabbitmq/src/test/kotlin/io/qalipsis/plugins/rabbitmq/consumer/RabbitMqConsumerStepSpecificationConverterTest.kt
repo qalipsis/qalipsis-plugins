@@ -25,7 +25,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.Delivery
 import io.mockk.every
@@ -115,7 +115,7 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
                     prop("connectionFactory").isEqualTo(connectionFactory)
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
@@ -163,7 +163,7 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
                     prop("connectionFactory").isEqualTo(connectionFactory)
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
@@ -173,7 +173,7 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
         // given
         val deserializer = MessageStringDeserializer()
         val spec = RabbitMqConsumerStepSpecificationImpl(deserializer)
-        spec.monitoringConfig.meters = true
+        spec.monitoringConfig.events = false
         spec.apply {
             connection {
                 host = "localhost"
@@ -206,7 +206,7 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(IterativeDatasourceStep::class).all {
                 prop("name").isNotNull().isEqualTo(stepIdSlot.captured)
                 prop("reader").isNotNull().isInstanceOf(RabbitMqConsumerIterativeReader::class).all {
-                    prop("meterRegistry").isSameAs(meterRegistry)
+                    prop("meterRegistry").isSameInstanceAs(meterRegistry)
                     prop("eventsLogger").isNull()
                     prop("prefetchCount").isEqualTo(10)
                     prop("concurrency").isEqualTo(2)
@@ -214,7 +214,7 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
                     prop("connectionFactory").isEqualTo(connectionFactory)
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
@@ -224,7 +224,7 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
         // given
         val deserializer = MessageStringDeserializer()
         val spec = RabbitMqConsumerStepSpecificationImpl(deserializer)
-        spec.monitoringConfig.events = true
+        spec.monitoringConfig.meters = false
         spec.apply {
             connection {
                 host = "localhost"
@@ -258,14 +258,14 @@ internal class RabbitMqConsumerStepSpecificationConverterTest :
                 prop("name").isNotNull().isEqualTo(stepIdSlot.captured)
                 prop("reader").isNotNull().isInstanceOf(RabbitMqConsumerIterativeReader::class).all {
                     prop("meterRegistry").isNull()
-                    prop("eventsLogger").isSameAs(eventsLogger)
+                    prop("eventsLogger").isSameInstanceAs(eventsLogger)
                     prop("prefetchCount").isEqualTo(10)
                     prop("concurrency").isEqualTo(2)
                     prop("queue").isEqualTo("name2")
                     prop("connectionFactory").isEqualTo(connectionFactory)
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }

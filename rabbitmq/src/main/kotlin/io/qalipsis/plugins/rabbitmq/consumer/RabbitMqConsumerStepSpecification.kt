@@ -116,7 +116,7 @@ internal class RabbitMqConsumerStepSpecificationImpl<V : Any> internal construct
 
     internal var connectionConfiguration = RabbitMqConnectionConfiguration()
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     @field:NotBlank
     internal var queueName = ""

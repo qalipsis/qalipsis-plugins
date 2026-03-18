@@ -22,7 +22,7 @@ package io.qalipsis.plugins.rabbitmq.producer
 import assertk.all
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.prop
 import io.mockk.coEvery
 import io.mockk.coJustRun
@@ -345,7 +345,7 @@ internal class RabbitMqProducerStepTest {
         }
 
         // then
-        assertThat(caughtException).isSameAs(exception)
+        assertThat(caughtException).isSameInstanceAs(exception)
         coVerifyOnce {
             context.receive()
             rabbitMqProducer.execute(data)

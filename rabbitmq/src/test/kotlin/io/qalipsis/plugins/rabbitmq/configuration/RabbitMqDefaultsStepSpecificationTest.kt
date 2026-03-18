@@ -23,7 +23,6 @@ import assertk.all
 import assertk.assertThat
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
-import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
@@ -108,8 +107,8 @@ internal class RabbitMqDefaultsStepSpecificationTest {
                             prop(RabbitMqConnectionConfiguration::port).isEqualTo(5673)
                         }
                         prop(RabbitMqDefaultsExtensionImpl::monitoringConfig).all {
-                            prop(StepMonitoringConfiguration::events).isFalse()
-                            prop(StepMonitoringConfiguration::meters).isFalse()
+                            prop(StepMonitoringConfiguration::events).isTrue()
+                            prop(StepMonitoringConfiguration::meters).isTrue()
                         }
                     }
             }
