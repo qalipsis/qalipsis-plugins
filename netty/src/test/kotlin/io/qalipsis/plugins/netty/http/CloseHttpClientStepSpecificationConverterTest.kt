@@ -24,7 +24,7 @@ import assertk.assertThat
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
@@ -39,11 +39,11 @@ import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import kotlin.coroutines.CoroutineContext
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import kotlin.coroutines.CoroutineContext
 
 @Suppress("UNCHECKED_CAST")
 internal class CloseHttpClientStepSpecificationConverterTest :
@@ -90,7 +90,7 @@ internal class CloseHttpClientStepSpecificationConverterTest :
                     isInstanceOf(CloseHttpClientStep::class)
                     prop("name").isNotNull()
                     prop("retryPolicy").isNull()
-                    prop("connectionOwner").isSameAs(connectionOwner)
+                    prop("connectionOwner").isSameInstanceAs(connectionOwner)
                 }
             }
 
@@ -121,7 +121,7 @@ internal class CloseHttpClientStepSpecificationConverterTest :
                     isInstanceOf(CloseHttpClientStep::class)
                     prop("name").isNotNull()
                     prop("retryPolicy").isNull()
-                    prop("connectionOwner").isSameAs(connectionOwner)
+                    prop("connectionOwner").isSameInstanceAs(connectionOwner)
                 }
             }
 
@@ -149,7 +149,7 @@ internal class CloseHttpClientStepSpecificationConverterTest :
                 isInstanceOf(CloseHttpClientStep::class)
                 prop("name").isNotNull()
                 prop("retryPolicy").isNull()
-                prop("connectionOwner").isSameAs(connectionOwner)
+                prop("connectionOwner").isSameInstanceAs(connectionOwner)
             }
         }
 

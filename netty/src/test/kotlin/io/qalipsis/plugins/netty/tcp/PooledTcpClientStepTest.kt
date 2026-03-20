@@ -24,7 +24,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotSameAs
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.prop
 import io.aerisconsulting.catadioptre.getProperty
 import io.aerisconsulting.catadioptre.setProperty
@@ -59,10 +59,10 @@ import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.coVerifyOnce
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.StepTestHelper
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.util.concurrent.atomic.AtomicInteger
 
 @WithMockk
 internal class PooledTcpClientStepTest {
@@ -154,13 +154,13 @@ internal class PooledTcpClientStepTest {
             // then
             val fixedPool1 = step.getProperty<Pool<TcpClient>>("clientsPool")
             assertThat(step).typedProp<StepBasedTcpMonitoringCollector>("stepMonitoringCollector").all {
-                prop("eventsLogger").isSameAs(eventsLogger)
+                prop("eventsLogger").isSameInstanceAs(eventsLogger)
                 prop("eventPrefix").isEqualTo("netty.tcp")
                 prop("meterPrefix").isEqualTo("netty-tcp")
-                prop("eventsTags").isSameAs(eventsTags)
-                prop("metersTags").isSameAs(metersTags)
+                prop("eventsTags").isSameInstanceAs(eventsTags)
+                prop("metersTags").isSameInstanceAs(metersTags)
             }
-            assertThat(step).prop("workerGroup").isSameAs(workerGroup)
+            assertThat(step).prop("workerGroup").isSameInstanceAs(workerGroup)
 
             // when
             val mockedPool = relaxedMockk<Pool<TcpClient>>()
@@ -190,11 +190,11 @@ internal class PooledTcpClientStepTest {
             }
 
             assertThat(step).typedProp<StepBasedTcpMonitoringCollector>("stepMonitoringCollector").all {
-                prop("eventsLogger").isSameAs(eventsLogger)
+                prop("eventsLogger").isSameInstanceAs(eventsLogger)
                 prop("eventPrefix").isEqualTo("netty.tcp")
                 prop("meterPrefix").isEqualTo("netty-tcp")
-                prop("eventsTags").isSameAs(eventsTags2)
-                prop("metersTags").isSameAs(metersTags2)
+                prop("eventsTags").isSameInstanceAs(eventsTags2)
+                prop("metersTags").isSameInstanceAs(metersTags2)
             }
         }
 
@@ -232,9 +232,9 @@ internal class PooledTcpClientStepTest {
             step.execute(capture(monitoringCollectorCaptor), refEq(ctx), eq("This is a test"), refEq(request))
         }
         assertThat(monitoringCollectorCaptor.captured).all {
-            prop("eventsLogger").isSameAs(eventsLogger)
-            prop("meterRegistry").isSameAs(meterRegistry)
-            prop("stepContext").isSameAs(ctx)
+            prop("eventsLogger").isSameInstanceAs(eventsLogger)
+            prop("meterRegistry").isSameInstanceAs(meterRegistry)
+            prop("stepContext").isSameInstanceAs(ctx)
             prop("eventPrefix").isEqualTo("netty.tcp")
             prop("meterPrefix").isEqualTo("netty-tcp")
         }
@@ -242,7 +242,7 @@ internal class PooledTcpClientStepTest {
         coVerify { ctx.send(capture(resultCaptor)) }
         assertThat(resultCaptor.captured).all {
             prop(RequestResult<String, ByteArray, *>::input).isEqualTo("This is a test")
-            prop(RequestResult<String, ByteArray, *>::response).isSameAs(response)
+            prop(RequestResult<String, ByteArray, *>::response).isSameInstanceAs(response)
         }
     }
 
@@ -282,7 +282,7 @@ internal class PooledTcpClientStepTest {
         val result = step.execute(monitoringCollector, ctx, "This is a test", request)
 
         // then
-        assertThat(result).isSameAs(response)
+        assertThat(result).isSameInstanceAs(response)
         coVerifyOnce {
             client.execute(refEq(ctx), refEq(request), refEq(monitoringCollector))
         }

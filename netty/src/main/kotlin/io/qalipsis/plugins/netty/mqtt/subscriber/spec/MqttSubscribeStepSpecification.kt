@@ -128,7 +128,7 @@ internal class MqttSubscribeStepSpecificationImpl<V : Any>(deserializer: Message
     NettyPluginSpecification<Unit, MqttSubscribeRecord<V?>, MqttDeserializerSpecification<V>>,
     SingletonStepSpecification {
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     internal val mqttSubscribeConfiguration = MqttSubscribeConfiguration(valueDeserializer = deserializer)
 

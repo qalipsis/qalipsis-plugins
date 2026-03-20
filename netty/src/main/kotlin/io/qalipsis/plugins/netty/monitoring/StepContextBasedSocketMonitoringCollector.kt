@@ -24,11 +24,13 @@ import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.lang.concurrentList
 import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Throughput
 import io.qalipsis.api.meters.Timer
 import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.plugins.netty.socket.SocketMonitoringCollector
 import io.qalipsis.plugins.netty.tcp.ConnectionAndRequestResult
 import java.time.Duration
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
@@ -72,14 +74,14 @@ internal open class StepContextBasedSocketMonitoringCollector(
 
     private val stepName = stepContext.stepName
 
-    private val connectingCounter by lazy {
+    private val connectingCounter by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-connecting", metersTags)?.report {
             display("conn.", ReportMessageSeverity.INFO) { 0 }
             display("\u27B6 %,.0f", ReportMessageSeverity.INFO, column = 1, toNumber = Counter::count)
         }
     }
 
-    private val connectedTimer by lazy {
+    private val connectedTimer by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.timer(scenarioName, stepName, "${meterPrefix}-connected", metersTags)?.report {
             display(
                 "\u2713 %,.0f",
@@ -103,7 +105,7 @@ internal open class StepContextBasedSocketMonitoringCollector(
         }
     }
 
-    private val connectionFailureTimer by lazy {
+    private val connectionFailureTimer by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.timer(scenarioName, stepName, "${meterPrefix}-connection-failure", metersTags)?.report {
             display(
                 "\u2716 %,.0f",
@@ -115,7 +117,7 @@ internal open class StepContextBasedSocketMonitoringCollector(
         }
     }
 
-    private val tlsConnectedTimer by lazy {
+    private val tlsConnectedTimer by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.timer(scenarioName, stepName, "${meterPrefix}-tls-connected", metersTags)?.report {
             display("\nTLS", ReportMessageSeverity.INFO, row = 0) { 0 }
             display(
@@ -140,7 +142,7 @@ internal open class StepContextBasedSocketMonitoringCollector(
         }
     }
 
-    private val tlsConnectionFailureTimer by lazy {
+    private val tlsConnectionFailureTimer by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.timer(scenarioName, stepName, "${meterPrefix}-tls-failure", metersTags)?.report {
             display(
                 "\u2716 %,.0f",
@@ -152,42 +154,42 @@ internal open class StepContextBasedSocketMonitoringCollector(
         }
     }
 
-    private val sendingRequestCounter by lazy {
+    private val sendingRequestCounter by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-sending-request", metersTags)?.report {
             display("\u2197 Reqs.", ReportMessageSeverity.INFO, row = 1) { 0 }
             display("\u27B6 %,.0f", ReportMessageSeverity.INFO, row = 1, column = 1, Counter::count)
         }
     }
 
-    private val sentRequestCounter by lazy {
+    private val sentRequestCounter by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-sent-request", metersTags)?.report {
             display("\u2713 %,.0f reqs", ReportMessageSeverity.INFO, row = 1, column = 2, Counter::count)
         }
     }
 
-    private val sendingBytesCounter by lazy {
+    private val sendingBytesCounter by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-sending-bytes", metersTags)?.report {
             display("\u27B6 %,.0f bytes", ReportMessageSeverity.INFO, row = 1, column = 3, Counter::count)
         }
     }
 
-    private val sentBytesCounter by lazy {
+    private val sentBytesCounter by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-sent-bytes", metersTags)?.report {
             display("\u2713 %,.0f bytes", ReportMessageSeverity.INFO, row = 1, column = 4, Counter::count)
         }
     }
 
-    private val sendingRequestFailureCounter by lazy {
+    private val sendingRequestFailureCounter by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-sending-request-failure", metersTags)?.report {
             display("\u2716 %,.0f reqs", ReportMessageSeverity.ERROR, row = 1, column = 5, Counter::count)
         }
     }
 
-    private val sendingBytesFailureCounter by lazy {
+    private val sendingBytesFailureCounter by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-sending-failure", metersTags)
     }
 
-    private val receivingDataTimer by lazy {
+    private val receivingDataTimer by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.timer(scenarioName, stepName, "${meterPrefix}-receiving", metersTags)?.report {
             display("\u2198 Resp.", ReportMessageSeverity.INFO, row = 2) { 0 }
             display("1st byte", ReportMessageSeverity.INFO, row = 2, column = 1) { 0 }
@@ -206,7 +208,7 @@ internal open class StepContextBasedSocketMonitoringCollector(
         }
     }
 
-    private val receivedDataTimer by lazy {
+    private val receivedDataTimer by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.timer(scenarioName, stepName, "${meterPrefix}-received-response", metersTags)?.report {
             display("\nlast byte", ReportMessageSeverity.INFO, row = 2, column = 1) { 0 }
             display(
@@ -224,7 +226,29 @@ internal open class StepContextBasedSocketMonitoringCollector(
         }
     }
 
-    private val receivingDataFailureCounter by lazy {
+    private val requestThroughput by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        meterRegistry?.throughput(
+            scenarioName = scenarioName,
+            stepName = stepName,
+            name = "${meterPrefix}-request-throughput",
+            unit = ChronoUnit.SECONDS, tags = metersTags
+        )?.report {
+            display("%,.0f req/s", ReportMessageSeverity.INFO, row = 2, column = 4, Throughput::current)
+        }
+    }
+
+    private val responseThroughput by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        meterRegistry?.throughput(
+            scenarioName = scenarioName,
+            stepName = stepName,
+            name = "${meterPrefix}-response-throughput",
+            unit = ChronoUnit.SECONDS, tags = metersTags
+        )?.report {
+            display("\n%,.0f resp/s", ReportMessageSeverity.INFO, row = 2, column = 4, Throughput::current)
+        }
+    }
+
+    private val receivingDataFailureCounter by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-receiving-failure", metersTags)
     }
 
@@ -306,6 +330,7 @@ internal open class StepContextBasedSocketMonitoringCollector(
 
     override fun recordSentRequestSuccess() {
         eventsLogger?.info("${eventPrefix}.sent-request", tags = eventTags)
+        requestThroughput?.record()
         sentRequestCounter?.increment()
     }
 
@@ -351,6 +376,7 @@ internal open class StepContextBasedSocketMonitoringCollector(
             arrayOf(meters.timeToLastByte, meters.receivedBytes),
             tags = eventTags
         )
+        responseThroughput?.record()
         receivedDataTimer?.record(meters.timeToLastByte!!)
     }
 

@@ -112,8 +112,8 @@ object Http2Scenario {
                     tls {
                         disableCertificateVerification = true
                     }
+                    pool { size = poolSize }
                 }
-                pool { size = poolSize }
                 request { _, _ -> request1 }
             }
             .verify {

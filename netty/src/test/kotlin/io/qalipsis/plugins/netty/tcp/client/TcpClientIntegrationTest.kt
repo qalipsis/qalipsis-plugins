@@ -33,6 +33,7 @@ import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Throughput
 import io.qalipsis.api.meters.Timer
 import io.qalipsis.plugins.netty.NativeTransportUtils
 import io.qalipsis.plugins.netty.Server
@@ -45,6 +46,14 @@ import io.qalipsis.plugins.netty.tcp.spec.TcpProxyType
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
+import java.net.ConnectException
+import java.net.SocketException
+import java.nio.channels.ClosedChannelException
+import java.nio.charset.StandardCharsets
+import java.time.Duration
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicReference
+import javax.net.ssl.SSLHandshakeException
 import kotlinx.coroutines.delay
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
@@ -54,14 +63,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.net.ConnectException
-import java.net.SocketException
-import java.nio.channels.ClosedChannelException
-import java.nio.charset.StandardCharsets
-import java.time.Duration
-import java.util.concurrent.TimeoutException
-import java.util.concurrent.atomic.AtomicReference
-import javax.net.ssl.SSLHandshakeException
 
 @WithMockk
 internal class TcpClientIntegrationTest {
@@ -104,6 +105,18 @@ internal class TcpClientIntegrationTest {
                 tags = any<Map<String, String>>()
             )
         } returns relaxedMockk<Timer> {
+            every { report(any()) } returns this
+        }
+        every {
+            meterRegistry.throughput(
+                scenarioName = any<String>(),
+                stepName = any<String>(),
+                name = any<String>(),
+                percentiles = any(),
+                unit = any(),
+                tags = any<Map<String, String>>()
+            )
+        } returns relaxedMockk<Throughput> {
             every { report(any()) } returns this
         }
     }

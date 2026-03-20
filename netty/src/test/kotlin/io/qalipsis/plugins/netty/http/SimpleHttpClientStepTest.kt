@@ -26,7 +26,7 @@ import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.key
 import assertk.assertions.prop
@@ -171,7 +171,7 @@ internal class SimpleHttpClientStepTest {
         }
         assertThat(step).all {
             prop("running").isEqualTo(true)
-            prop("workerGroup").isSameAs(workerGroup)
+            prop("workerGroup").isSameInstanceAs(workerGroup)
         }
         confirmVerified(workerGroup)
     }
@@ -261,9 +261,9 @@ internal class SimpleHttpClientStepTest {
             step.execute(capture(monitoringCollectorCaptor), refEq(ctx), eq("This is a test"), refEq(request))
         }
         assertThat(monitoringCollectorCaptor.captured).all {
-            prop("eventsLogger").isSameAs(eventsLogger)
-            prop("meterRegistry").isSameAs(meterRegistry)
-            prop("stepContext").isSameAs(ctx)
+            prop("eventsLogger").isSameInstanceAs(eventsLogger)
+            prop("meterRegistry").isSameInstanceAs(meterRegistry)
+            prop("stepContext").isSameInstanceAs(ctx)
             prop("eventPrefix").isEqualTo("netty.http")
             prop("meterPrefix").isEqualTo("netty-http")
         }
@@ -271,7 +271,7 @@ internal class SimpleHttpClientStepTest {
         coVerify { ctx.send(capture(resultCaptor)) }
         assertThat(resultCaptor.captured).all {
             prop(RequestResult<String, QalipsisHttpResponse<String>, *>::input).isEqualTo("This is a test")
-            prop(RequestResult<String, QalipsisHttpResponse<String>, *>::response).isSameAs(convertedResponse)
+            prop(RequestResult<String, QalipsisHttpResponse<String>, *>::response).isSameInstanceAs(convertedResponse)
         }
     }
 
@@ -436,7 +436,7 @@ internal class SimpleHttpClientStepTest {
         val result = step.execute(monitoringCollector, ctx, input, request)
 
         // then
-        assertThat(result).isSameAs(response)
+        assertThat(result).isSameInstanceAs(response)
         assertThat(clients).all {
             hasSize(2)
             key("client-1").isNotNull().transform { it.isEmpty }.isFalse()
@@ -478,7 +478,7 @@ internal class SimpleHttpClientStepTest {
         val acquiredClient = step.createOrAcquireClient(ctx, monitoringCollector)
 
         // then
-        assertThat(acquiredClient).isSameAs(client)
+        assertThat(acquiredClient).isSameInstanceAs(client)
         assertThat(clients).all {
             hasSize(2)
             key("client-1").isNotNull().transform { it.isEmpty }.isTrue()
@@ -486,7 +486,7 @@ internal class SimpleHttpClientStepTest {
         }
         assertThat(clientsInUse).all {
             hasSize(1)
-            key("client-1").isSameAs(client)
+            key("client-1").isSameInstanceAs(client)
         }
     }
 
@@ -520,7 +520,7 @@ internal class SimpleHttpClientStepTest {
         val acquiredClient = step.createOrAcquireClient(ctx, monitoringCollector)
 
         // then
-        assertThat(acquiredClient).isSameAs(client)
+        assertThat(acquiredClient).isSameInstanceAs(client)
         assertThat(clients).all {
             hasSize(2)
             key("client-1").isNotNull().transform { it.isEmpty }.isTrue()
@@ -528,7 +528,7 @@ internal class SimpleHttpClientStepTest {
         }
         assertThat(clientsInUse).all {
             hasSize(1)
-            key("client-1").isSameAs(client)
+            key("client-1").isSameInstanceAs(client)
         }
     }
 

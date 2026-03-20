@@ -34,7 +34,6 @@ import io.qalipsis.plugins.netty.http.HttpRequestBuilder
 import io.qalipsis.plugins.netty.http.request.HttpRequest
 import io.qalipsis.plugins.netty.http.response.HttpResponse
 import io.qalipsis.plugins.netty.tcp.ConnectionAndRequestResult
-import io.qalipsis.plugins.netty.tcp.spec.SocketClientPoolConfiguration
 import kotlin.reflect.KClass
 
 interface HttpClientStepSpecification<INPUT, OUTPUT> :
@@ -51,12 +50,6 @@ interface HttpClientStepSpecification<INPUT, OUTPUT> :
      * Configures the connection to the remote address.
      */
     fun connect(configurationBlock: HttpClientConfiguration.() -> Unit)
-
-    /**
-     * Enables the creation of a pool of connections instead of one connection by minion.
-     * This optimizes the throughput, when the remote server does not require a unique connection by client or user.
-     */
-    fun pool(configurationBlock: SocketClientPoolConfiguration.() -> Unit)
 
     /**
      * Configures the monitoring of the step.
@@ -86,9 +79,7 @@ internal class HttpClientStepSpecificationImpl<INPUT, OUTPUT> :
 
     val connectionConfiguration = HttpClientConfiguration()
 
-    var poolConfiguration: SocketClientPoolConfiguration? = null
-
-    var monitoringConfiguration = StepMonitoringConfiguration()
+    var monitoringConfiguration = StepMonitoringConfiguration().all()
 
     override fun request(requestFactory: suspend HttpRequestBuilder.(StepContext<*, *>, INPUT) -> HttpRequest<*>) {
         this.requestFactory = requestFactory
@@ -96,11 +87,6 @@ internal class HttpClientStepSpecificationImpl<INPUT, OUTPUT> :
 
     override fun connect(configurationBlock: HttpClientConfiguration.() -> Unit) {
         connectionConfiguration.configurationBlock()
-    }
-
-    override fun pool(configurationBlock: SocketClientPoolConfiguration.() -> Unit) {
-        this.poolConfiguration = SocketClientPoolConfiguration()
-            .also { it.configurationBlock() }
     }
 
     override fun monitoring(configurationBlock: StepMonitoringConfiguration.() -> Unit) {
@@ -166,7 +152,7 @@ class QueryHttpClientStepSpecification<INPUT, OUTPUT>(val stepName: String) :
 
     var bodyType: KClass<*> = String::class
 
-    internal val monitoringConfiguration = StepMonitoringConfiguration()
+    internal val monitoringConfiguration = StepMonitoringConfiguration().all()
 
     fun request(requestBlock: suspend HttpRequestBuilder.(StepContext<*, *>, input: INPUT) -> HttpRequest<*>) {
         this.requestFactory = requestBlock

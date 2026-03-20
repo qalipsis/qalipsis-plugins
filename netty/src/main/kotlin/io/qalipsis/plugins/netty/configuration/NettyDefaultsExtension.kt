@@ -33,7 +33,6 @@ import io.qalipsis.plugins.netty.http.spec.HttpClientStepSpecificationImpl
 import io.qalipsis.plugins.netty.mqtt.publisher.spec.MqttPublishStepSpecificationImpl
 import io.qalipsis.plugins.netty.mqtt.spec.MqttConnectionConfiguration
 import io.qalipsis.plugins.netty.mqtt.subscriber.spec.MqttSubscribeStepSpecificationImpl
-import io.qalipsis.plugins.netty.tcp.spec.SocketClientPoolConfiguration
 import io.qalipsis.plugins.netty.tcp.spec.TcpClientConfiguration
 import io.qalipsis.plugins.netty.tcp.spec.TcpClientStepSpecificationImpl
 import io.qalipsis.plugins.netty.udp.spec.UdpClientStepSpecification
@@ -68,11 +67,6 @@ interface NettyDefaultsExtension {
     fun mqttConnection(configurationBlock: MqttConnectionConfiguration.() -> Unit)
 
     /**
-     * Configures the default pool for TCP and HTTP steps.
-     */
-    fun pool(configurationBlock: SocketClientPoolConfiguration.() -> Unit)
-
-    /**
      * Configures the default monitoring for all sibling Netty steps.
      */
     fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit)
@@ -97,9 +91,7 @@ internal class NettyDefaultsExtensionImpl : NettyDefaultsExtension {
 
     internal var mqttConnectionConfig: (MqttConnectionConfiguration.() -> Unit)? = null
 
-    internal var poolConfig: (SocketClientPoolConfiguration.() -> Unit)? = null
-
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     override fun tcpConnection(configurationBlock: TcpClientConfiguration.() -> Unit) {
         this.tcpConnectionConfig = configurationBlock
@@ -117,10 +109,6 @@ internal class NettyDefaultsExtensionImpl : NettyDefaultsExtension {
         this.mqttConnectionConfig = configurationBlock
     }
 
-    override fun pool(configurationBlock: SocketClientPoolConfiguration.() -> Unit) {
-        this.poolConfig = configurationBlock
-    }
-
     override fun monitoring(monitoringConfig: StepMonitoringConfiguration.() -> Unit) {
         this.monitoringConfig.monitoringConfig()
     }
@@ -130,9 +118,6 @@ internal class NettyDefaultsExtensionImpl : NettyDefaultsExtension {
      */
     internal fun applyTo(spec: TcpClientStepSpecificationImpl<*>) {
         tcpConnectionConfig?.let { spec.connectionConfiguration.it() }
-        poolConfig?.let {
-            spec.poolConfiguration = SocketClientPoolConfiguration().also { pool -> pool.it() }
-        }
         spec.monitoringConfiguration = monitoringConfig.copy()
     }
 
@@ -141,9 +126,6 @@ internal class NettyDefaultsExtensionImpl : NettyDefaultsExtension {
      */
     internal fun applyTo(spec: HttpClientStepSpecificationImpl<*, *>) {
         httpConnectionConfig?.let { spec.connectionConfiguration.it() }
-        poolConfig?.let {
-            spec.poolConfiguration = SocketClientPoolConfiguration().also { pool -> pool.it() }
-        }
         spec.monitoringConfiguration = monitoringConfig.copy()
     }
 

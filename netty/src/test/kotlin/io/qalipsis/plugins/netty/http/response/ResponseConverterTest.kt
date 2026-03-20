@@ -27,7 +27,7 @@ import assertk.assertions.index
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.key
 import assertk.assertions.prop
 import io.aerisconsulting.catadioptre.invokeInvisible
@@ -49,7 +49,6 @@ import io.netty.handler.codec.http.cookie.Cookie
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyNever
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 @WithMockk
@@ -102,9 +101,9 @@ internal class ResponseConverterTest {
             repeat(bytes.size) { index(it).isEqualTo(bytes[it]) }
         }
         assertThat(response).all {
-            prop(HttpResponse<Entity>::status).isSameAs(HttpResponseStatus.ACCEPTED)
-            prop(HttpResponse<Entity>::body).isSameAs(deserializedBody)
-            prop(HttpResponse<Entity>::bodyBytes).isSameAs(capturedBytes.captured)
+            prop(HttpResponse<Entity>::status).isSameInstanceAs(HttpResponseStatus.ACCEPTED)
+            prop(HttpResponse<Entity>::body).isSameInstanceAs(deserializedBody)
+            prop(HttpResponse<Entity>::bodyBytes).isSameInstanceAs(capturedBytes.captured)
             prop(HttpResponse<Entity>::contentType).isEqualTo(MediaType("application", "json", Charsets.UTF_8))
             prop(HttpResponse<Entity>::cookies).all {
                 hasSize(2)
@@ -168,9 +167,9 @@ internal class ResponseConverterTest {
             repeat(bytes.size) { index(it).isEqualTo(bytes[it]) }
         }
         assertThat(response).all {
-            prop(HttpResponse<Entity>::status).isSameAs(HttpResponseStatus.ACCEPTED)
-            prop(HttpResponse<Entity>::body).isSameAs(deserializedBody)
-            prop(HttpResponse<Entity>::bodyBytes).isSameAs(capturedBytes.captured)
+            prop(HttpResponse<Entity>::status).isSameInstanceAs(HttpResponseStatus.ACCEPTED)
+            prop(HttpResponse<Entity>::body).isSameInstanceAs(deserializedBody)
+            prop(HttpResponse<Entity>::bodyBytes).isSameInstanceAs(capturedBytes.captured)
             prop(HttpResponse<Entity>::contentType).isNull()
             prop(HttpResponse<Entity>::cookies).all {
                 hasSize(2)
@@ -219,7 +218,7 @@ internal class ResponseConverterTest {
             )
         }
         assertThat(response).all {
-            prop(HttpResponse<Entity>::status).isSameAs(HttpResponseStatus.ACCEPTED)
+            prop(HttpResponse<Entity>::status).isSameInstanceAs(HttpResponseStatus.ACCEPTED)
             prop(HttpResponse<Entity>::body).isNull()
             prop(HttpResponse<Entity>::bodyBytes).isNull()
             prop(HttpResponse<Entity>::contentType).isNull()
@@ -278,7 +277,7 @@ internal class ResponseConverterTest {
         val body: ByteArray = responseConverter.invokeInvisible("convertBody", nettyResponse, bytes, mediaType)
 
         // then
-        assertThat(body).isSameAs(bytes)
+        assertThat(body).isSameInstanceAs(bytes)
         confirmVerified(deserializer1, deserializer2)
     }
 
@@ -319,7 +318,7 @@ internal class ResponseConverterTest {
         val body: Entity? = responseConverter.invokeInvisible("convertBody", nettyResponse, bytes, mediaType)
 
         // then
-        assertThat(body).isSameAs(result)
+        assertThat(body).isSameInstanceAs(result)
         verifyOrder {
             deserializer1.accept(refEq(mediaType))
             deserializer2.accept(refEq(mediaType))
@@ -348,7 +347,7 @@ internal class ResponseConverterTest {
         val body: Entity? = responseConverter.invokeInvisible("convertBody", nettyResponse, bytes, mediaType)
 
         // then
-        assertThat(body).isSameAs(result)
+        assertThat(body).isSameInstanceAs(result)
         verifyOrder {
             deserializer1.accept(refEq(mediaType))
             deserializer1.convert(refEq(bytes), refEq(mediaType), refEq(Entity::class))

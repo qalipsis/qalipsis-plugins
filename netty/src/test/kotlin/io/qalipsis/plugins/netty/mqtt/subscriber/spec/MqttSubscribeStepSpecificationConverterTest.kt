@@ -25,7 +25,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import io.aerisconsulting.catadioptre.invokeInvisible
 import io.mockk.confirmVerified
 import io.mockk.every
@@ -124,14 +124,13 @@ internal class MqttSubscribeStepSpecificationConverterTest :
                     prop("mqttClientOptions").isEqualTo(mockedClientOptions)
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
 
     @Test
     internal fun `should convert spec without name but with topic`() = testDispatcherProvider.runTest {
-
         // given
         val deserializer = MessageStringDeserializer()
         val spec = MqttSubscribeStepSpecificationImpl(deserializer)
@@ -172,15 +171,14 @@ internal class MqttSubscribeStepSpecificationConverterTest :
                     prop("mqttClientOptions").isEqualTo(mockedClientOptions)
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
 
     @Test
     internal fun `should build single converter`() {
-
-        val monitoringConfiguration = StepMonitoringConfiguration()
+        val monitoringConfiguration = StepMonitoringConfiguration().off()
         val valueDeserializer = MessageStringDeserializer()
 
         // when
@@ -192,7 +190,7 @@ internal class MqttSubscribeStepSpecificationConverterTest :
 
         // then
         assertThat(recordsConverter).isNotNull().isInstanceOf(MqttSubscribeConverter::class).all {
-            prop("valueDeserializer").isSameAs(valueDeserializer)
+            prop("valueDeserializer").isSameInstanceAs(valueDeserializer)
             prop("meterRegistry").isNull()
             prop("eventsLogger").isNull()
         }
@@ -200,8 +198,7 @@ internal class MqttSubscribeStepSpecificationConverterTest :
 
     @Test
     internal fun `should build single converter with json deserializer`() {
-
-        val monitoringConfiguration = StepMonitoringConfiguration()
+        val monitoringConfiguration = StepMonitoringConfiguration().all()
         val jsonValueDeserializer = MessageJsonDeserializer(String::class)
 
         // when
@@ -213,9 +210,9 @@ internal class MqttSubscribeStepSpecificationConverterTest :
 
         // then
         assertThat(recordsConverter).isNotNull().isInstanceOf(MqttSubscribeConverter::class).all {
-            prop("valueDeserializer").isSameAs(jsonValueDeserializer)
-            prop("meterRegistry").isNull()
-            prop("eventsLogger").isNull()
+            prop("valueDeserializer").isSameInstanceAs(jsonValueDeserializer)
+            prop("meterRegistry").isNotNull().isInstanceOf(CampaignMeterRegistry::class)
+            prop("eventsLogger").isNotNull().isInstanceOf(EventsLogger::class)
         }
     }
 
@@ -232,7 +229,7 @@ internal class MqttSubscribeStepSpecificationConverterTest :
 
         // then
         assertThat(recordsConverter).isNotNull().isInstanceOf(MqttSubscribeConverter::class).all {
-            prop("valueDeserializer").isSameAs(valueDeserializer)
+            prop("valueDeserializer").isSameInstanceAs(valueDeserializer)
             prop("meterRegistry").isNotNull().isInstanceOf(CampaignMeterRegistry::class)
             prop("eventsLogger").isNull()
         }
@@ -252,7 +249,7 @@ internal class MqttSubscribeStepSpecificationConverterTest :
 
         // then
         assertThat(recordsConverter).isNotNull().isInstanceOf(MqttSubscribeConverter::class).all {
-            prop("valueDeserializer").isSameAs(valueDeserializer)
+            prop("valueDeserializer").isSameInstanceAs(valueDeserializer)
             prop("meterRegistry").isNull()
             prop("eventsLogger").isNotNull().isInstanceOf(EventsLogger::class)
         }

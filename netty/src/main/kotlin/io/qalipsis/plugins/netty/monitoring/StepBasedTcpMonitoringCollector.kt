@@ -55,15 +55,14 @@ internal class StepBasedTcpMonitoringCollector(
 
     private val stepName = context.stepName
 
-
-    private val connectingCounter by lazy {
+    private val connectingCounter by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.counter(scenarioName, stepName, "${meterPrefix}-connecting", metersTags)?.report {
             display("conn.", ReportMessageSeverity.INFO) { 0 }
             display("\u27B6 %,.0f", ReportMessageSeverity.INFO, column = 1, toNumber = Counter::count)
         }
     }
 
-    private val connectedTimer by lazy {
+    private val connectedTimer by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.timer(scenarioName, stepName, "${meterPrefix}-connected", metersTags)?.report {
             display(
                 "\u2713 %,.0f",
@@ -87,7 +86,7 @@ internal class StepBasedTcpMonitoringCollector(
         }
     }
 
-    private val connectionFailureTimer by lazy {
+    private val connectionFailureTimer by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.timer(scenarioName, stepName, "${meterPrefix}-connection-failure", metersTags)?.report {
             display(
                 "\u2716 %,.0f",
@@ -99,7 +98,7 @@ internal class StepBasedTcpMonitoringCollector(
         }
     }
 
-    private val tlsConnectedTimer by lazy {
+    private val tlsConnectedTimer by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.timer(scenarioName, stepName, "${meterPrefix}-tls-connected", metersTags)?.report {
             display("\nTLS", ReportMessageSeverity.INFO, row = 0) { 0 }
             display(
@@ -124,7 +123,7 @@ internal class StepBasedTcpMonitoringCollector(
         }
     }
 
-    private val tlsConnectionFailureTimer by lazy {
+    private val tlsConnectionFailureTimer by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.timer(scenarioName, stepName, "${meterPrefix}-tls-failure", metersTags)?.report {
             display(
                 "\u2716 %,.0f",

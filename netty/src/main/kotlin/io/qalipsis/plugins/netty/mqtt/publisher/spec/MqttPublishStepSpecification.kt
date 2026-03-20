@@ -80,7 +80,7 @@ interface MqttPublishStepSpecification<I> :
 internal class MqttPublishStepSpecificationImpl<I> : AbstractStepSpecification<I, MqttPublishResult<I>, MqttPublishStepSpecification<I>>(),
     MqttPublishStepSpecification<I>, NettyPluginSpecification<I, MqttPublishResult<I>, MqttPublishStepSpecification<I>> {
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
 
     internal val mqttPublishConfiguration = MqttPublishConfiguration<I>()
 

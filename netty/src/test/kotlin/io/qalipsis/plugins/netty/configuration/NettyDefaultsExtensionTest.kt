@@ -22,6 +22,7 @@ package io.qalipsis.plugins.netty.configuration
 import assertk.all
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import assertk.assertions.prop
@@ -31,6 +32,8 @@ import io.qalipsis.plugins.netty.http.spec.HttpClientStepSpecificationImpl
 import io.qalipsis.plugins.netty.mqtt.publisher.spec.MqttPublishStepSpecificationImpl
 import io.qalipsis.plugins.netty.mqtt.subscriber.deserializer.MqttByteArrayDeserializer
 import io.qalipsis.plugins.netty.mqtt.subscriber.spec.MqttSubscribeStepSpecificationImpl
+import io.qalipsis.plugins.netty.socket.ConnectionStrategyConfiguration
+import io.qalipsis.plugins.netty.socket.ConnectionStrategyType
 import io.qalipsis.plugins.netty.tcp.spec.TcpClientConfiguration
 import io.qalipsis.plugins.netty.tcp.spec.TcpClientStepSpecificationImpl
 import io.qalipsis.plugins.netty.udp.spec.UdpClientStepSpecification
@@ -48,10 +51,10 @@ internal class NettyDefaultsExtensionTest {
         defaults.tcpConnection {
             address("localhost", 9000)
             readTimeout = Duration.ofSeconds(30)
-        }
-        defaults.pool {
-            size = 5
-            checkHealthBeforeUse = true
+            pool {
+                size = 5
+                checkHealthBeforeUse = true
+            }
         }
         defaults.monitoring {
             events = true
@@ -66,10 +69,10 @@ internal class NettyDefaultsExtensionTest {
                 prop(TcpClientConfiguration::host).isEqualTo("localhost")
                 prop(TcpClientConfiguration::port).isEqualTo(9000)
                 prop(TcpClientConfiguration::readTimeout).isEqualTo(Duration.ofSeconds(30))
-            }
-            prop(TcpClientStepSpecificationImpl<*>::poolConfiguration).isNotNull().all {
-                prop("size") { it.size }.isEqualTo(5)
-                prop("checkHealthBeforeUse") { it.checkHealthBeforeUse }.isTrue()
+                prop(TcpClientConfiguration::poolConfiguration).isNotNull().all {
+                    prop("size") { it.size }.isEqualTo(5)
+                    prop("checkHealthBeforeUse") { it.checkHealthBeforeUse }.isTrue()
+                }
             }
             prop(TcpClientStepSpecificationImpl<*>::monitoringConfiguration).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
@@ -84,9 +87,9 @@ internal class NettyDefaultsExtensionTest {
         defaults.httpConnection {
             address("localhost", 8080)
             readTimeout = Duration.ofSeconds(60)
-        }
-        defaults.pool {
-            size = 10
+            pool {
+                size = 10
+            }
         }
         defaults.monitoring {
             events = true
@@ -101,9 +104,9 @@ internal class NettyDefaultsExtensionTest {
                 prop(HttpClientConfiguration::host).isEqualTo("localhost")
                 prop(HttpClientConfiguration::port).isEqualTo(8080)
                 prop(HttpClientConfiguration::readTimeout).isEqualTo(Duration.ofSeconds(60))
-            }
-            prop(HttpClientStepSpecificationImpl<*, *>::poolConfiguration).isNotNull().all {
-                prop("size") { it.size }.isEqualTo(10)
+                prop(HttpClientConfiguration::poolConfiguration).isNotNull().all {
+                    prop("size") { it.size }.isEqualTo(10)
+                }
             }
             prop(HttpClientStepSpecificationImpl<*, *>::monitoringConfiguration).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
@@ -194,6 +197,52 @@ internal class NettyDefaultsExtensionTest {
             prop(MqttSubscribeStepSpecificationImpl<*>::monitoringConfig).all {
                 prop(StepMonitoringConfiguration::events).isTrue()
                 prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    fun `should apply connection strategy defaults to TCP step`() {
+        val defaults = NettyDefaultsExtensionImpl()
+        defaults.tcpConnection {
+            connectionStrategy {
+                strategyType = ConnectionStrategyType.WARMUP
+                shared = true
+            }
+        }
+
+        val spec = TcpClientStepSpecificationImpl<Any>()
+        defaults.applyTo(spec)
+
+        assertThat(spec).all {
+            prop(TcpClientStepSpecificationImpl<*>::connectionConfiguration).all {
+                prop(TcpClientConfiguration::connectionStrategyConfiguration).all {
+                    prop(ConnectionStrategyConfiguration::strategyType).isEqualTo(ConnectionStrategyType.WARMUP)
+                    prop(ConnectionStrategyConfiguration::shared).isTrue()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `should apply connection strategy defaults to HTTP step`() {
+        val defaults = NettyDefaultsExtensionImpl()
+        defaults.httpConnection {
+            connectionStrategy {
+                strategyType = ConnectionStrategyType.POOL
+                shared = false
+            }
+        }
+
+        val spec = HttpClientStepSpecificationImpl<Any, String>()
+        defaults.applyTo(spec)
+
+        assertThat(spec).all {
+            prop(HttpClientStepSpecificationImpl<*, *>::connectionConfiguration).all {
+                prop(HttpClientConfiguration::connectionStrategyConfiguration).all {
+                    prop(ConnectionStrategyConfiguration::strategyType).isEqualTo(ConnectionStrategyType.POOL)
+                    prop(ConnectionStrategyConfiguration::shared).isFalse()
+                }
             }
         }
     }

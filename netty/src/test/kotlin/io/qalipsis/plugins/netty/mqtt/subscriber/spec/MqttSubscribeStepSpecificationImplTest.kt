@@ -21,7 +21,12 @@ package io.qalipsis.plugins.netty.mqtt.subscriber.spec
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNotNull
+import assertk.assertions.isTrue
+import assertk.assertions.prop
 import io.qalipsis.api.messaging.deserializer.MessageJsonDeserializer
 import io.qalipsis.api.messaging.deserializer.MessageStringDeserializer
 import io.qalipsis.api.scenario.StepSpecificationRegistry
@@ -35,8 +40,8 @@ import io.qalipsis.plugins.netty.mqtt.spec.MqttQoS
 import io.qalipsis.plugins.netty.mqtt.spec.MqttVersion
 import io.qalipsis.plugins.netty.mqtt.subscriber.deserializer.MqttByteArrayDeserializer
 import io.qalipsis.plugins.netty.netty
-import org.junit.jupiter.api.Test
 import java.time.Duration
+import org.junit.jupiter.api.Test
 
 /**
  * @author Gabriel Moraes
@@ -54,8 +59,8 @@ internal class MqttSubscribeStepSpecificationImplTest {
         assertThat(scenario.rootSteps.first()).isInstanceOf(MqttSubscribeStepSpecificationImpl::class).all {
             prop(MqttSubscribeStepSpecificationImpl<*>::name).isEqualTo("my-step")
             prop(MqttSubscribeStepSpecificationImpl<*>::monitoringConfig).all {
-                prop(StepMonitoringConfiguration::meters).isFalse()
-                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+                prop(StepMonitoringConfiguration::events).isTrue()
             }
             prop(MqttSubscribeStepSpecificationImpl<*>::mqttSubscribeConfiguration).all {
                 prop(MqttSubscribeConfiguration<*>::concurrency).isEqualTo(2)
@@ -209,8 +214,8 @@ internal class MqttSubscribeStepSpecificationImplTest {
         assertThat(scenario.rootSteps.first()).isInstanceOf(MqttSubscribeStepSpecificationImpl::class).all {
             prop(MqttSubscribeStepSpecificationImpl<*>::name).isEqualTo("my-step")
             prop(MqttSubscribeStepSpecificationImpl<*>::monitoringConfig).all {
-                prop(StepMonitoringConfiguration::meters).isFalse()
-                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+                prop(StepMonitoringConfiguration::events).isTrue()
             }
             prop(MqttSubscribeStepSpecificationImpl<*>::mqttSubscribeConfiguration).all {
                 prop(MqttSubscribeConfiguration<*>::concurrency).isEqualTo(2)

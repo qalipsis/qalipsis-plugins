@@ -49,12 +49,6 @@ interface TcpClientStepSpecification<INPUT> :
     fun connect(configurationBlock: TcpClientConfiguration.() -> Unit)
 
     /**
-     * Enables the creation of a pool of connections instead of one connection by minion.
-     * This optimizes the throughput, when the remote server does not require a unique connection by client or user.
-     */
-    fun pool(configurationBlock: SocketClientPoolConfiguration.() -> Unit)
-
-    /**
      * Configures the monitoring of the step.
      */
     fun monitoring(configurationBlock: StepMonitoringConfiguration.() -> Unit)
@@ -75,9 +69,7 @@ internal class TcpClientStepSpecificationImpl<INPUT> :
 
     val connectionConfiguration = TcpClientConfiguration()
 
-    var poolConfiguration: SocketClientPoolConfiguration? = null
-
-    var monitoringConfiguration = StepMonitoringConfiguration()
+    var monitoringConfiguration = StepMonitoringConfiguration().all()
 
     override fun request(requestFactory: suspend ByteArrayRequestBuilder.(StepContext<*, *>, INPUT) -> ByteArray) {
         this.requestFactory = requestFactory
@@ -85,11 +77,6 @@ internal class TcpClientStepSpecificationImpl<INPUT> :
 
     override fun connect(configurationBlock: TcpClientConfiguration.() -> Unit) {
         connectionConfiguration.configurationBlock()
-    }
-
-    override fun pool(configurationBlock: SocketClientPoolConfiguration.() -> Unit) {
-        this.poolConfiguration = SocketClientPoolConfiguration()
-            .also { it.configurationBlock() }
     }
 
     override fun monitoring(configurationBlock: StepMonitoringConfiguration.() -> Unit) {
@@ -148,7 +135,7 @@ class QueryTcpClientStepSpecification<INPUT>(val stepName: String) :
     internal var requestFactory: suspend ByteArrayRequestBuilder.(StepContext<*, *>, INPUT) -> ByteArray =
         { _, _ -> ByteArray(0) }
 
-    internal val monitoringConfiguration = StepMonitoringConfiguration()
+    internal val monitoringConfiguration = StepMonitoringConfiguration().all()
 
     fun request(requestBlock: suspend ByteArrayRequestBuilder.(StepContext<*, *>, input: INPUT) -> ByteArray) {
         this.requestFactory = requestBlock

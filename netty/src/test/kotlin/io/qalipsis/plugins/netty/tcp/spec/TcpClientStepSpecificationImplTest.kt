@@ -22,11 +22,10 @@ package io.qalipsis.plugins.netty.tcp.spec
 import assertk.all
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.qalipsis.api.context.StepContext
@@ -37,10 +36,10 @@ import io.qalipsis.api.steps.StepMonitoringConfiguration
 import io.qalipsis.plugins.netty.ByteArrayRequestBuilder
 import io.qalipsis.plugins.netty.configuration.TlsConfiguration
 import io.qalipsis.plugins.netty.netty
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.Test
 import java.net.Inet4Address
 import java.net.Inet6Address
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 
 /**
  * @author Eric Jessé
@@ -63,8 +62,10 @@ internal class TcpClientStepSpecificationImplTest {
             }
 
             assertThat(previousStep.nextSteps[0]).isInstanceOf(TcpClientStepSpecificationImpl::class).all {
-                prop(TcpClientStepSpecificationImpl<*>::requestFactory).isSameAs(requestSpecification)
-                prop(TcpClientStepSpecificationImpl<*>::poolConfiguration).isNull()
+                prop(TcpClientStepSpecificationImpl<*>::requestFactory).isSameInstanceAs(requestSpecification)
+                prop(TcpClientStepSpecificationImpl<*>::connectionConfiguration).all {
+                    prop(TcpClientConfiguration::poolConfiguration).isNull()
+                }
                 prop(TcpClientStepSpecificationImpl<*>::connectionConfiguration).all {
                     prop(TcpClientConfiguration::host).isEqualTo("localhost")
                     prop(TcpClientConfiguration::port).isEqualTo(12234)
@@ -72,8 +73,8 @@ internal class TcpClientStepSpecificationImplTest {
                     prop(TcpClientConfiguration::proxyConfiguration).isNull()
                 }
                 prop(TcpClientStepSpecificationImpl<*>::monitoringConfiguration).all {
-                    prop(StepMonitoringConfiguration::events).isFalse()
-                    prop(StepMonitoringConfiguration::meters).isFalse()
+                    prop(StepMonitoringConfiguration::events).isTrue()
+                    prop(StepMonitoringConfiguration::meters).isTrue()
                 }
             }
         }
@@ -96,11 +97,11 @@ internal class TcpClientStepSpecificationImplTest {
                         type = TcpProxyType.SOCKS5
                         address("my-proxy", 9876)
                     }
-                }
 
-                pool {
-                    size = 143
-                    checkHealthBeforeUse = true
+                    pool {
+                        size = 143
+                        checkHealthBeforeUse = true
+                    }
                 }
 
                 monitoring {
@@ -110,7 +111,7 @@ internal class TcpClientStepSpecificationImplTest {
             }
 
             assertThat(previousStep.nextSteps[0]).isInstanceOf(TcpClientStepSpecificationImpl::class).all {
-                prop(TcpClientStepSpecificationImpl<*>::requestFactory).isSameAs(requestSpecification)
+                prop(TcpClientStepSpecificationImpl<*>::requestFactory).isSameInstanceAs(requestSpecification)
                 prop(TcpClientStepSpecificationImpl<*>::connectionConfiguration).all {
                     prop(TcpClientConfiguration::host).isEqualTo("localhost")
                     prop(TcpClientConfiguration::port).isEqualTo(12234)
@@ -123,9 +124,11 @@ internal class TcpClientStepSpecificationImplTest {
                         prop(TcpProxyConfiguration::port).isEqualTo(9876)
                     }
                 }
-                prop(TcpClientStepSpecificationImpl<*>::poolConfiguration).isNotNull().all {
-                    prop(SocketClientPoolConfiguration::size).isEqualTo(143)
-                    prop(SocketClientPoolConfiguration::checkHealthBeforeUse).isEqualTo(true)
+                prop(TcpClientStepSpecificationImpl<*>::connectionConfiguration).all {
+                    prop(TcpClientConfiguration::poolConfiguration).isNotNull().all {
+                        prop(SocketClientPoolConfiguration::size).isEqualTo(143)
+                        prop(SocketClientPoolConfiguration::checkHealthBeforeUse).isEqualTo(true)
+                    }
                 }
                 prop(TcpClientStepSpecificationImpl<*>::monitoringConfiguration).all {
                     prop(StepMonitoringConfiguration::events).isTrue()
@@ -152,7 +155,7 @@ internal class TcpClientStepSpecificationImplTest {
             }
 
             assertThat(previousStep.nextSteps[0]).isInstanceOf(TcpClientStepSpecificationImpl::class).all {
-                prop(TcpClientStepSpecificationImpl<*>::requestFactory).isSameAs(requestSpecification)
+                prop(TcpClientStepSpecificationImpl<*>::requestFactory).isSameInstanceAs(requestSpecification)
                 prop(TcpClientStepSpecificationImpl<*>::connectionConfiguration).all {
                     prop(TcpClientConfiguration::host).isEqualTo("127.0.0.1")
                     prop(TcpClientConfiguration::port).isEqualTo(12234)
@@ -164,8 +167,8 @@ internal class TcpClientStepSpecificationImplTest {
                     }
                 }
                 prop(TcpClientStepSpecificationImpl<*>::monitoringConfiguration).all {
-                    prop(StepMonitoringConfiguration::events).isFalse()
-                    prop(StepMonitoringConfiguration::meters).isFalse()
+                    prop(StepMonitoringConfiguration::events).isTrue()
+                    prop(StepMonitoringConfiguration::meters).isTrue()
                 }
             }
         }
@@ -183,8 +186,10 @@ internal class TcpClientStepSpecificationImplTest {
             }
 
             assertThat(scenario.rootSteps[0]).isInstanceOf(TcpClientStepSpecificationImpl::class).all {
-                prop(TcpClientStepSpecificationImpl<*>::requestFactory).isSameAs(requestSpecification)
-                prop(TcpClientStepSpecificationImpl<*>::poolConfiguration).isNull()
+                prop(TcpClientStepSpecificationImpl<*>::requestFactory).isSameInstanceAs(requestSpecification)
+                prop(TcpClientStepSpecificationImpl<*>::connectionConfiguration).all {
+                    prop(TcpClientConfiguration::poolConfiguration).isNull()
+                }
                 prop(TcpClientStepSpecificationImpl<*>::connectionConfiguration).all {
                     prop(TcpClientConfiguration::host).isEqualTo("localhost")
                     prop(TcpClientConfiguration::port).isEqualTo(12234)
@@ -192,8 +197,8 @@ internal class TcpClientStepSpecificationImplTest {
                     prop(TcpClientConfiguration::proxyConfiguration).isNull()
                 }
                 prop(TcpClientStepSpecificationImpl<*>::monitoringConfiguration).all {
-                    prop(StepMonitoringConfiguration::events).isFalse()
-                    prop(StepMonitoringConfiguration::meters).isFalse()
+                    prop(StepMonitoringConfiguration::events).isTrue()
+                    prop(StepMonitoringConfiguration::meters).isTrue()
                 }
             }
         }
@@ -213,10 +218,10 @@ internal class TcpClientStepSpecificationImplTest {
 
             assertThat(previousStep.nextSteps[0]).isInstanceOf(QueryTcpClientStepSpecification::class).all {
                 prop(QueryTcpClientStepSpecification<*>::stepName).isEqualTo("my-step-to-reuse")
-                prop(QueryTcpClientStepSpecification<*>::requestFactory).isSameAs(requestSpecification)
+                prop(QueryTcpClientStepSpecification<*>::requestFactory).isSameInstanceAs(requestSpecification)
                 prop(QueryTcpClientStepSpecification<*>::monitoringConfiguration).all {
-                    prop(StepMonitoringConfiguration::events).isFalse()
-                    prop(StepMonitoringConfiguration::meters).isFalse()
+                    prop(StepMonitoringConfiguration::events).isTrue()
+                    prop(StepMonitoringConfiguration::meters).isTrue()
                 }
             }
         }
@@ -237,7 +242,7 @@ internal class TcpClientStepSpecificationImplTest {
 
             assertThat(previousStep.nextSteps[0]).isInstanceOf(QueryTcpClientStepSpecification::class).all {
                 prop(QueryTcpClientStepSpecification<*>::stepName).isEqualTo("my-step-to-reuse")
-                prop(QueryTcpClientStepSpecification<*>::requestFactory).isSameAs(requestSpecification)
+                prop(QueryTcpClientStepSpecification<*>::requestFactory).isSameInstanceAs(requestSpecification)
                 prop(QueryTcpClientStepSpecification<*>::monitoringConfiguration).all {
                     prop(StepMonitoringConfiguration::events).isTrue()
                     prop(StepMonitoringConfiguration::meters).isTrue()

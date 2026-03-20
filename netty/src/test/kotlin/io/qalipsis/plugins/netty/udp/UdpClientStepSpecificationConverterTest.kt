@@ -25,7 +25,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import io.aerisconsulting.catadioptre.getProperty
 import io.mockk.impl.annotations.RelaxedMockK
 import io.qalipsis.api.context.StepContext
@@ -37,11 +37,11 @@ import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import kotlin.coroutines.CoroutineContext
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import kotlin.coroutines.CoroutineContext
 
 @Suppress("UNCHECKED_CAST")
 internal class UdpClientStepSpecificationConverterTest :
@@ -80,7 +80,7 @@ internal class UdpClientStepSpecificationConverterTest :
             retryPolicy = mockedRetryPolicy
             request(requestSpecification)
             monitoring {
-                events = true
+                meters = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -93,11 +93,11 @@ internal class UdpClientStepSpecificationConverterTest :
             assertThat(it).all {
                 isInstanceOf(UdpClientStep::class)
                 prop("name").isEqualTo("my-step")
-                prop("retryPolicy").isSameAs(mockedRetryPolicy)
-                prop("eventLoopGroupSupplier").isSameAs(eventLoopGroupSupplier)
-                prop("requestFactory").isSameAs(requestSpecification)
-                prop("connectionConfiguration").isSameAs(spec.getProperty("connectionConfiguration"))
-                prop("eventsLogger").isSameAs(eventsLogger)
+                prop("retryPolicy").isSameInstanceAs(mockedRetryPolicy)
+                prop("eventLoopGroupSupplier").isSameInstanceAs(eventLoopGroupSupplier)
+                prop("requestFactory").isSameInstanceAs(requestSpecification)
+                prop("connectionConfiguration").isSameInstanceAs(spec.getProperty("connectionConfiguration"))
+                prop("eventsLogger").isSameInstanceAs(eventsLogger)
                 prop("meterRegistry").isNull()
             }
         }
@@ -112,7 +112,7 @@ internal class UdpClientStepSpecificationConverterTest :
         spec.apply {
             request(requestSpecification)
             monitoring {
-                meters = true
+                events = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -126,11 +126,11 @@ internal class UdpClientStepSpecificationConverterTest :
                 isInstanceOf(UdpClientStep::class)
                 prop("name").isNotNull()
                 prop("retryPolicy").isNull()
-                prop("eventLoopGroupSupplier").isSameAs(eventLoopGroupSupplier)
-                prop("requestFactory").isSameAs(requestSpecification)
-                prop("connectionConfiguration").isSameAs(spec.getProperty("connectionConfiguration"))
+                prop("eventLoopGroupSupplier").isSameInstanceAs(eventLoopGroupSupplier)
+                prop("requestFactory").isSameInstanceAs(requestSpecification)
+                prop("connectionConfiguration").isSameInstanceAs(spec.getProperty("connectionConfiguration"))
                 prop("eventsLogger").isNull()
-                prop("meterRegistry").isSameAs(meterRegistry)
+                prop("meterRegistry").isSameInstanceAs(meterRegistry)
             }
         }
     }

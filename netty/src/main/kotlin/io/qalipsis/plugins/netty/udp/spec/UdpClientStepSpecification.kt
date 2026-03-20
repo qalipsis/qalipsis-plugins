@@ -47,7 +47,7 @@ class UdpClientStepSpecification<INPUT> :
 
     internal val connectionConfiguration = ConnectionConfiguration()
 
-    internal var monitoringConfiguration = StepMonitoringConfiguration()
+    internal var monitoringConfiguration = StepMonitoringConfiguration().all()
 
     fun request(requestFactory: suspend (StepContext<*, *>, INPUT) -> ByteArray) {
         this.requestFactory = requestFactory

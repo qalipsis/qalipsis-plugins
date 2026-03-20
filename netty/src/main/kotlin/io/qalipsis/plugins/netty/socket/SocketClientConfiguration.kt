@@ -23,6 +23,7 @@ import io.qalipsis.api.annotations.Spec
 import io.qalipsis.api.constraints.PositiveDuration
 import io.qalipsis.plugins.netty.configuration.ConnectionConfiguration
 import io.qalipsis.plugins.netty.configuration.TlsConfiguration
+import io.qalipsis.plugins.netty.tcp.spec.SocketClientPoolConfiguration
 import java.time.Duration
 import javax.validation.Valid
 
@@ -45,11 +46,34 @@ abstract class SocketClientConfiguration internal constructor(
     @field:Valid internal var tlsConfiguration: TlsConfiguration? = null
 ) : ConnectionConfiguration() {
 
+    internal var connectionStrategyConfiguration = ConnectionStrategyConfiguration()
+
+    internal var poolConfiguration: SocketClientPoolConfiguration? = null
+
     /**
      * Enables and configures the connection to the remote peer with TLS.
      */
     fun tls(configurationBlock: TlsConfiguration.() -> Unit) {
         this.tlsConfiguration = TlsConfiguration()
             .also { it.configurationBlock() }
+    }
+
+    /**
+     * Configures the connection strategy for this socket connection.
+     *
+     * - ON_DEMAND: one connection per minion (default)
+     * - POOL: shared connection pool
+     * - WARMUP: pre-creates all connections at step start
+     */
+    fun connectionStrategy(configurationBlock: @ConnectionStrategyMarker ConnectionStrategyConfiguration.() -> Unit) {
+        connectionStrategyConfiguration.configurationBlock()
+    }
+
+    /**
+     * Enables the creation of a pool of connections instead of one connection by minion.
+     * This optimizes the throughput, when the remote server does not require a unique connection by client or user.
+     */
+    fun pool(configurationBlock: SocketClientPoolConfiguration.() -> Unit) {
+        this.poolConfiguration = SocketClientPoolConfiguration().also { it.configurationBlock() }
     }
 }

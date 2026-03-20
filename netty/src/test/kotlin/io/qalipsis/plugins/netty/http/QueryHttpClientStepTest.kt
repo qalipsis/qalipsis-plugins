@@ -24,7 +24,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.mockk.coEvery
@@ -144,17 +144,17 @@ internal class QueryHttpClientStepTest {
             prop(RequestResult<String, HttpResponse, *>::sendingFailure).isNull()
             prop(RequestResult<String, HttpResponse, *>::failure).isNull()
             prop(RequestResult<String, HttpResponse, *>::cause).isNull()
-            prop(RequestResult<String, HttpResponse, *>::response).isSameAs(convertedResponse)
-            prop(RequestResult<String, HttpResponse, *>::meters).isSameAs(monitoringCollector.captured.meters)
+            prop(RequestResult<String, HttpResponse, *>::response).isSameInstanceAs(convertedResponse)
+            prop(RequestResult<String, HttpResponse, *>::meters).isSameInstanceAs(monitoringCollector.captured.meters)
         }
 
         coVerify {
             simpleHttpClientStep.execute(any(), refEq(ctx), eq("This is a test"), refEq(request))
         }
         assertThat(monitoringCollector.captured).all {
-            prop("stepContext").isSameAs(ctx)
-            prop("eventsLogger").isSameAs(eventsLogger)
-            prop("meterRegistry").isSameAs(meterRegistry)
+            prop("stepContext").isSameInstanceAs(ctx)
+            prop("eventsLogger").isSameInstanceAs(eventsLogger)
+            prop("meterRegistry").isSameInstanceAs(meterRegistry)
         }
 
         confirmVerified(simpleHttpClientStep)
@@ -206,18 +206,18 @@ internal class QueryHttpClientStepTest {
                 prop(RequestResult<*, *, *>::input).isEqualTo("This is a test")
                 prop(RequestResult<*, *, *>::isSuccess).isFalse()
                 prop(RequestResult<*, *, *>::isFailure).isTrue()
-                prop(RequestResult<*, *, *>::cause).isSameAs(httpResult.cause)
-                prop(RequestResult<*, *, *>::sendingFailure).isSameAs(httpResult.sendingFailure)
-                prop(RequestResult<*, *, *>::failure).isSameAs(httpResult.failure)
+                prop(RequestResult<*, *, *>::cause).isSameInstanceAs(httpResult.cause)
+                prop(RequestResult<*, *, *>::sendingFailure).isSameInstanceAs(httpResult.sendingFailure)
+                prop(RequestResult<*, *, *>::failure).isSameInstanceAs(httpResult.failure)
                 prop(RequestResult<*, *, *>::response).isNull()
-                prop(RequestResult<*, *, *>::meters).isSameAs(httpResult.meters)
+                prop(RequestResult<*, *, *>::meters).isSameInstanceAs(httpResult.meters)
             }
 
             coVerify {
                 simpleHttpClientStep.execute(any(), refEq(ctx), eq("This is a test"), refEq(request))
             }
             assertThat(monitoringCollector.captured).all {
-                prop("stepContext").isSameAs(ctx)
+                prop("stepContext").isSameInstanceAs(ctx)
                 prop("eventsLogger").isNull()
                 prop("meterRegistry").isNull()
             }

@@ -21,23 +21,29 @@ package io.qalipsis.plugins.netty.tcp
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
+import assertk.assertions.isSameInstanceAs
+import assertk.assertions.prop
 import io.mockk.impl.annotations.RelaxedMockK
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepCreationContextImpl
 import io.qalipsis.plugins.netty.ByteArrayRequestBuilder
 import io.qalipsis.plugins.netty.EventLoopGroupSupplier
+import io.qalipsis.plugins.netty.socket.ConnectionStrategyType
 import io.qalipsis.plugins.netty.tcp.spec.TcpClientStepSpecificationImpl
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import kotlin.coroutines.CoroutineContext
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import kotlin.coroutines.CoroutineContext
 
 @Suppress("UNCHECKED_CAST")
 internal class TcpClientStepSpecificationConverterTest :
@@ -77,7 +83,7 @@ internal class TcpClientStepSpecificationConverterTest :
             request(requestSpecification)
 
             monitoring {
-                events = true
+                meters = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -88,11 +94,11 @@ internal class TcpClientStepSpecificationConverterTest :
         // then
         assertThat(creationContext.createdStep).isNotNull().isInstanceOf(SimpleTcpClientStep::class).all {
             prop(SimpleTcpClientStep<*>::name).isEqualTo("my-step")
-            prop(SimpleTcpClientStep<*>::retryPolicy).isSameAs(mockedRetryPolicy)
-            prop("eventLoopGroupSupplier").isSameAs(eventLoopGroupSupplier)
-            prop("requestFactory").isSameAs(requestSpecification)
-            prop("clientConfiguration").isSameAs(spec.connectionConfiguration)
-            prop("eventsLogger").isSameAs(eventsLogger)
+            prop(SimpleTcpClientStep<*>::retryPolicy).isSameInstanceAs(mockedRetryPolicy)
+            prop("eventLoopGroupSupplier").isSameInstanceAs(eventLoopGroupSupplier)
+            prop("requestFactory").isSameInstanceAs(requestSpecification)
+            prop("clientConfiguration").isSameInstanceAs(spec.connectionConfiguration)
+            prop("eventsLogger").isSameInstanceAs(eventsLogger)
             prop("meterRegistry").isNull()
         }
     }
@@ -106,7 +112,7 @@ internal class TcpClientStepSpecificationConverterTest :
         spec.apply {
             request(requestSpecification)
             monitoring {
-                meters = true
+                events = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -118,11 +124,11 @@ internal class TcpClientStepSpecificationConverterTest :
         assertThat(creationContext.createdStep).isNotNull().isInstanceOf(SimpleTcpClientStep::class).all {
             prop(SimpleTcpClientStep<*>::name).isNotNull()
             prop(SimpleTcpClientStep<*>::retryPolicy).isNull()
-            prop("eventLoopGroupSupplier").isSameAs(eventLoopGroupSupplier)
-            prop("requestFactory").isSameAs(requestSpecification)
-            prop("clientConfiguration").isSameAs(spec.connectionConfiguration)
+            prop("eventLoopGroupSupplier").isSameInstanceAs(eventLoopGroupSupplier)
+            prop("requestFactory").isSameInstanceAs(requestSpecification)
+            prop("clientConfiguration").isSameInstanceAs(spec.connectionConfiguration)
             prop("eventsLogger").isNull()
-            prop("meterRegistry").isSameAs(meterRegistry)
+            prop("meterRegistry").isSameInstanceAs(meterRegistry)
         }
     }
 
@@ -136,13 +142,15 @@ internal class TcpClientStepSpecificationConverterTest :
             name = "my-step"
             retryPolicy = mockedRetryPolicy
             request(requestSpecification)
-            pool {
-                size = 123
-                checkHealthBeforeUse = false
+            connect {
+                pool {
+                    size = 123
+                    checkHealthBeforeUse = false
+                }
             }
 
             monitoring {
-                events = true
+                meters = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -153,13 +161,76 @@ internal class TcpClientStepSpecificationConverterTest :
         // then
         assertThat(creationContext.createdStep).isNotNull().isInstanceOf(PooledTcpClientStep::class).all {
             prop(PooledTcpClientStep<*>::name).isEqualTo("my-step")
-            prop(PooledTcpClientStep<*>::retryPolicy).isSameAs(mockedRetryPolicy)
-            prop("eventLoopGroupSupplier").isSameAs(eventLoopGroupSupplier)
-            prop("requestFactory").isSameAs(requestSpecification)
-            prop("clientConfiguration").isSameAs(spec.connectionConfiguration)
-            prop("poolConfiguration").isSameAs(spec.poolConfiguration)
-            prop("eventsLogger").isSameAs(eventsLogger)
+            prop(PooledTcpClientStep<*>::retryPolicy).isSameInstanceAs(mockedRetryPolicy)
+            prop("eventLoopGroupSupplier").isSameInstanceAs(eventLoopGroupSupplier)
+            prop("requestFactory").isSameInstanceAs(requestSpecification)
+            prop("clientConfiguration").isSameInstanceAs(spec.connectionConfiguration)
+            prop("poolConfiguration").isSameInstanceAs(spec.connectionConfiguration.poolConfiguration)
+            prop("eventsLogger").isSameInstanceAs(eventsLogger)
             prop("meterRegistry").isNull()
+        }
+    }
+
+    @Test
+    internal fun `should convert spec with warmup connection strategy`() = testDispatcherProvider.runTest {
+        // given
+        val requestSpecification: suspend ByteArrayRequestBuilder.(StepContext<*, *>, Int) -> ByteArray =
+            { _, _ -> ByteArray(1) { it.toByte() } }
+        val spec = TcpClientStepSpecificationImpl<Int>()
+        spec.apply {
+            name = "my-warmup-step"
+            retryPolicy = mockedRetryPolicy
+            request(requestSpecification)
+            connect {
+                connectionStrategy {
+                    strategyType = ConnectionStrategyType.WARMUP
+                    shared = true
+                }
+            }
+            monitoring {
+                meters = false
+            }
+        }
+        val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
+
+        // when
+        converter.convert<String, Int>(creationContext as StepCreationContext<TcpClientStepSpecificationImpl<*>>)
+
+        // then
+        assertThat(creationContext.createdStep).isNotNull().isInstanceOf(WarmupTcpClientStep::class).all {
+            prop(WarmupTcpClientStep<*>::name).isEqualTo("my-warmup-step")
+            prop(WarmupTcpClientStep<*>::retryPolicy).isSameInstanceAs(mockedRetryPolicy)
+            prop("eventLoopGroupSupplier").isSameInstanceAs(eventLoopGroupSupplier)
+            prop("requestFactory").isSameInstanceAs(requestSpecification)
+            prop("clientConfiguration").isSameInstanceAs(spec.connectionConfiguration)
+            prop("eventsLogger").isSameInstanceAs(eventsLogger)
+            prop("meterRegistry").isNull()
+        }
+    }
+
+    @Test
+    internal fun `should convert spec with pool connection strategy`() = testDispatcherProvider.runTest {
+        // given
+        val requestSpecification: suspend ByteArrayRequestBuilder.(StepContext<*, *>, Int) -> ByteArray =
+            { _, _ -> ByteArray(1) { it.toByte() } }
+        val spec = TcpClientStepSpecificationImpl<Int>()
+        spec.apply {
+            name = "my-pool-step"
+            request(requestSpecification)
+            connect {
+                connectionStrategy {
+                    strategyType = ConnectionStrategyType.POOL
+                }
+            }
+        }
+        val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
+
+        // when
+        converter.convert<String, Int>(creationContext as StepCreationContext<TcpClientStepSpecificationImpl<*>>)
+
+        // then
+        assertThat(creationContext.createdStep).isNotNull().isInstanceOf(PooledTcpClientStep::class).all {
+            prop(PooledTcpClientStep<*>::name).isEqualTo("my-pool-step")
         }
     }
 

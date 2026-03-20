@@ -25,7 +25,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
@@ -82,7 +82,7 @@ internal class QueryTcpClientStepSpecificationConverterTest :
                 retryPolicy = mockedRetryPolicy
                 request(requestSpecification)
                 monitoring {
-                    events = true
+                    meters = false
                 }
             }
             val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -99,10 +99,10 @@ internal class QueryTcpClientStepSpecificationConverterTest :
             creationContext.createdStep!!.let {
                 assertThat(it).isInstanceOf(QueryTcpClientStep::class).all {
                     prop("name").isEqualTo("my-step")
-                    prop("retryPolicy").isSameAs(mockedRetryPolicy)
-                    prop("requestFactory").isSameAs(requestSpecification)
-                    prop("connectionOwner").isSameAs(connectionOwner)
-                    prop("eventsLogger").isSameAs(eventsLogger)
+                    prop("retryPolicy").isSameInstanceAs(mockedRetryPolicy)
+                    prop("requestFactory").isSameInstanceAs(requestSpecification)
+                    prop("connectionOwner").isSameInstanceAs(connectionOwner)
+                    prop("eventsLogger").isSameInstanceAs(eventsLogger)
                     prop("meterRegistry").isNull()
                 }
             }
@@ -118,7 +118,7 @@ internal class QueryTcpClientStepSpecificationConverterTest :
             spec.apply {
                 request(requestSpecification)
                 monitoring {
-                    meters = true
+                    events = false
                 }
             }
             val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -136,10 +136,10 @@ internal class QueryTcpClientStepSpecificationConverterTest :
                 assertThat(it).isInstanceOf(QueryTcpClientStep::class).all {
                     prop("name").isNotNull()
                     prop("retryPolicy").isNull()
-                    prop("requestFactory").isSameAs(requestSpecification)
-                    prop("connectionOwner").isSameAs(connectionOwner)
+                    prop("requestFactory").isSameInstanceAs(requestSpecification)
+                    prop("connectionOwner").isSameInstanceAs(connectionOwner)
                     prop("eventsLogger").isNull()
-                    prop("meterRegistry").isSameAs(meterRegistry)
+                    prop("meterRegistry").isSameInstanceAs(meterRegistry)
                 }
             }
 
@@ -177,10 +177,10 @@ internal class QueryTcpClientStepSpecificationConverterTest :
                 assertThat(it).isInstanceOf(QueryTcpClientStep::class).all {
                     prop("name").isNotNull()
                     prop("retryPolicy").isNull()
-                    prop("requestFactory").isSameAs(requestSpecification)
-                    prop("connectionOwner").isSameAs(connectionOwner)
-                    prop("eventsLogger").isSameAs(eventsLogger)
-                    prop("meterRegistry").isSameAs(meterRegistry)
+                    prop("requestFactory").isSameInstanceAs(requestSpecification)
+                    prop("connectionOwner").isSameInstanceAs(connectionOwner)
+                    prop("eventsLogger").isSameInstanceAs(eventsLogger)
+                    prop("meterRegistry").isSameInstanceAs(meterRegistry)
                 }
             }
 

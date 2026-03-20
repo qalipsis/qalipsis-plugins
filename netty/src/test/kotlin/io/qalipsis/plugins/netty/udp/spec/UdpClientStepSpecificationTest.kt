@@ -24,7 +24,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.qalipsis.api.context.StepContext
@@ -54,14 +54,14 @@ internal class UdpClientStepSpecificationTest {
         }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(UdpClientStepSpecification::class).all {
-            prop(UdpClientStepSpecification<*>::requestFactory).isSameAs(requestSpecification)
+            prop(UdpClientStepSpecification<*>::requestFactory).isSameInstanceAs(requestSpecification)
             prop(UdpClientStepSpecification<*>::connectionConfiguration).all {
                 prop(ConnectionConfiguration::host).isEqualTo("localhost")
                 prop(ConnectionConfiguration::port).isEqualTo(12234)
             }
             prop(UdpClientStepSpecification<*>::monitoringConfiguration).all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
     }
@@ -77,12 +77,12 @@ internal class UdpClientStepSpecificationTest {
                 address("localhost", 12234)
             }
             monitoring {
-                events = true
+                meters = false
             }
         }
 
         assertThat(previousStep.nextSteps[0]).isInstanceOf(UdpClientStepSpecification::class).all {
-            prop(UdpClientStepSpecification<*>::requestFactory).isSameAs(requestSpecification)
+            prop(UdpClientStepSpecification<*>::requestFactory).isSameInstanceAs(requestSpecification)
             prop(UdpClientStepSpecification<*>::connectionConfiguration).all {
                 prop(ConnectionConfiguration::host).isEqualTo("localhost")
                 prop(ConnectionConfiguration::port).isEqualTo(12234)
@@ -105,12 +105,12 @@ internal class UdpClientStepSpecificationTest {
                 address("localhost", 12234)
             }
             monitoring {
-                meters = true
+                events = false
             }
         }
 
         assertThat(scenario.rootSteps[0]).isInstanceOf(UdpClientStepSpecification::class).all {
-            prop(UdpClientStepSpecification<*>::requestFactory).isSameAs(requestSpecification)
+            prop(UdpClientStepSpecification<*>::requestFactory).isSameInstanceAs(requestSpecification)
             prop(UdpClientStepSpecification<*>::connectionConfiguration).all {
                 prop(ConnectionConfiguration::host).isEqualTo("localhost")
                 prop(ConnectionConfiguration::port).isEqualTo(12234)

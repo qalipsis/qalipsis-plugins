@@ -104,8 +104,8 @@ object Http1Scenario {
                 connect {
                     url("http://localhost:${httpPort}/")
                     noDelay = true
+                    pool { size = 50 }
                 }
-                pool { size = 50 }
                 request { _, _ -> request1 }
             }
             .verify {

@@ -28,7 +28,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.key
 import assertk.assertions.prop
@@ -77,12 +77,12 @@ import io.qalipsis.test.mockk.coVerifyOnce
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
 import io.qalipsis.test.steps.StepTestHelper
+import java.net.InetAddress
 import kotlinx.coroutines.channels.Channel
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.net.InetAddress
 import io.qalipsis.plugins.netty.http.response.HttpResponse as QalipsisHttpResponse
 
 @Suppress("UNCHECKED_CAST", "CHANGING_ARGUMENTS_EXECUTION_ORDER_FOR_NAMED_VARARGS")
@@ -186,7 +186,7 @@ internal class PooledHttpClientStepTest {
         // then
         assertThat(step).all {
             typedProp<StepBasedTcpMonitoringCollector>("stepMonitoringCollector").all {
-                prop("eventsLogger").isSameAs(eventsLogger)
+                prop("eventsLogger").isSameInstanceAs(eventsLogger)
                 prop("connectingCounter").isNotNull()
                 prop("connectedTimer").isNotNull()
                 prop("connectionFailureTimer").isNotNull()
@@ -194,8 +194,8 @@ internal class PooledHttpClientStepTest {
                 prop("tlsConnectionFailureTimer").isNotNull()
                 prop("eventPrefix").isEqualTo("netty.http")
                 prop("meterPrefix").isEqualTo("netty-http")
-                prop("eventsTags").isSameAs(eventsTags)
-                prop("metersTags").isSameAs(metersTags)
+                prop("eventsTags").isSameInstanceAs(eventsTags)
+                prop("metersTags").isSameInstanceAs(metersTags)
             }
             typedProp<MutableMap<SocketClient.RemotePeerIdentifier, Pool<HttpClient>>>("clientsPools").all {
                 hasSize(1)
@@ -273,7 +273,7 @@ internal class PooledHttpClientStepTest {
         // then
         assertThat(result).all {
             prop(RequestResult<String, HttpResponse, *>::input).isEqualTo("TEST")
-            prop(RequestResult<String, HttpResponse, *>::response).isSameAs(convertedResponse)
+            prop(RequestResult<String, HttpResponse, *>::response).isSameInstanceAs(convertedResponse)
             prop(RequestResult<String, HttpResponse, *>::failure).isNull()
             prop(RequestResult<String, HttpResponse, *>::isSuccess).isTrue()
             prop(RequestResult<String, HttpResponse, *>::isFailure).isFalse()
@@ -318,7 +318,7 @@ internal class PooledHttpClientStepTest {
         val result = step.execute(monitoringCollector, ctx, "TEST", request)
 
         // then
-        assertThat(result).isSameAs(response)
+        assertThat(result).isSameInstanceAs(response)
         coVerifyOnce {
             step["doExecute"](refEq(monitoringCollector), refEq(ctx), refEq(request))
         }
@@ -362,7 +362,7 @@ internal class PooledHttpClientStepTest {
             val result = step.execute(monitoringCollector, ctx, "TEST", request)
 
             // then
-            assertThat(result).isSameAs(response)
+            assertThat(result).isSameInstanceAs(response)
             coVerifyOnce {
                 step["doExecute"](refEq(monitoringCollector), refEq(ctx), refEq(request))
             }
@@ -419,7 +419,7 @@ internal class PooledHttpClientStepTest {
         val result = step.execute(monitoringCollector, ctx, "TEST", request1)
 
         // then
-        assertThat(result).isSameAs(response3)
+        assertThat(result).isSameInstanceAs(response3)
         coVerifyOnce {
             step["doExecute"](refEq(monitoringCollector), refEq(ctx), refEq(request1))
             step["doExecute"](refEq(monitoringCollector), refEq(ctx), refEq(request2))
@@ -473,7 +473,7 @@ internal class PooledHttpClientStepTest {
         val result = step.execute(monitoringCollector, ctx, "TEST", request1)
 
         // then
-        assertThat(result).isSameAs(redirectResponse)
+        assertThat(result).isSameInstanceAs(redirectResponse)
         coVerifyOrder {
             step["doExecute"](refEq(monitoringCollector), refEq(ctx), refEq(request1))
             step["doExecute"](refEq(monitoringCollector), refEq(ctx), refEq(request2))
@@ -521,10 +521,10 @@ internal class PooledHttpClientStepTest {
             val result = step.coInvokeInvisible<HttpResponse>("doExecute", monitoringCollector, ctx, request)
 
             // then
-            assertThat(result).isSameAs(response)
+            assertThat(result).isSameInstanceAs(response)
             assertThat(clientsPools).all {
                 hasSize(1)
-                key(SocketClient.RemotePeerIdentifier(InetAddress.getByName("localhost"), 80)).isSameAs(pool)
+                key(SocketClient.RemotePeerIdentifier(InetAddress.getByName("localhost"), 80)).isSameInstanceAs(pool)
             }
             coVerify {
                 pool.awaitReadiness()
@@ -581,11 +581,11 @@ internal class PooledHttpClientStepTest {
         val result = step.coInvokeInvisible<HttpResponse>("doExecute", monitoringCollector, ctx, request)
 
         // then
-        assertThat(result).isSameAs(response)
+        assertThat(result).isSameInstanceAs(response)
         assertThat(clientsPools).all {
             hasSize(2)
-            key(SocketClient.RemotePeerIdentifier(InetAddress.getByName("localhost"), 80)).isSameAs(pool1)
-            key(SocketClient.RemotePeerIdentifier(InetAddress.getByName("localhost"), 443)).isSameAs(pool2)
+            key(SocketClient.RemotePeerIdentifier(InetAddress.getByName("localhost"), 80)).isSameInstanceAs(pool1)
+            key(SocketClient.RemotePeerIdentifier(InetAddress.getByName("localhost"), 443)).isSameInstanceAs(pool2)
         }
         coVerifyOrder {
             configuration.copy()

@@ -25,7 +25,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.spyk
@@ -106,7 +106,7 @@ internal class MqttPublishStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(MqttPublishStep::class).all {
                 prop("name").isEqualTo("my-step")
                 prop("mqttClientOptions").isEqualTo(mockedClientOptions)
-                prop("eventLoopGroupSupplier").isSameAs(eventLoopGroupSupplier)
+                prop("eventLoopGroupSupplier").isSameInstanceAs(eventLoopGroupSupplier)
                 prop("retryPolicy").isNotNull()
                 prop("recordsFactory").isNotNull()
             }
@@ -147,10 +147,10 @@ internal class MqttPublishStepSpecificationConverterTest :
             assertThat(it).isInstanceOf(MqttPublishStep::class).all {
                 prop("name").isNotNull().isEqualTo("")
                 prop("mqttClientOptions").isEqualTo(mockedClientOptions)
-                prop("eventLoopGroupSupplier").isSameAs(eventLoopGroupSupplier)
+                prop("eventLoopGroupSupplier").isSameInstanceAs(eventLoopGroupSupplier)
                 prop("retryPolicy").isNull()
                 prop("recordsFactory").isNotNull()
-                prop("meterRegistry").isNotNull().isSameAs(meterRegistry)
+                prop("meterRegistry").isNotNull().isSameInstanceAs(meterRegistry)
                 prop("eventsLogger").isNull()
             }
         }

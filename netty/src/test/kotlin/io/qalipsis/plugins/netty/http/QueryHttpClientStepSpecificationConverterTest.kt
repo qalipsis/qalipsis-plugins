@@ -26,7 +26,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
@@ -103,7 +103,7 @@ internal class QueryHttpClientStepSpecificationConverterTest :
                 retryPolicy = mockedRetryPolicy
                 request(requestSpecification)
                 monitoring {
-                    events = true
+                    meters = false
                 }
             }
             val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -120,17 +120,17 @@ internal class QueryHttpClientStepSpecificationConverterTest :
             creationContext.createdStep!!.let {
                 assertThat(it).isInstanceOf(QueryHttpClientStep::class).all {
                     prop("name").isEqualTo("my-step")
-                    prop("retryPolicy").isSameAs(mockedRetryPolicy)
-                    prop("requestFactory").isSameAs(requestSpecification)
-                    prop("connectionOwner").isSameAs(connectionOwner)
+                    prop("retryPolicy").isSameInstanceAs(mockedRetryPolicy)
+                    prop("requestFactory").isSameInstanceAs(requestSpecification)
+                    prop("connectionOwner").isSameInstanceAs(connectionOwner)
                     typedProp<ResponseConverter<*>>("responseConverter").all {
-                        prop("argumentType").isSameAs(String::class)
+                        prop("argumentType").isSameInstanceAs(String::class)
                         typedProp<List<HttpBodyDeserializer>>("deserializers").containsOnly(
                             bodyDeserializer1,
                             bodyDeserializer2
                         )
                     }
-                    prop("eventsLogger").isSameAs(eventsLogger)
+                    prop("eventsLogger").isSameInstanceAs(eventsLogger)
                     prop("meterRegistry").isNull()
                 }
             }
@@ -146,7 +146,7 @@ internal class QueryHttpClientStepSpecificationConverterTest :
             spec.apply {
                 request(requestSpecification)
                 monitoring {
-                    meters = true
+                    events = false
                 }
             }.deserialize(Entity::class)
             val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -164,17 +164,17 @@ internal class QueryHttpClientStepSpecificationConverterTest :
                 assertThat(it).isInstanceOf(QueryHttpClientStep::class).all {
                     prop("name").isNotNull()
                     prop("retryPolicy").isNull()
-                    prop("requestFactory").isSameAs(requestSpecification)
-                    prop("connectionOwner").isSameAs(connectionOwner)
+                    prop("requestFactory").isSameInstanceAs(requestSpecification)
+                    prop("connectionOwner").isSameInstanceAs(connectionOwner)
                     typedProp<ResponseConverter<*>>("responseConverter").all {
-                        prop("argumentType").isSameAs(Entity::class)
+                        prop("argumentType").isSameInstanceAs(Entity::class)
                         typedProp<List<HttpBodyDeserializer>>("deserializers").containsOnly(
                             bodyDeserializer1,
                             bodyDeserializer2
                         )
                     }
                     prop("eventsLogger").isNull()
-                    prop("meterRegistry").isSameAs(meterRegistry)
+                    prop("meterRegistry").isSameInstanceAs(meterRegistry)
                 }
             }
 
@@ -212,17 +212,17 @@ internal class QueryHttpClientStepSpecificationConverterTest :
                 assertThat(it).isInstanceOf(QueryHttpClientStep::class).all {
                     prop("name").isNotNull()
                     prop("retryPolicy").isNull()
-                    prop("requestFactory").isSameAs(requestSpecification)
-                    prop("connectionOwner").isSameAs(connectionOwner)
+                    prop("requestFactory").isSameInstanceAs(requestSpecification)
+                    prop("connectionOwner").isSameInstanceAs(connectionOwner)
                     typedProp<ResponseConverter<*>>("responseConverter").all {
-                        prop("argumentType").isSameAs(Entity::class)
+                        prop("argumentType").isSameInstanceAs(Entity::class)
                         typedProp<List<HttpBodyDeserializer>>("deserializers").containsOnly(
                             bodyDeserializer1,
                             bodyDeserializer2
                         )
                     }
-                    prop("eventsLogger").isSameAs(eventsLogger)
-                    prop("meterRegistry").isSameAs(meterRegistry)
+                    prop("eventsLogger").isSameInstanceAs(eventsLogger)
+                    prop("meterRegistry").isSameInstanceAs(meterRegistry)
                 }
             }
 

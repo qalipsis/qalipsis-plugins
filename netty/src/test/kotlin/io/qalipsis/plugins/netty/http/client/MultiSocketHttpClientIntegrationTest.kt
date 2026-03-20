@@ -34,6 +34,7 @@ import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Throughput
 import io.qalipsis.api.meters.Timer
 import io.qalipsis.plugins.netty.NativeTransportUtils
 import io.qalipsis.plugins.netty.http.client.monitoring.HttpStepContextBasedSocketMonitoringCollector
@@ -44,13 +45,13 @@ import io.qalipsis.plugins.netty.tcp.ConnectionAndRequestResult
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
+import java.time.Duration
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.time.Duration
 
 @WithMockk
 internal class MultiSocketHttpClientIntegrationTest {
@@ -94,6 +95,18 @@ internal class MultiSocketHttpClientIntegrationTest {
                 tags = any<Map<String, String>>()
             )
         } returns relaxedMockk<Timer> {
+            every { report(any()) } returns this
+        }
+        every {
+            meterRegistry.throughput(
+                scenarioName = any<String>(),
+                stepName = any<String>(),
+                name = any<String>(),
+                percentiles = any(),
+                unit = any(),
+                tags = any<Map<String, String>>()
+            )
+        } returns relaxedMockk<Throughput> {
             every { report(any()) } returns this
         }
     }

@@ -26,7 +26,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.netty.handler.codec.http.HttpMethod
@@ -41,9 +41,9 @@ import io.qalipsis.plugins.netty.http.request.HttpRequest
 import io.qalipsis.plugins.netty.http.request.SimpleHttpRequest
 import io.qalipsis.plugins.netty.netty
 import io.qalipsis.plugins.netty.tcp.spec.SocketClientPoolConfiguration
+import java.time.Duration
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.time.Duration
 
 /**
  * @author Eric Jessé
@@ -66,8 +66,10 @@ internal class HttpClientStepSpecificationImplTest {
             }
 
             assertThat(previousStep.nextSteps[0]).isInstanceOf(HttpClientStepSpecificationImpl::class).all {
-                prop(HttpClientStepSpecificationImpl<*, *>::requestFactory).isSameAs(requestSpecification)
-                prop(HttpClientStepSpecificationImpl<*, *>::poolConfiguration).isNull()
+                prop(HttpClientStepSpecificationImpl<*, *>::requestFactory).isSameInstanceAs(requestSpecification)
+                prop(HttpClientStepSpecificationImpl<*, *>::connectionConfiguration).all {
+                    prop(HttpClientConfiguration::poolConfiguration).isNull()
+                }
                 prop(HttpClientStepSpecificationImpl<*, *>::bodyType).isEqualTo(String::class)
                 prop(HttpClientStepSpecificationImpl<*, *>::connectionConfiguration).all {
                     prop(HttpClientConfiguration::version).isEqualTo(HttpVersion.HTTP_1_1)
@@ -87,8 +89,8 @@ internal class HttpClientStepSpecificationImplTest {
                     prop(HttpClientConfiguration::proxyConfiguration).isNull()
                 }
                 prop(HttpClientStepSpecificationImpl<*, *>::monitoringConfiguration).all {
-                    prop(StepMonitoringConfiguration::events).isFalse()
-                    prop(StepMonitoringConfiguration::meters).isFalse()
+                    prop(StepMonitoringConfiguration::events).isTrue()
+                    prop(StepMonitoringConfiguration::meters).isTrue()
                 }
             }
         }
@@ -119,11 +121,11 @@ internal class HttpClientStepSpecificationImplTest {
                         type = HttpProxyType.SOCKS5
                         address("my-proxy", 9876)
                     }
-                }
 
-                pool {
-                    size = 143
-                    checkHealthBeforeUse = true
+                    pool {
+                        size = 143
+                        checkHealthBeforeUse = true
+                    }
                 }
 
                 monitoring {
@@ -133,7 +135,7 @@ internal class HttpClientStepSpecificationImplTest {
             }
 
             assertThat(previousStep.nextSteps[0]).isInstanceOf(HttpClientStepSpecificationImpl::class).all {
-                prop(HttpClientStepSpecificationImpl<*, *>::requestFactory).isSameAs(requestSpecification)
+                prop(HttpClientStepSpecificationImpl<*, *>::requestFactory).isSameInstanceAs(requestSpecification)
                 prop(HttpClientStepSpecificationImpl<*, *>::bodyType).isEqualTo(String::class)
                 prop(HttpClientStepSpecificationImpl<*, *>::connectionConfiguration).all {
                     prop(HttpClientConfiguration::version).isEqualTo(HttpVersion.HTTP_1_1)
@@ -158,9 +160,11 @@ internal class HttpClientStepSpecificationImplTest {
                         prop(HttpProxyConfiguration::port).isEqualTo(9876)
                     }
                 }
-                prop(HttpClientStepSpecificationImpl<*, *>::poolConfiguration).isNotNull().all {
-                    prop(SocketClientPoolConfiguration::size).isEqualTo(143)
-                    prop(SocketClientPoolConfiguration::checkHealthBeforeUse).isEqualTo(true)
+                prop(HttpClientStepSpecificationImpl<*, *>::connectionConfiguration).all {
+                    prop(HttpClientConfiguration::poolConfiguration).isNotNull().all {
+                        prop(SocketClientPoolConfiguration::size).isEqualTo(143)
+                        prop(SocketClientPoolConfiguration::checkHealthBeforeUse).isEqualTo(true)
+                    }
                 }
                 prop(HttpClientStepSpecificationImpl<*, *>::monitoringConfiguration).all {
                     prop(StepMonitoringConfiguration::events).isTrue()
@@ -182,8 +186,10 @@ internal class HttpClientStepSpecificationImplTest {
             }.deserialize(Entity::class)
 
             assertThat(scenario.rootSteps[0]).isInstanceOf(HttpClientStepSpecificationImpl::class).all {
-                prop(HttpClientStepSpecificationImpl<*, *>::requestFactory).isSameAs(requestSpecification)
-                prop(HttpClientStepSpecificationImpl<*, *>::poolConfiguration).isNull()
+                prop(HttpClientStepSpecificationImpl<*, *>::requestFactory).isSameInstanceAs(requestSpecification)
+                prop(HttpClientStepSpecificationImpl<*, *>::connectionConfiguration).all {
+                    prop(HttpClientConfiguration::poolConfiguration).isNull()
+                }
                 prop(HttpClientStepSpecificationImpl<*, *>::bodyType).isEqualTo(Entity::class)
                 prop(HttpClientStepSpecificationImpl<*, *>::connectionConfiguration).all {
                     prop(HttpClientConfiguration::version).isEqualTo(HttpVersion.HTTP_1_1)
@@ -203,8 +209,8 @@ internal class HttpClientStepSpecificationImplTest {
                     prop(HttpClientConfiguration::proxyConfiguration).isNull()
                 }
                 prop(HttpClientStepSpecificationImpl<*, *>::monitoringConfiguration).all {
-                    prop(StepMonitoringConfiguration::events).isFalse()
-                    prop(StepMonitoringConfiguration::meters).isFalse()
+                    prop(StepMonitoringConfiguration::events).isTrue()
+                    prop(StepMonitoringConfiguration::meters).isTrue()
                 }
             }
         }
@@ -224,9 +230,9 @@ internal class HttpClientStepSpecificationImplTest {
 
         assertThat(scenario.rootSteps[0]).isInstanceOf(HttpClientStepSpecificationImpl::class).all {
             prop(HttpClientStepSpecificationImpl<*, *>::requestFactory).isEqualTo(requestSpecification)
-            prop(HttpClientStepSpecificationImpl<*, *>::poolConfiguration).isNull()
             prop(HttpClientStepSpecificationImpl<*, *>::bodyType).isEqualTo(Entity::class)
             prop(HttpClientStepSpecificationImpl<*, *>::connectionConfiguration).all {
+                prop(HttpClientConfiguration::poolConfiguration).isNull()
                 prop(HttpClientConfiguration::version).isEqualTo(HttpVersion.HTTP_1_1)
                 prop(HttpClientConfiguration::host).isEqualTo("localhost")
                 prop(HttpClientConfiguration::port).isEqualTo(12234)
@@ -244,8 +250,8 @@ internal class HttpClientStepSpecificationImplTest {
                 prop(HttpClientConfiguration::proxyConfiguration).isNull()
             }
             prop(HttpClientStepSpecificationImpl<*, *>::monitoringConfiguration).all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
     }
@@ -264,11 +270,11 @@ internal class HttpClientStepSpecificationImplTest {
 
             assertThat(previousStep.nextSteps[0]).isInstanceOf(QueryHttpClientStepSpecification::class).all {
                 prop(QueryHttpClientStepSpecification<*, *>::stepName).isEqualTo("my-step-to-reuse")
-                prop(QueryHttpClientStepSpecification<*, *>::requestFactory).isSameAs(requestSpecification)
+                prop(QueryHttpClientStepSpecification<*, *>::requestFactory).isSameInstanceAs(requestSpecification)
                 prop(QueryHttpClientStepSpecification<*, *>::bodyType).isEqualTo(String::class)
                 prop(QueryHttpClientStepSpecification<*, *>::monitoringConfiguration).all {
-                    prop(StepMonitoringConfiguration::events).isFalse()
-                    prop(StepMonitoringConfiguration::meters).isFalse()
+                    prop(StepMonitoringConfiguration::events).isTrue()
+                    prop(StepMonitoringConfiguration::meters).isTrue()
                 }
             }
         }
@@ -289,7 +295,7 @@ internal class HttpClientStepSpecificationImplTest {
 
             assertThat(previousStep.nextSteps[0]).isInstanceOf(QueryHttpClientStepSpecification::class).all {
                 prop(QueryHttpClientStepSpecification<*, *>::stepName).isEqualTo("my-step-to-reuse")
-                prop(QueryHttpClientStepSpecification<*, *>::requestFactory).isSameAs(requestSpecification)
+                prop(QueryHttpClientStepSpecification<*, *>::requestFactory).isSameInstanceAs(requestSpecification)
                 prop(QueryHttpClientStepSpecification<*, *>::bodyType).isEqualTo(Entity::class)
                 prop(QueryHttpClientStepSpecification<*, *>::monitoringConfiguration).all {
                     prop(StepMonitoringConfiguration::events).isTrue()

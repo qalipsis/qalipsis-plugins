@@ -21,7 +21,13 @@ package io.qalipsis.plugins.netty.mqtt.publisher.spec
 
 import assertk.all
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.hasSize
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNotNull
+import assertk.assertions.isTrue
+import assertk.assertions.prop
 import io.aerisconsulting.catadioptre.getProperty
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.DummyStepSpecification
@@ -64,8 +70,8 @@ internal class MqttPublishStepSpecificationImplTest {
         val nextStep = previousStep.nextSteps[0]
         assertThat(nextStep).isInstanceOf(MqttPublishStepSpecificationImpl::class).all {
             prop(MqttPublishStepSpecificationImpl<*>::monitoringConfig).all {
-                prop(StepMonitoringConfiguration::events).isFalse()
-                prop(StepMonitoringConfiguration::meters).isFalse()
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
             prop(MqttPublishStepSpecificationImpl<*>::mqttPublishConfiguration).all {
                 prop(MqttPublishConfiguration<*>::authentication).all{

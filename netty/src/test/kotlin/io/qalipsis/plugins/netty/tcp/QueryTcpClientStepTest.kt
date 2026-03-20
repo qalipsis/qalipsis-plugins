@@ -24,7 +24,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import io.mockk.coEvery
@@ -47,13 +47,13 @@ import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.StepTestHelper
+import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.channels.Channel
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.nio.charset.StandardCharsets
 
 @WithMockk
 internal class QueryTcpClientStepTest {
@@ -134,17 +134,17 @@ internal class QueryTcpClientStepTest {
             prop(RequestResult<String, ByteArray, *>::sendingFailure).isNull()
             prop(RequestResult<String, ByteArray, *>::failure).isNull()
             prop(RequestResult<String, ByteArray, *>::cause).isNull()
-            prop(RequestResult<String, ByteArray, *>::response).isSameAs(response)
-            prop(RequestResult<String, ByteArray, *>::meters).isSameAs(monitoringCollector.captured.meters)
+            prop(RequestResult<String, ByteArray, *>::response).isSameInstanceAs(response)
+            prop(RequestResult<String, ByteArray, *>::meters).isSameInstanceAs(monitoringCollector.captured.meters)
         }
 
         coVerify {
             simpleTcpClientStep.execute(any(), refEq(ctx), eq("This is a test"), refEq(request))
         }
         assertThat(monitoringCollector.captured).all {
-            prop("stepContext").isSameAs(ctx)
-            prop("eventsLogger").isSameAs(eventsLogger)
-            prop("meterRegistry").isSameAs(meterRegistry)
+            prop("stepContext").isSameInstanceAs(ctx)
+            prop("eventsLogger").isSameInstanceAs(eventsLogger)
+            prop("meterRegistry").isSameInstanceAs(meterRegistry)
         }
 
         confirmVerified(simpleTcpClientStep)
@@ -194,18 +194,18 @@ internal class QueryTcpClientStepTest {
                 prop(RequestResult<*, *, *>::input).isEqualTo("This is a test")
                 prop(RequestResult<*, *, *>::isSuccess).isFalse()
                 prop(RequestResult<*, *, *>::isFailure).isTrue()
-                prop(RequestResult<*, *, *>::cause).isSameAs(tcpResult.cause)
-                prop(RequestResult<*, *, *>::sendingFailure).isSameAs(tcpResult.sendingFailure)
-                prop(RequestResult<*, *, *>::failure).isSameAs(tcpResult.failure)
+                prop(RequestResult<*, *, *>::cause).isSameInstanceAs(tcpResult.cause)
+                prop(RequestResult<*, *, *>::sendingFailure).isSameInstanceAs(tcpResult.sendingFailure)
+                prop(RequestResult<*, *, *>::failure).isSameInstanceAs(tcpResult.failure)
                 prop(RequestResult<*, *, *>::response).isNull()
-                prop(RequestResult<*, *, *>::meters).isSameAs(tcpResult.meters)
+                prop(RequestResult<*, *, *>::meters).isSameInstanceAs(tcpResult.meters)
             }
 
             coVerify {
                 simpleTcpClientStep.execute(any(), refEq(ctx), eq("This is a test"), refEq(request))
             }
             assertThat(monitoringCollector.captured).all {
-                prop("stepContext").isSameAs(ctx)
+                prop("stepContext").isSameInstanceAs(ctx)
                 prop("eventsLogger").isNull()
                 prop("meterRegistry").isNull()
             }

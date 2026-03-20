@@ -30,6 +30,7 @@ import io.qalipsis.plugins.netty.EventLoopGroupSupplier
 import io.qalipsis.plugins.netty.http.response.HttpBodyDeserializer
 import io.qalipsis.plugins.netty.http.response.ResponseConverter
 import io.qalipsis.plugins.netty.http.spec.HttpClientStepSpecificationImpl
+import io.qalipsis.plugins.netty.socket.ConnectionStrategyType
 import jakarta.inject.Named
 import kotlin.coroutines.CoroutineContext
 
@@ -56,30 +57,74 @@ internal class HttpClientStepSpecificationConverter(
 
     override suspend fun <I, O> convert(creationContext: StepCreationContext<HttpClientStepSpecificationImpl<*, *>>) {
         val spec = creationContext.stepSpecification as HttpClientStepSpecificationImpl<I, O>
-        val step = spec.poolConfiguration?.let { poolConfiguration ->
-            creationContext.stepSpecification.connectionConfiguration.keepConnectionAlive = true
-            PooledHttpClientStep(
-                spec.name,
-                spec.retryPolicy,
-                ioCoroutineContext,
-                spec.requestFactory,
-                spec.connectionConfiguration,
-                poolConfiguration,
-                eventLoopGroupSupplier,
-                ResponseConverter(spec.bodyType, sortedDeserializers),
-                eventsLogger.takeIf { spec.monitoringConfiguration.events },
-                meterRegistry.takeIf { spec.monitoringConfiguration.meters }
-            )
-        } ?: SimpleHttpClientStep<I, O>(
-            spec.name,
-            spec.retryPolicy,
-            spec.requestFactory,
-            spec.connectionConfiguration,
-            eventLoopGroupSupplier,
-            ResponseConverter(spec.bodyType, sortedDeserializers),
-            eventsLogger.takeIf { spec.monitoringConfiguration.events },
-            meterRegistry.takeIf { spec.monitoringConfiguration.meters }
-        )
+        val responseConverter = ResponseConverter<O>(spec.bodyType, sortedDeserializers)
+        val effectiveEventsLogger = eventsLogger.takeIf { spec.monitoringConfiguration.events }
+        val effectiveMeterRegistry = meterRegistry.takeIf { spec.monitoringConfiguration.meters }
+
+        val step = when (spec.connectionConfiguration.connectionStrategyConfiguration.strategyType) {
+            ConnectionStrategyType.POOL -> {
+                val poolConfig = spec.connectionConfiguration.poolConfiguration
+                    ?: io.qalipsis.plugins.netty.tcp.spec.SocketClientPoolConfiguration()
+                spec.connectionConfiguration.keepConnectionAlive = true
+                PooledHttpClientStep(
+                    spec.name,
+                    spec.retryPolicy,
+                    ioCoroutineContext,
+                    spec.requestFactory,
+                    spec.connectionConfiguration,
+                    poolConfig,
+                    eventLoopGroupSupplier,
+                    responseConverter,
+                    effectiveEventsLogger,
+                    effectiveMeterRegistry
+                )
+            }
+
+            ConnectionStrategyType.WARMUP -> {
+                spec.connectionConfiguration.keepConnectionAlive = true
+                WarmupHttpClientStep<I, O>(
+                    spec.name,
+                    spec.retryPolicy,
+                    spec.requestFactory,
+                    spec.connectionConfiguration,
+                    spec.connectionConfiguration.connectionStrategyConfiguration.shared,
+                    eventLoopGroupSupplier,
+                    responseConverter,
+                    effectiveEventsLogger,
+                    effectiveMeterRegistry
+                )
+            }
+
+            ConnectionStrategyType.ON_DEMAND -> {
+                if (spec.connectionConfiguration.poolConfiguration != null) {
+                    // Backward compatibility: if pool() was called without connectionStrategy(), use pooled step.
+                    spec.connectionConfiguration.keepConnectionAlive = true
+                    PooledHttpClientStep(
+                        spec.name,
+                        spec.retryPolicy,
+                        ioCoroutineContext,
+                        spec.requestFactory,
+                        spec.connectionConfiguration,
+                        spec.connectionConfiguration.poolConfiguration!!,
+                        eventLoopGroupSupplier,
+                        responseConverter,
+                        effectiveEventsLogger,
+                        effectiveMeterRegistry
+                    )
+                } else {
+                    SimpleHttpClientStep<I, O>(
+                        spec.name,
+                        spec.retryPolicy,
+                        spec.requestFactory,
+                        spec.connectionConfiguration,
+                        eventLoopGroupSupplier,
+                        responseConverter,
+                        effectiveEventsLogger,
+                        effectiveMeterRegistry
+                    )
+                }
+            }
+        }
 
         creationContext.createdStep(step)
     }

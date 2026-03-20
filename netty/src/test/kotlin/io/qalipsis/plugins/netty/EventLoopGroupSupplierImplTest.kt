@@ -23,7 +23,7 @@ import assertk.all
 import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isNotSameAs
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import org.junit.jupiter.api.Test
 
@@ -48,7 +48,7 @@ internal class EventLoopGroupSupplierImplTest {
 
         // then
         assertThat(newLoopGroup).all {
-            isSameAs(loopGroup)
+            isSameInstanceAs(loopGroup)
             transform("isShuttingDown") { it.isShuttingDown }.isFalse()
             transform("isShutdown") { it.isShutdown }.isFalse()
             transform("isTerminated") { it.isTerminated }.isFalse()
@@ -60,7 +60,7 @@ internal class EventLoopGroupSupplierImplTest {
 
         // then
         assertThat(newLoopGroup).all {
-            isSameAs(loopGroup)
+            isSameInstanceAs(loopGroup)
             transform("isShuttingDown") { it.isShuttingDown }.isFalse()
             transform("isShutdown") { it.isShutdown }.isFalse()
             transform("isTerminated") { it.isTerminated }.isFalse()
@@ -71,7 +71,7 @@ internal class EventLoopGroupSupplierImplTest {
 
         // then
         assertThat(newLoopGroup).all {
-            isSameAs(loopGroup)
+            isSameInstanceAs(loopGroup)
             transform("isShutdown") { it.isShutdown }.isTrue()
             transform("isTerminated") { it.isTerminated }.isTrue()
         }

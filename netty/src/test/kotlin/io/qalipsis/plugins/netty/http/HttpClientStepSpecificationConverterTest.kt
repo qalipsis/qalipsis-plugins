@@ -26,7 +26,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.prop
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
@@ -42,18 +42,19 @@ import io.qalipsis.plugins.netty.http.request.SimpleHttpRequest
 import io.qalipsis.plugins.netty.http.response.HttpBodyDeserializer
 import io.qalipsis.plugins.netty.http.response.ResponseConverter
 import io.qalipsis.plugins.netty.http.spec.HttpClientStepSpecificationImpl
+import io.qalipsis.plugins.netty.socket.ConnectionStrategyType
 import io.qalipsis.test.assertk.prop
 import io.qalipsis.test.assertk.typedProp
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import kotlin.coroutines.CoroutineContext
 
 @WithMockk
 @Suppress("UNCHECKED_CAST")
@@ -109,7 +110,7 @@ internal class HttpClientStepSpecificationConverterTest :
             request(requestSpecification)
 
             monitoring {
-                events = true
+                meters = false
             }
         }
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -120,18 +121,18 @@ internal class HttpClientStepSpecificationConverterTest :
         // then
         assertThat(creationContext.createdStep).isNotNull().isInstanceOf(SimpleHttpClientStep::class).all {
             prop(SimpleHttpClientStep<*, *>::name).isEqualTo("my-step")
-            prop(SimpleHttpClientStep<*, *>::retryPolicy).isSameAs(mockedRetryPolicy)
-            prop("eventLoopGroupSupplier").isSameAs(eventLoopGroupSupplier)
-            prop("requestFactory").isSameAs(requestSpecification)
-            prop("clientConfiguration").isSameAs(spec.connectionConfiguration)
+            prop(SimpleHttpClientStep<*, *>::retryPolicy).isSameInstanceAs(mockedRetryPolicy)
+            prop("eventLoopGroupSupplier").isSameInstanceAs(eventLoopGroupSupplier)
+            prop("requestFactory").isSameInstanceAs(requestSpecification)
+            prop("clientConfiguration").isSameInstanceAs(spec.connectionConfiguration)
             typedProp<ResponseConverter<*>>("responseConverter").all {
-                prop("argumentType").isSameAs(String::class)
+                prop("argumentType").isSameInstanceAs(String::class)
                 typedProp<List<HttpBodyDeserializer>>("deserializers").containsOnly(
                     bodyDeserializer1,
                     bodyDeserializer2
                 )
             }
-            prop("eventsLogger").isSameAs(eventsLogger)
+            prop("eventsLogger").isSameInstanceAs(eventsLogger)
             prop("meterRegistry").isNull()
         }
     }
@@ -145,7 +146,7 @@ internal class HttpClientStepSpecificationConverterTest :
         spec.apply {
             request(requestSpecification)
             monitoring {
-                meters = true
+                events = false
             }
         }.deserialize(Entity::class)
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -157,18 +158,18 @@ internal class HttpClientStepSpecificationConverterTest :
         assertThat(creationContext.createdStep).isNotNull().isInstanceOf(SimpleHttpClientStep::class).all {
             prop(SimpleHttpClientStep<*, *>::name).isNotNull()
             prop(SimpleHttpClientStep<*, *>::retryPolicy).isNull()
-            prop("eventLoopGroupSupplier").isSameAs(eventLoopGroupSupplier)
-            prop("requestFactory").isSameAs(requestSpecification)
-            prop("clientConfiguration").isSameAs(spec.connectionConfiguration)
+            prop("eventLoopGroupSupplier").isSameInstanceAs(eventLoopGroupSupplier)
+            prop("requestFactory").isSameInstanceAs(requestSpecification)
+            prop("clientConfiguration").isSameInstanceAs(spec.connectionConfiguration)
             typedProp<ResponseConverter<*>>("responseConverter").all {
-                prop("argumentType").isSameAs(Entity::class)
+                prop("argumentType").isSameInstanceAs(Entity::class)
                 typedProp<List<HttpBodyDeserializer>>("deserializers").containsOnly(
                     bodyDeserializer1,
                     bodyDeserializer2
                 )
             }
             prop("eventsLogger").isNull()
-            prop("meterRegistry").isSameAs(meterRegistry)
+            prop("meterRegistry").isSameInstanceAs(meterRegistry)
         }
     }
 
@@ -182,13 +183,15 @@ internal class HttpClientStepSpecificationConverterTest :
             name = "my-step"
             retryPolicy = mockedRetryPolicy
             request(requestSpecification)
-            pool {
-                size = 123
-                checkHealthBeforeUse = false
+            connect {
+                pool {
+                    size = 123
+                    checkHealthBeforeUse = false
+                }
             }
 
             monitoring {
-                events = true
+                meters = false
             }
         }.deserialize(Entity::class)
         val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
@@ -199,20 +202,86 @@ internal class HttpClientStepSpecificationConverterTest :
         // then
         assertThat(creationContext.createdStep).isNotNull().isInstanceOf(PooledHttpClientStep::class).all {
             prop(PooledHttpClientStep<*, *>::name).isEqualTo("my-step")
-            prop(PooledHttpClientStep<*, *>::retryPolicy).isSameAs(mockedRetryPolicy)
-            prop("eventLoopGroupSupplier").isSameAs(eventLoopGroupSupplier)
-            prop("requestFactory").isSameAs(requestSpecification)
-            prop("clientConfiguration").isSameAs(spec.connectionConfiguration)
-            prop("poolConfiguration").isSameAs(spec.poolConfiguration)
+            prop(PooledHttpClientStep<*, *>::retryPolicy).isSameInstanceAs(mockedRetryPolicy)
+            prop("eventLoopGroupSupplier").isSameInstanceAs(eventLoopGroupSupplier)
+            prop("requestFactory").isSameInstanceAs(requestSpecification)
+            prop("clientConfiguration").isSameInstanceAs(spec.connectionConfiguration)
+            prop("poolConfiguration").isSameInstanceAs(spec.connectionConfiguration.poolConfiguration)
             typedProp<ResponseConverter<*>>("responseConverter").all {
-                prop("argumentType").isSameAs(Entity::class)
+                prop("argumentType").isSameInstanceAs(Entity::class)
                 typedProp<List<HttpBodyDeserializer>>("deserializers").containsOnly(
                     bodyDeserializer1,
                     bodyDeserializer2
                 )
             }
-            prop("eventsLogger").isSameAs(eventsLogger)
+            prop("eventsLogger").isSameInstanceAs(eventsLogger)
             prop("meterRegistry").isNull()
+        }
+    }
+
+    @Test
+    internal fun `should convert spec with warmup connection strategy`() = testDispatcherProvider.runTest {
+        // given
+        val requestSpecification: suspend HttpRequestBuilder.(StepContext<*, *>, String) -> HttpRequest<*> =
+            { _, _ -> SimpleHttpRequest(HttpMethod.HEAD, "/head") }
+        val spec = HttpClientStepSpecificationImpl<String, Int>()
+        spec.apply {
+            name = "my-warmup-step"
+            retryPolicy = mockedRetryPolicy
+            request(requestSpecification)
+            connect {
+                connectionStrategy {
+                    strategyType = ConnectionStrategyType.WARMUP
+                    shared = true
+                }
+            }
+            monitoring {
+                meters = false
+            }
+        }
+        val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
+
+        // when
+        converter.convert<String, Int>(creationContext as StepCreationContext<HttpClientStepSpecificationImpl<*, *>>)
+
+        // then
+        assertThat(creationContext.createdStep).isNotNull().isInstanceOf(WarmupHttpClientStep::class).all {
+            prop(WarmupHttpClientStep<*, *>::name).isEqualTo("my-warmup-step")
+            prop(WarmupHttpClientStep<*, *>::retryPolicy).isSameInstanceAs(mockedRetryPolicy)
+            prop("eventLoopGroupSupplier").isSameInstanceAs(eventLoopGroupSupplier)
+            prop("requestFactory").isSameInstanceAs(requestSpecification)
+            prop("clientConfiguration").isSameInstanceAs(spec.connectionConfiguration)
+            typedProp<ResponseConverter<*>>("responseConverter").all {
+                prop("argumentType").isSameInstanceAs(String::class)
+            }
+            prop("eventsLogger").isSameInstanceAs(eventsLogger)
+            prop("meterRegistry").isNull()
+        }
+    }
+
+    @Test
+    internal fun `should convert spec with pool connection strategy`() = testDispatcherProvider.runTest {
+        // given
+        val requestSpecification: suspend HttpRequestBuilder.(StepContext<*, *>, String) -> HttpRequest<*> =
+            { _, _ -> SimpleHttpRequest(HttpMethod.HEAD, "/head") }
+        val spec = HttpClientStepSpecificationImpl<String, Int>()
+        spec.apply {
+            name = "my-pool-step"
+            request(requestSpecification)
+            connect {
+                connectionStrategy {
+                    strategyType = ConnectionStrategyType.POOL
+                }
+            }
+        }
+        val creationContext = StepCreationContextImpl(scenarioSpecification, directedAcyclicGraph, spec)
+
+        // when
+        converter.convert<String, Int>(creationContext as StepCreationContext<HttpClientStepSpecificationImpl<*, *>>)
+
+        // then
+        assertThat(creationContext.createdStep).isNotNull().isInstanceOf(PooledHttpClientStep::class).all {
+            prop(PooledHttpClientStep<*, *>::name).isEqualTo("my-pool-step")
         }
     }
 

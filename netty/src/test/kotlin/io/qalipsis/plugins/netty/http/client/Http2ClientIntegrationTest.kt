@@ -31,7 +31,7 @@ import assertk.assertions.isGreaterThan
 import assertk.assertions.isLessThan
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.key
 import assertk.assertions.prop
@@ -55,6 +55,7 @@ import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.meters.Throughput
 import io.qalipsis.api.meters.Timer
 import io.qalipsis.plugins.netty.NativeTransportUtils
 import io.qalipsis.plugins.netty.configuration.TlsConfiguration
@@ -72,6 +73,16 @@ import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.coVerifyNever
 import io.qalipsis.test.mockk.coVerifyOnce
 import io.qalipsis.test.mockk.relaxedMockk
+import java.io.BufferedOutputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.net.ConnectException
+import java.nio.channels.ClosedChannelException
+import java.time.Duration
+import java.util.concurrent.TimeoutException
+import java.util.stream.Stream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import kotlinx.coroutines.delay
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
@@ -83,16 +94,6 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.io.BufferedOutputStream
-import java.io.File
-import java.io.FileOutputStream
-import java.net.ConnectException
-import java.nio.channels.ClosedChannelException
-import java.time.Duration
-import java.util.concurrent.TimeoutException
-import java.util.stream.Stream
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 
 typealias HttpITestResult = ConnectionAndRequestResult<Unit, Unit>
 typealias HttpITMeters = ConnectionAndRequestResult.Meters
@@ -141,6 +142,18 @@ internal class Http2ClientIntegrationTest {
                 tags = any<Map<String, String>>()
             )
         } returns relaxedMockk<Timer> {
+            every { report(any()) } returns this
+        }
+        every {
+            meterRegistry.throughput(
+                scenarioName = any<String>(),
+                stepName = any<String>(),
+                name = any<String>(),
+                percentiles = any(),
+                unit = any(),
+                tags = any<Map<String, String>>()
+            )
+        } returns relaxedMockk<Throughput> {
             every { report(any()) } returns this
         }
     }
@@ -329,7 +342,7 @@ internal class Http2ClientIntegrationTest {
         val result = monitoringCollector.toResult(Unit, Unit, null);
         assertThat(result).all {
             prop(HttpITestResult::connected).isFalse()
-            prop(HttpITestResult::connectionFailure).isSameAs(exception)
+            prop(HttpITestResult::connectionFailure).isSameInstanceAs(exception)
             prop(HttpITestResult::tlsFailure).isNull()
             prop(HttpITestResult::sendingFailure).isNull()
             prop(HttpITestResult::failure).isNull()
@@ -382,7 +395,7 @@ internal class Http2ClientIntegrationTest {
         assertThat(result).all {
             prop(HttpITestResult::connected).isFalse()
             prop(HttpITestResult::connectionFailure).isNull()
-            prop(HttpITestResult::tlsFailure).isSameAs(exception)
+            prop(HttpITestResult::tlsFailure).isSameInstanceAs(exception)
             prop(HttpITestResult::sendingFailure).isNull()
             prop(HttpITestResult::failure).isNull()
             prop(HttpITestResult::meters).all {
@@ -446,7 +459,7 @@ internal class Http2ClientIntegrationTest {
             prop(HttpITestResult::connected).isTrue()
             prop(HttpITestResult::connectionFailure).isNull()
             prop(HttpITestResult::tlsFailure).isNull()
-            prop(HttpITestResult::sendingFailure).isSameAs(exception)
+            prop(HttpITestResult::sendingFailure).isSameInstanceAs(exception)
             prop(HttpITestResult::failure).isNull()
             prop(HttpITestResult::meters).all {
                 prop(HttpITMeters::timeToSuccessfulConnect).isNotNull().all {
@@ -530,7 +543,7 @@ internal class Http2ClientIntegrationTest {
             prop(HttpITestResult::connected).isTrue()
             prop(HttpITestResult::connectionFailure).isNull()
             prop(HttpITestResult::tlsFailure).isNull()
-            prop(HttpITestResult::sendingFailure).isSameAs(exception)
+            prop(HttpITestResult::sendingFailure).isSameInstanceAs(exception)
             prop(HttpITestResult::failure).isNull()
             prop(HttpITestResult::meters).all {
                 prop(HttpITMeters::timeToSuccessfulConnect).isNotNull().all {

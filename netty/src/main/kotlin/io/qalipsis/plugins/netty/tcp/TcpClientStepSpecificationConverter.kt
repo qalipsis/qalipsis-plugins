@@ -27,6 +27,8 @@ import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
 import io.qalipsis.plugins.netty.EventLoopGroupSupplier
+import io.qalipsis.plugins.netty.socket.ConnectionStrategyType
+import io.qalipsis.plugins.netty.tcp.spec.SocketClientPoolConfiguration
 import io.qalipsis.plugins.netty.tcp.spec.TcpClientStepSpecificationImpl
 import jakarta.inject.Named
 import kotlin.coroutines.CoroutineContext
@@ -50,28 +52,68 @@ internal class TcpClientStepSpecificationConverter(
 
     override suspend fun <I, O> convert(creationContext: StepCreationContext<TcpClientStepSpecificationImpl<*>>) {
         val spec = creationContext.stepSpecification
-        val step = spec.poolConfiguration?.let { poolConfiguration ->
-            creationContext.stepSpecification.connectionConfiguration.keepConnectionAlive = true
-            PooledTcpClientStep(
-                spec.name,
-                spec.retryPolicy,
-                ioCoroutineContext,
-                spec.requestFactory,
-                spec.connectionConfiguration,
-                poolConfiguration,
-                eventLoopGroupSupplier,
-                eventsLogger.takeIf { spec.monitoringConfiguration.events },
-                meterRegistry.takeIf { spec.monitoringConfiguration.meters }
-            )
-        } ?: SimpleTcpClientStep(
-            spec.name,
-            spec.retryPolicy,
-            spec.requestFactory,
-            spec.connectionConfiguration,
-            eventLoopGroupSupplier,
-            eventsLogger.takeIf { spec.monitoringConfiguration.events },
-            meterRegistry.takeIf { spec.monitoringConfiguration.meters }
-        )
+        val effectiveEventsLogger = eventsLogger.takeIf { spec.monitoringConfiguration.events }
+        val effectiveMeterRegistry = meterRegistry.takeIf { spec.monitoringConfiguration.meters }
+
+        val step = when (spec.connectionConfiguration.connectionStrategyConfiguration.strategyType) {
+            ConnectionStrategyType.POOL -> {
+                val poolConfig = spec.connectionConfiguration.poolConfiguration ?: SocketClientPoolConfiguration()
+                spec.connectionConfiguration.keepConnectionAlive = true
+                PooledTcpClientStep(
+                    spec.name,
+                    spec.retryPolicy,
+                    ioCoroutineContext,
+                    spec.requestFactory,
+                    spec.connectionConfiguration,
+                    poolConfig,
+                    eventLoopGroupSupplier,
+                    effectiveEventsLogger,
+                    effectiveMeterRegistry
+                )
+            }
+
+            ConnectionStrategyType.WARMUP -> {
+                spec.connectionConfiguration.keepConnectionAlive = true
+                WarmupTcpClientStep(
+                    spec.name,
+                    spec.retryPolicy,
+                    spec.requestFactory,
+                    spec.connectionConfiguration,
+                    spec.connectionConfiguration.connectionStrategyConfiguration.shared,
+                    eventLoopGroupSupplier,
+                    effectiveEventsLogger,
+                    effectiveMeterRegistry
+                )
+            }
+
+            ConnectionStrategyType.ON_DEMAND -> {
+                if (spec.connectionConfiguration.poolConfiguration != null) {
+                    // Backward compatibility: if pool() was called without connectionStrategy(), use pooled step.
+                    spec.connectionConfiguration.keepConnectionAlive = true
+                    PooledTcpClientStep(
+                        spec.name,
+                        spec.retryPolicy,
+                        ioCoroutineContext,
+                        spec.requestFactory,
+                        spec.connectionConfiguration,
+                        spec.connectionConfiguration.poolConfiguration!!,
+                        eventLoopGroupSupplier,
+                        effectiveEventsLogger,
+                        effectiveMeterRegistry
+                    )
+                } else {
+                    SimpleTcpClientStep(
+                        spec.name,
+                        spec.retryPolicy,
+                        spec.requestFactory,
+                        spec.connectionConfiguration,
+                        eventLoopGroupSupplier,
+                        effectiveEventsLogger,
+                        effectiveMeterRegistry
+                    )
+                }
+            }
+        }
 
         creationContext.createdStep(step)
     }
