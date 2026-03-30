@@ -1,0 +1,12 @@
+meters:
+  export:
+    enabled: true
+    kafka:
+      enabled: true
+      bootstrap: "kafka-1:9092"
+      topic: qalipsis-meters
+      linger.ms: 3000
+      batch-size: 500
+      configuration:
+        delivery.timeout.ms: 14000
+
