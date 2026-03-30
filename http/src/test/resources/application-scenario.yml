@@ -1,0 +1,10 @@
+logging:
+  level:
+    root: INFO
+    "io.qalipsis": INFO
+    "io.qalipsis.api": INFO
+    "io.qalipsis.core": INFO
+    "io.qalipsis.core.runtime": INFO
+    "io.qalipsis.core.factory.orchestration": DEBUG
+    "io.qalipsis.core.factory.meters": DEBUG
+    "io.qalipsis.plugins.http": DEBUG
