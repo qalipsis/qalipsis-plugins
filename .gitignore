@@ -1,0 +1,28 @@
+# Gradle
+.gradle/
+build/
+buildSrc/build/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kotlin
+*.class
+
+# Logs
+*.log
+*.log.*
+
+# Test output
+qalipsis-test.log
+qalipsis-events-test.log
+qalipsis-events.log
+qalipsis.log
