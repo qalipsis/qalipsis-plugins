@@ -1,0 +1,322 @@
+/*
+ * QALIPSIS
+ * Copyright (C) 2025 AERIS IT Solutions GmbH
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+package io.qalipsis.plugins.elasticsearch.poll
+
+import com.fasterxml.jackson.databind.json.JsonMapper
+import io.aerisconsulting.catadioptre.coInvokeInvisible
+import io.mockk.clearMocks
+import io.mockk.coEvery
+import io.mockk.confirmVerified
+import io.mockk.every
+import io.mockk.impl.annotations.RelaxedMockK
+import io.mockk.spyk
+import io.qalipsis.api.context.StepStartStopContext
+import io.qalipsis.api.events.EventsLogger
+import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
+import io.qalipsis.api.sync.SuspendedCountLatch
+import io.qalipsis.test.coroutines.TestDispatcherProvider
+import io.qalipsis.test.mockk.WithMockk
+import io.qalipsis.test.mockk.coVerifyNever
+import io.qalipsis.test.mockk.relaxedMockk
+import io.qalipsis.test.mockk.verifyOnce
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import org.elasticsearch.client.RestClient
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.extension.RegisterExtension
+import java.time.Duration
+
+/**
+ *
+ * @author Eric Jessé
+ */
+@WithMockk
+internal class ElasticsearchIterativeReaderTest {
+
+    @JvmField
+    @RegisterExtension
+    val testDispatcherProvider = TestDispatcherProvider()
+
+    val elasticPollStatement: ElasticsearchPollStatement = relaxedMockk()
+
+    val meterRegistry: CampaignMeterRegistry = relaxedMockk()
+
+    val eventsLogger: EventsLogger = relaxedMockk()
+
+    val restClient: RestClient = relaxedMockk()
+
+    val restClientFactory: () -> RestClient = { restClient }
+
+    val jsonMapper: JsonMapper = relaxedMockk { }
+
+    @RelaxedMockK
+    private lateinit var stepStartStopContext: StepStartStopContext
+
+    private val recordsByteCounter = relaxedMockk<Counter>()
+
+    private val receivedSuccessBytesCounter = relaxedMockk<Counter>()
+
+    private val successCounter = relaxedMockk<Counter>()
+
+    private val failureCounter = relaxedMockk<Counter>()
+
+    @Test
+    @Timeout(10)
+    internal fun `should have no next when not running`() = testDispatcherProvider.run {
+        // given
+        val reader = spyk(
+            ElasticsearchIterativeReader(
+                this,
+                ioCoroutineContext = testDispatcherProvider.io(),
+                restClientFactory,
+                elasticPollStatement,
+                "Any",
+                emptyMap(),
+                Duration.ofMillis(100),
+                jsonMapper,
+                { Channel(1) },
+                meterRegistry,
+                eventsLogger
+            )
+        )
+        coEvery { reader.coInvokeInvisible<Unit>("poll", any<RestClient>()) } returns Unit
+
+        // when + then
+        Assertions.assertFalse(reader.hasNext())
+        delay(200)
+        coVerifyNever { reader.coInvokeInvisible<Unit>("poll", any<RestClient>()) }
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should have next when running and poll`() = testDispatcherProvider.run {
+        // given
+        val countDownLatch = SuspendedCountLatch(3, true)
+
+        val tags = emptyMap<String, String>()
+        every { stepStartStopContext.toMetersTags() } returns tags
+        every { stepStartStopContext.scenarioName } returns "scenario-name"
+        every { stepStartStopContext.stepName } returns "step-name"
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-byte-records", refEq(tags)) } returns recordsByteCounter
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-success-bytes", refEq(tags)) } returns successCounter
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-failure", refEq(tags)) } returns failureCounter
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-success", refEq(tags)) } returns failureCounter
+        every { successCounter.report(any()) } returns successCounter
+        every { recordsByteCounter.report(any()) } returns recordsByteCounter
+        every { receivedSuccessBytesCounter.report(any()) } returns receivedSuccessBytesCounter
+        every { failureCounter.report(any()) } returns failureCounter
+
+        val reader = spyk(
+            ElasticsearchIterativeReader(
+                this,
+                ioCoroutineContext = testDispatcherProvider.io(),
+                restClientFactory,
+                elasticPollStatement,
+                "Any",
+                emptyMap(),
+                Duration.ofMillis(100),
+                jsonMapper,
+                { Channel(1) },
+                meterRegistry,
+                eventsLogger
+            )
+        )
+        coEvery { reader.coInvokeInvisible<Unit>("poll", any<RestClient>()) } coAnswers { countDownLatch.decrement() }
+
+        // when
+        reader.start(stepStartStopContext)
+
+        // then
+        Assertions.assertTrue(reader.hasNext())
+        countDownLatch.await()
+        verifyOnce { elasticPollStatement.reset() }
+        confirmVerified(elasticPollStatement)
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should keep on polling even after a failure`() = testDispatcherProvider.run {
+        // given
+        val countDownLatch = SuspendedCountLatch(3, true)
+        val tags = emptyMap<String, String>()
+        every { stepStartStopContext.toMetersTags() } returns tags
+        every { stepStartStopContext.scenarioName } returns "scenario-name"
+        every { stepStartStopContext.stepName } returns "step-name"
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-byte-records", refEq(tags)) } returns recordsByteCounter
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-success-bytes", refEq(tags)) } returns successCounter
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-failure", refEq(tags)) } returns failureCounter
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-success", refEq(tags)) } returns failureCounter
+        every { successCounter.report(any()) } returns successCounter
+        every { recordsByteCounter.report(any()) } returns recordsByteCounter
+        every { receivedSuccessBytesCounter.report(any()) } returns receivedSuccessBytesCounter
+        every { failureCounter.report(any()) } returns failureCounter
+        val reader = spyk(
+            ElasticsearchIterativeReader(
+                this,
+                ioCoroutineContext = testDispatcherProvider.io(),
+                restClientFactory,
+                elasticPollStatement,
+                "Any",
+                emptyMap(),
+                Duration.ofMillis(100),
+                jsonMapper,
+                { Channel(1) },
+                meterRegistry,
+                eventsLogger
+            )
+        )
+        coEvery { reader.coInvokeInvisible<Unit>("poll", any<RestClient>()) } coAnswers {
+            countDownLatch.decrement()
+            throw RuntimeException("")
+        }
+
+        // when
+        reader.start(stepStartStopContext)
+
+        // then
+        countDownLatch.await()
+        Assertions.assertTrue(reader.hasNext())
+        verifyOnce { elasticPollStatement.reset() }
+        confirmVerified(elasticPollStatement)
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should be stoppable`() = testDispatcherProvider.run {
+        // given
+        val countDownLatch = SuspendedCountLatch(3, true)
+        val tags = emptyMap<String, String>()
+        every { stepStartStopContext.toMetersTags() } returns tags
+        every { stepStartStopContext.scenarioName } returns "scenario-name"
+        every { stepStartStopContext.stepName } returns "step-name"
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-byte-records", refEq(tags)) } returns recordsByteCounter
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-success-bytes", refEq(tags)) } returns successCounter
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-failure", refEq(tags)) } returns failureCounter
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-success", refEq(tags)) } returns failureCounter
+        every { successCounter.report(any()) } returns successCounter
+        every { recordsByteCounter.report(any()) } returns recordsByteCounter
+        every { receivedSuccessBytesCounter.report(any()) } returns receivedSuccessBytesCounter
+        every { failureCounter.report(any()) } returns failureCounter
+        val reader = spyk(
+            ElasticsearchIterativeReader(
+                this,
+                ioCoroutineContext = testDispatcherProvider.io(),
+                restClientFactory,
+                elasticPollStatement,
+                "Any",
+                emptyMap(),
+                Duration.ofMillis(100),
+                jsonMapper,
+                { Channel(1) },
+                meterRegistry,
+                eventsLogger
+            )
+        )
+        coEvery { reader.coInvokeInvisible<Unit>("poll", any<RestClient>()) } coAnswers { countDownLatch.decrement() }
+
+        // when
+        reader.start(stepStartStopContext)
+
+        // then
+        countDownLatch.await()
+        verifyOnce { elasticPollStatement.reset() }
+        clearMocks(reader, elasticPollStatement, answers = false)
+
+        // when
+        reader.stop(stepStartStopContext)
+
+        // then
+        verifyOnce { elasticPollStatement.reset() }
+        Assertions.assertFalse(reader.hasNext())
+        Thread.sleep(200)
+        coVerifyNever { reader.coInvokeInvisible<Unit>("poll", any<RestClient>()) }
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should be restartable`() = testDispatcherProvider.run {
+        // given
+        // Count down for the first period of activity.
+        val countDownLatch1 = SuspendedCountLatch(3)
+        // Count down for the second period of activity.
+        val countDownLatch2 = SuspendedCountLatch(3, true)
+        val tags = emptyMap<String, String>()
+        every { stepStartStopContext.toMetersTags() } returns tags
+        every { stepStartStopContext.scenarioName } returns "scenario-name"
+        every { stepStartStopContext.stepName } returns "step-name"
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-byte-records", refEq(tags)) } returns recordsByteCounter
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-success-bytes", refEq(tags)) } returns successCounter
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-failure", refEq(tags)) } returns failureCounter
+        every { meterRegistry.counter("scenario-name", "step-name", "elasticsearch-poll-success", refEq(tags)) } returns failureCounter
+        every { successCounter.report(any()) } returns successCounter
+        every { recordsByteCounter.report(any()) } returns recordsByteCounter
+        every { receivedSuccessBytesCounter.report(any()) } returns receivedSuccessBytesCounter
+        every { failureCounter.report(any()) } returns failureCounter
+        val reader = spyk(
+            ElasticsearchIterativeReader(
+                this,
+                ioCoroutineContext = testDispatcherProvider.io(),
+                restClientFactory,
+                elasticPollStatement,
+                "Any",
+                emptyMap(),
+                Duration.ofMillis(100),
+                jsonMapper,
+                { Channel(Channel.UNLIMITED) },
+                meterRegistry,
+                eventsLogger
+            )
+        )
+        coEvery { reader.coInvokeInvisible<Unit>("poll", any<RestClient>()) } coAnswers {
+            if (countDownLatch1.get() > 0) {
+                countDownLatch1.decrement()
+            } else {
+                countDownLatch2.decrement()
+            }
+        }
+
+        // when
+        reader.start(stepStartStopContext)
+
+        // then
+        verifyOnce { elasticPollStatement.reset() }
+        countDownLatch1.await()
+        clearMocks(reader, elasticPollStatement, answers = false)
+
+        // when
+        reader.stop(stepStartStopContext)
+
+        // then
+        verifyOnce { elasticPollStatement.reset() }
+        Assertions.assertFalse(reader.hasNext())
+        delay(200)
+        clearMocks(reader, elasticPollStatement, answers = false)
+
+        // when
+        reader.start(stepStartStopContext)
+
+        // then
+        countDownLatch2.await()
+        verifyOnce { elasticPollStatement.reset() }
+    }
+}
