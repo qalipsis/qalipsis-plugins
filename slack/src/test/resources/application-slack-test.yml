@@ -1,0 +1,4 @@
+report:
+  export:
+    slack:
+      token: ${SLACK_BOT_TOKEN}
