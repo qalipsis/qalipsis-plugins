@@ -49,11 +49,19 @@ internal abstract class AbstractDataProvider(
         return queryGenerator.queryFields
     }
 
-    suspend fun searchNames(tenant: String, filters: Collection<String>, size: Int): Collection<String> {
+    suspend fun searchNames(
+        tenant: String,
+        campaignKey: String?,
+        filters: Collection<String>,
+        size: Int,
+    ): Collection<String> {
         val sql =
             StringBuilder("""SELECT DISTINCT "name" FROM ${databaseSchema}.${databaseTable} WHERE "tenant" = $1 AND "campaign" IS NOT NULL""")
         if (filters.isNotEmpty()) {
             sql.append(""" AND "name" ILIKE any (array[$2])""")
+        }
+        if (!campaignKey.isNullOrBlank()) {
+            sql.append(""" AND "campaign" = $3""")
         }
         sql.append(""" ORDER BY "name" LIMIT $size""")
         val query = sql.toString()
@@ -67,6 +75,9 @@ internal abstract class AbstractDataProvider(
                 Flux.from(connection.createStatement(query).bind("$1", tenant).also {
                     if (filters.isNotEmpty()) {
                         it.bind("$2", filters.map(this::convertWildcards).toTypedArray())
+                    }
+                    if (!campaignKey.isNullOrBlank()) {
+                        it.bind("$3", campaignKey)
                     }
                 }.execute()).flatMap { result ->
                     result.map { row, _ -> row.get("name", String::class.java) }

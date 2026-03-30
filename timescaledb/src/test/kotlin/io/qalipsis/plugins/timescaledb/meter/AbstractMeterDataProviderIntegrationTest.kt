@@ -35,6 +35,9 @@ import io.r2dbc.postgresql.PostgresqlConnectionConfiguration
 import io.r2dbc.postgresql.PostgresqlConnectionFactory
 import io.r2dbc.spi.Connection
 import jakarta.inject.Inject
+import java.sql.Timestamp
+import java.time.Instant
+import java.util.concurrent.TimeUnit
 import org.apache.commons.lang3.RandomStringUtils
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -44,9 +47,6 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.testcontainers.junit.jupiter.Testcontainers
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.sql.Timestamp
-import java.time.Instant
-import java.util.concurrent.TimeUnit
 
 @Testcontainers
 @MicronautTest(environments = ["timescaledb", "head"], startApplication = false, transactional = false)
@@ -149,7 +149,7 @@ internal abstract class AbstractMeterDataProviderIntegrationTest : TestPropertyP
         })
 
         // when
-        val allNamesOfTenant1 = meterDataProvider.searchNames("tenant-1", emptySet(), 200)
+        val allNamesOfTenant1 = meterDataProvider.searchNames("tenant-1", null, emptySet(), 200)
 
         // then
         assertThat(allNamesOfTenant1.toList()).all {
@@ -160,7 +160,7 @@ internal abstract class AbstractMeterDataProviderIntegrationTest : TestPropertyP
         }
 
         // when
-        val someNamesOfTenant2 = meterDataProvider.searchNames("tenant-2", emptySet(), 30)
+        val someNamesOfTenant2 = meterDataProvider.searchNames("tenant-2", null, emptySet(), 30)
 
         // then
         assertThat(someNamesOfTenant2.toList()).all {
@@ -199,7 +199,7 @@ internal abstract class AbstractMeterDataProviderIntegrationTest : TestPropertyP
         val filters = setOf("mY-mEteR-10*", "*-1?9-*")
 
         // when
-        var result = meterDataProvider.searchNames("tenant-1", filters, 20)
+        var result = meterDataProvider.searchNames("tenant-1", null, filters, 20)
 
         // then
         assertThat(result).all {
@@ -228,7 +228,7 @@ internal abstract class AbstractMeterDataProviderIntegrationTest : TestPropertyP
         }
 
         // when
-        result = meterDataProvider.searchNames("tenant-2", filters, 5)
+        result = meterDataProvider.searchNames("tenant-2", null, filters, 5)
 
         // then
         assertThat(result).all {

@@ -159,7 +159,7 @@ internal abstract class AbstractEventDataProviderIntegrationTest : TestPropertyP
         })
 
         // when
-        val allNamesOfTenant1 = eventDataProvider.searchNames("tenant-1", emptySet(), 200)
+        val allNamesOfTenant1 = eventDataProvider.searchNames("tenant-1", null, emptySet(), 200)
 
         // then
         assertThat(allNamesOfTenant1.toList()).all {
@@ -170,7 +170,7 @@ internal abstract class AbstractEventDataProviderIntegrationTest : TestPropertyP
         }
 
         // when
-        val someNamesOfTenant2 = eventDataProvider.searchNames("tenant-2", emptySet(), 30)
+        val someNamesOfTenant2 = eventDataProvider.searchNames("tenant-2", null, emptySet(), 30)
 
         // then
         assertThat(someNamesOfTenant2.toList()).all {
@@ -203,7 +203,7 @@ internal abstract class AbstractEventDataProviderIntegrationTest : TestPropertyP
         val filters = setOf("mY-eVenT-10*", "*-1?9-*")
 
         // when
-        var result = eventDataProvider.searchNames("tenant-1", filters, 20)
+        var result = eventDataProvider.searchNames("tenant-1", null, filters, 20)
 
         // then
         assertThat(result).all {
@@ -232,7 +232,7 @@ internal abstract class AbstractEventDataProviderIntegrationTest : TestPropertyP
         }
 
         // when
-        result = eventDataProvider.searchNames("tenant-2", filters, 5)
+        result = eventDataProvider.searchNames("tenant-2", null, filters, 5)
 
         // then
         assertThat(result).all {
