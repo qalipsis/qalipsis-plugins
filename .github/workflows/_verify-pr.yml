@@ -1,0 +1,78 @@
+name: Verify Pull Request
+
+on:
+  workflow_call:
+    inputs:
+      module:
+        description: 'Gradle module name (e.g., qalipsis-plugin-cassandra)'
+        required: true
+        type: string
+      module-dir:
+        description: 'Module directory name (e.g., cassandra)'
+        required: true
+        type: string
+      has-license-check:
+        description: 'Whether to run license check'
+        required: false
+        type: boolean
+        default: true
+
+env:
+  GITHUB_ACTIONS: true
+
+jobs:
+  pull-request-check:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Check licenses
+        if: ${{ inputs.has-license-check }}
+        run: ./gradlew :${{ inputs.module }}:checkLicense
+
+      - name: All tests
+        run: ./gradlew :${{ inputs.module }}:check --continue --refresh-dependencies
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v5
+        if: always()
+        with:
+          report_paths: '${{ inputs.module-dir }}/**/build/test-results/*/TEST-*.xml'
+          fail_on_failure: true
+          summary: true
+
+      - name: Upload tests and coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Test and coverage Reports
+          path: '${{ inputs.module-dir }}/**/build/reports/'
+
+  dependency-review:
+    needs: pull-request-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Perform dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          vulnerability-check: false
+          deny-licenses: 'GPL-3.0'

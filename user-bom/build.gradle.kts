@@ -5,11 +5,11 @@ import org.jreleaser.model.api.deploy.maven.MavenCentralMavenDeployer
 plugins {
     `java-platform`
     `maven-publish`
-    id("org.jreleaser") version "1.18.0"
+    id("org.jreleaser")
 }
 
 group = "io.qalipsis"
-version = File(rootDir, "project.version").readText().trim()
+version = file("project.version").readText().trim()
 description = "Bill of materials for QALIPSIS scenario development"
 
 repositories {
@@ -92,8 +92,8 @@ publishing {
     publications {
         create<MavenPublication>("qalipsisPlatform") {
             pom {
-                name.set(rootProject.name)
-                description.set(rootProject.description)
+                name.set(project.name)
+                description.set(project.description)
 
                 if (rootProject.version.toString().endsWith("-SNAPSHOT")) {
                     withXml {
@@ -118,8 +118,8 @@ publishing {
                     }
                 }
                 scm {
-                    connection.set("scm:git:https://github.com/qalipsis/qalipsis-user-platform.git")
-                    url.set("https://github.com/qalipsis/qalipsis-user-platform.git/")
+                    connection.set("scm:git:https://github.com/qalipsis/qalipsis-plugins.git")
+                    url.set("https://github.com/qalipsis/qalipsis-plugins.git/")
                 }
             }
 
@@ -154,23 +154,23 @@ dependencies {
         api("io.qalipsis:qalipsis-factory:$pluginPlatformVersion")
 
         // Plugins.
-        api("io.qalipsis.plugin:qalipsis-plugin-cassandra:0.17.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-elasticsearch:0.17.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-graphite:0.17.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-influxdb:0.17.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-jackson:0.17.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-jakarta-ee-messaging:0.17.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-jms:0.17.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-kafka:0.17.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-mail:0.17.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-mongodb:0.17.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-netty:0.17.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-r2dbc-jasync:0.17.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-rabbitmq:0.17.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-redis-lettuce:0.17.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-slack:0.17.0-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-sql:0.17.1-SNAPSHOT")
-        api("io.qalipsis.plugin:qalipsis-plugin-timescaledb:0.17.1-SNAPSHOT")
+        api(project(":qalipsis-plugin-cassandra"))
+        api(project(":qalipsis-plugin-elasticsearch"))
+        api(project(":qalipsis-plugin-graphite"))
+        api(project(":qalipsis-plugin-http"))
+        api(project(":qalipsis-plugin-influxdb"))
+        api(project(":qalipsis-plugin-jackson"))
+        api(project(":qalipsis-plugin-jakarta-ee-messaging"))
+        api(project(":qalipsis-plugin-jms"))
+        api(project(":qalipsis-plugin-kafka"))
+        api(project(":qalipsis-plugin-mail"))
+        api(project(":qalipsis-plugin-mongodb"))
+        api(project(":qalipsis-plugin-netty"))
+        api(project(":qalipsis-plugin-r2dbc-jasync"))
+        api(project(":qalipsis-plugin-rabbitmq"))
+        api(project(":qalipsis-plugin-redis-lettuce"))
+        api(project(":qalipsis-plugin-slack"))
+        api(project(":qalipsis-plugin-sql"))
+        api(project(":qalipsis-plugin-timescaledb"))
     }
 }
-

@@ -167,7 +167,7 @@ tasks.withType<Test> {
     }
 }
 
-tasks.artifacts {
+artifacts {
     if (project.plugins.hasPlugin("java-test-fixtures")) {
         archives(tasks.findByName("testFixturesSources") as Jar)
         archives(tasks.findByName("testFixturesJavadoc") as Jar)

@@ -17,48 +17,16 @@
  *
  */
 
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
-    kotlin("jvm")
-    kotlin("kapt")
-    kotlin("plugin.allopen")
+    id("qalipsis-plugin")
 }
 
 description = "QALIPSIS plugin for Graphite"
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.majorVersion
-        javaParameters = true
-    }
-}
 
 tasks.withType<Test> {
     // Enables the search of memory leaks in the Netty buffers when running all tests.
     systemProperties("io.netty.leakDetectionLevel" to "paranoid")
 }
-
-kapt {
-    correctErrorTypes = true
-    useBuildCache = false
-}
-
-allOpen {
-    annotations(
-        "io.micronaut.aop.Around",
-        "jakarta.inject.Singleton",
-        "io.qalipsis.api.annotations.StepConverter",
-        "io.qalipsis.api.annotations.StepDecorator",
-        "io.qalipsis.api.annotations.PluginComponent",
-        "io.qalipsis.api.annotations.Spec",
-        "io.micronaut.validation.Validated"
-    )
-}
-
-
-kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catadioptre")
-kapt.useBuildCache = false
 
 val pluginPlatformVersion: String by project
 val ktorVersion = "2.3.13"

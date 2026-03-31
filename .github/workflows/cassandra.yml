@@ -1,0 +1,27 @@
+name: Cassandra Plugin
+
+on:
+  push:
+    branches: ['main', 'develop/*']
+    paths: ['cassandra/**', 'buildSrc/**', 'build.gradle.kts', 'settings.gradle.kts', 'gradle.properties', 'gradle/**']
+  pull_request:
+    branches: ['main', 'develop/*']
+    paths: ['cassandra/**', 'buildSrc/**', 'build.gradle.kts', 'settings.gradle.kts', 'gradle.properties', 'gradle/**']
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    if: github.event_name != 'pull_request'
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-cassandra
+      module-dir: cassandra
+    secrets: inherit
+
+  verify-pr:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/_verify-pr.yml
+    with:
+      module: qalipsis-plugin-cassandra
+      module-dir: cassandra
+    secrets: inherit

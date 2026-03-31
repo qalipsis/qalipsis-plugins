@@ -18,35 +18,11 @@
  */
 
 plugins {
-    kotlin("jvm")
-    kotlin("kapt")
-    kotlin("plugin.allopen")
+    id("qalipsis-plugin")
     `java-test-fixtures`
 }
 
 description = "QALIPSIS plugin for the Jackson Project"
-
-kapt {
-    correctErrorTypes = true
-    useBuildCache = false
-}
-
-allOpen {
-    annotations(
-        "io.micronaut.aop.Around",
-        "jakarta.inject.Singleton",
-        "io.qalipsis.api.annotations.StepConverter",
-        "io.qalipsis.api.annotations.StepDecorator",
-        "io.qalipsis.api.annotations.PluginComponent",
-        "io.qalipsis.api.annotations.Spec",
-        "io.micronaut.validation.Validated"
-    )
-}
-
-kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catadioptre")
-kapt.useBuildCache = false
-
-val pluginPlatformVersion: String by project
 
 repositories {
     maven {
@@ -54,6 +30,8 @@ repositories {
         setUrl("https://jitpack.io")
     }
 }
+
+val pluginPlatformVersion: String by project
 
 dependencies {
     implementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))

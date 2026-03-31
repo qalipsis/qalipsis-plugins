@@ -17,40 +17,12 @@
  *
  */
 
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
-    kotlin("jvm")
-    kotlin("kapt")
-    kotlin("plugin.allopen")
+    id("qalipsis-plugin")
     `java-test-fixtures`
 }
 
 description = "QALIPSIS plugin for JMS"
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.majorVersion
-        javaParameters = true
-    }
-}
-
-kapt {
-    correctErrorTypes = true
-    useBuildCache = false
-}
-
-allOpen {
-    annotations(
-        "io.micronaut.aop.Around",
-        "jakarta.inject.Singleton",
-        "io.qalipsis.api.annotations.StepConverter",
-        "io.qalipsis.api.annotations.StepDecorator",
-        "io.qalipsis.api.annotations.PluginComponent",
-        "io.qalipsis.api.annotations.Spec",
-        "io.micronaut.validation.Validated"
-    )
-}
 
 val pluginPlatformVersion: String by project
 
@@ -93,5 +65,3 @@ dependencies {
     kaptTest("io.micronaut:micronaut-inject-java")
     kaptTest("io.qalipsis:qalipsis-api-processors")
 }
-
-

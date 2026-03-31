@@ -18,33 +18,11 @@
  */
 
 plugins {
-    kotlin("jvm")
-    kotlin("kapt")
-    kotlin("plugin.allopen")
+    id("qalipsis-plugin")
     `java-test-fixtures`
 }
 
 description = "QALIPSIS plugin for RabbitMQ"
-
-kapt {
-    correctErrorTypes = true
-    useBuildCache = false
-}
-
-allOpen {
-    annotations(
-        "io.micronaut.aop.Around",
-        "jakarta.inject.Singleton",
-        "io.qalipsis.api.annotations.StepConverter",
-        "io.qalipsis.api.annotations.StepDecorator",
-        "io.qalipsis.api.annotations.PluginComponent",
-        "io.qalipsis.api.annotations.Spec",
-        "io.micronaut.validation.Validated"
-    )
-}
-
-kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catadioptre")
-kapt.useBuildCache = false
 
 val rabbitMQVersion = "5.28.0"
 val pluginPlatformVersion: String by project
@@ -83,5 +61,3 @@ dependencies {
     kaptTest("io.micronaut:micronaut-inject-java")
     kaptTest("io.qalipsis:qalipsis-api-processors")
 }
-
-

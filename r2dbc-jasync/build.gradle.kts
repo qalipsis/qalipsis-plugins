@@ -18,32 +18,10 @@
  */
 
 plugins {
-    kotlin("jvm")
-    kotlin("kapt")
-    kotlin("plugin.allopen")
+    id("qalipsis-plugin")
 }
 
 description = "QALIPSIS plugin for R2DBC using jasync-SQL"
-
-kapt {
-    correctErrorTypes = true
-    useBuildCache = false
-}
-
-allOpen {
-    annotations(
-        "io.micronaut.aop.Around",
-        "jakarta.inject.Singleton",
-        "io.qalipsis.api.annotations.StepConverter",
-        "io.qalipsis.api.annotations.StepDecorator",
-        "io.qalipsis.api.annotations.PluginComponent",
-        "io.qalipsis.api.annotations.Spec",
-        "io.micronaut.validation.Validated"
-    )
-}
-
-kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catadioptre")
-kapt.useBuildCache = false
 
 val jasyncVersion = "2.2.4"
 val calciteVersion = "1.38.0"
@@ -99,5 +77,3 @@ dependencies {
     kaptTest("io.micronaut:micronaut-inject-java")
     kaptTest("io.qalipsis:qalipsis-api-processors")
 }
-
-

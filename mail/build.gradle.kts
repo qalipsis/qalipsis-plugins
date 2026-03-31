@@ -18,16 +18,10 @@
  */
 
 plugins {
-    kotlin("jvm")
-    kotlin("kapt")
-    kotlin("plugin.allopen")
+    id("qalipsis-plugin")
 }
 
 description = "QALIPSIS plugin for Mail"
-
-
-kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catadioptre")
-kapt.useBuildCache = false
 
 val pluginPlatformVersion: String by project
 
@@ -65,5 +59,3 @@ dependencies {
     kaptTest("io.micronaut:micronaut-inject-java")
     kaptTest("io.qalipsis:qalipsis-api-processors")
 }
-
-

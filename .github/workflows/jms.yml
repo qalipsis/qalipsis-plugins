@@ -1,0 +1,27 @@
+name: JMS Plugin
+
+on:
+  push:
+    branches: ['main', 'develop/*']
+    paths: ['jms/**', 'buildSrc/**', 'build.gradle.kts', 'settings.gradle.kts', 'gradle.properties', 'gradle/**']
+  pull_request:
+    branches: ['main', 'develop/*']
+    paths: ['jms/**', 'buildSrc/**', 'build.gradle.kts', 'settings.gradle.kts', 'gradle.properties', 'gradle/**']
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    if: github.event_name != 'pull_request'
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-jms
+      module-dir: jms
+    secrets: inherit
+
+  verify-pr:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/_verify-pr.yml
+    with:
+      module: qalipsis-plugin-jms
+      module-dir: jms
+    secrets: inherit

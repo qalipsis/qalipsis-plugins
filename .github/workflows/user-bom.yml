@@ -1,0 +1,14 @@
+name: User BOM Platform
+
+on:
+  push:
+    branches: ['main', 'develop/*']
+    paths: ['user-bom/**', 'buildSrc/**', 'build.gradle.kts', 'settings.gradle.kts', 'gradle.properties', 'gradle/**']
+  workflow_dispatch:
+
+jobs:
+  publish:
+    uses: ./.github/workflows/_publish-only.yml
+    with:
+      module: qalipsis-platform
+    secrets: inherit

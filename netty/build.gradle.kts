@@ -20,9 +20,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm")
-    kotlin("kapt")
-    kotlin("plugin.allopen")
+    id("qalipsis-plugin")
     `java-test-fixtures`
 }
 
@@ -30,8 +28,6 @@ description = "QALIPSIS plugin for HTTP, TCP, UDP and MQTT using Netty"
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.majorVersion
-        javaParameters = true
         freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
     }
 }
@@ -42,26 +38,6 @@ tasks.withType<Test> {
     // Enable only for local execution, not for CI.
     // systemProperties("io.netty.leakDetectionLevel" to "paranoid")
 }
-
-kapt {
-    correctErrorTypes = true
-    useBuildCache = false
-}
-
-allOpen {
-    annotations(
-        "io.micronaut.aop.Around",
-        "jakarta.inject.Singleton",
-        "io.qalipsis.api.annotations.StepConverter",
-        "io.qalipsis.api.annotations.StepDecorator",
-        "io.qalipsis.api.annotations.PluginComponent",
-        "io.qalipsis.api.annotations.Spec",
-        "io.micronaut.validation.Validated"
-    )
-}
-
-kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catadioptre")
-kapt.useBuildCache = false
 
 val pluginPlatformVersion: String by project
 
