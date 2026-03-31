@@ -22,6 +22,7 @@ package io.qalipsis.plugins.slack
 import assertk.all
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import assertk.assertions.prop
 import com.slack.api.methods.AsyncMethodsClient
 import com.slack.api.model.Attachment
@@ -37,6 +38,7 @@ import io.mockk.coExcludeRecords
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
+import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.report.CampaignReport
 import io.qalipsis.api.report.ExecutionStatus
 import io.qalipsis.api.sync.asSuspended
@@ -79,6 +81,7 @@ internal class SlackNotificationPublisherIntegrationTest {
 
     @BeforeEach
     internal fun setupAll() {
+        log.info { "Bot Token: ${botToken.take(3)}...${botToken.takeLast(3)}" }
         campaignReportPrototype = CampaignReport(
             campaignKey = "Campaign-1",
             startedMinions = 1000,
@@ -168,6 +171,7 @@ internal class SlackNotificationPublisherIntegrationTest {
         ).asSuspended().get()
 
         // then
+        assertThat(response.isOk).isTrue()
         val retrievedMessage: Message = retrieveMessage(response.channel, response.ts)
         val headerBlock = retrievedMessage.blocks[0] as HeaderBlock
         val attachmentBlock = retrievedMessage.attachments[0]
@@ -349,5 +353,9 @@ internal class SlackNotificationPublisherIntegrationTest {
             ExecutionStatus.WARNING -> Pair("#e69d0b", ":large_orange_circle:")
             else -> Pair("#bf0606", ":red_circle:")
         }
+    }
+
+    private companion object {
+        val log = logger()
     }
 }

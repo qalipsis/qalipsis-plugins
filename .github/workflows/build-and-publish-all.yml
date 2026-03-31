@@ -1,0 +1,131 @@
+name: Build and Publish All Plugins
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cassandra:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-cassandra
+      module-dir: cassandra
+    secrets: inherit
+
+  elasticsearch:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-elasticsearch
+      module-dir: elasticsearch
+    secrets: inherit
+
+  graphite:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-graphite
+      module-dir: graphite
+    secrets: inherit
+
+  http:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-http
+      module-dir: http
+    secrets: inherit
+
+  influxdb:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-influxdb
+      module-dir: influxdb
+    secrets: inherit
+
+  jackson:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-jackson
+      module-dir: jackson
+    secrets: inherit
+
+  jakarta-ee-messaging:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-jakarta-ee-messaging
+      module-dir: jakarta-ee-messaging
+    secrets: inherit
+
+  jms:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-jms
+      module-dir: jms
+    secrets: inherit
+
+  kafka:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-kafka
+      module-dir: kafka
+    secrets: inherit
+
+  mail:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-mail
+      module-dir: mail
+    secrets: inherit
+
+  mongodb:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-mongodb
+      module-dir: mongodb
+    secrets: inherit
+
+  netty:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-netty
+      module-dir: netty
+    secrets: inherit
+
+  r2dbc-jasync:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-r2dbc-jasync
+      module-dir: r2dbc-jasync
+    secrets: inherit
+
+  rabbitmq:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-rabbitmq
+      module-dir: rabbitmq
+    secrets: inherit
+
+  redis-lettuce:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-redis-lettuce
+      module-dir: redis-lettuce
+    secrets: inherit
+
+  slack:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-slack
+      module-dir: slack
+    secrets: inherit
+
+  sql:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-sql
+      module-dir: sql
+    secrets: inherit
+
+  timescaledb:
+    uses: ./.github/workflows/_build-and-publish.yml
+    with:
+      module: qalipsis-plugin-timescaledb
+      module-dir: timescaledb
+    secrets: inherit

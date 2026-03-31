@@ -46,6 +46,8 @@ jobs:
         run: ./gradlew :${{ inputs.module }}:checkLicense
 
       - name: All tests
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         run: ./gradlew :${{ inputs.module }}:check --continue --refresh-dependencies
 
       - name: Build

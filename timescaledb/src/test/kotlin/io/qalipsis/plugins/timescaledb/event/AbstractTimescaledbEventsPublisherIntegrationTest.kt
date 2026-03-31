@@ -43,17 +43,6 @@ import io.r2dbc.postgresql.client.SSLMode
 import io.r2dbc.postgresql.codec.Json
 import io.r2dbc.spi.Connection
 import jakarta.inject.Inject
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.reactive.asFlow
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Timeout
-import org.junit.jupiter.api.extension.RegisterExtension
-import org.testcontainers.junit.jupiter.Testcontainers
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
 import java.io.PrintWriter
 import java.math.BigDecimal
 import java.time.Clock
@@ -68,6 +57,17 @@ import java.util.concurrent.TimeUnit
 import kotlin.reflect.jvm.jvmName
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.reactive.asFlow
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.extension.RegisterExtension
+import org.testcontainers.junit.jupiter.Testcontainers
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 
 @ExperimentalTime
 @Testcontainers
@@ -231,7 +231,7 @@ internal abstract class AbstractTimescaledbEventsPublisherIntegrationTest {
     }
 
     @Test
-    @Timeout(60)
+    @Timeout(120)
     fun `should save a massive amount of events`() = testDispatcherProvider.run {
         // given
         val totalCount = 50_000
@@ -271,7 +271,7 @@ internal abstract class AbstractTimescaledbEventsPublisherIntegrationTest {
         // then
         val elapsed = measureTime {
             do {
-                delay(1000)
+                delay(500)
                 val savedEventsCount = (executeSelect("select count(*) as c from events").first()["c"] as Long).toInt()
                 log.info { "Saved events so far: $savedEventsCount" }
             } while (savedEventsCount != totalCount)

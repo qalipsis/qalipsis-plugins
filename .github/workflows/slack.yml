@@ -9,9 +9,6 @@ on:
     paths: ['slack/**', 'buildSrc/**', 'build.gradle.kts', 'settings.gradle.kts', 'gradle.properties', 'gradle/**']
   workflow_dispatch:
 
-env:
-  SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-
 jobs:
   build-and-publish:
     if: github.event_name != 'pull_request'

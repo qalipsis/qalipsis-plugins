@@ -19,6 +19,7 @@
 
 import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
 import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_ERROR
+import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_OUT
 import org.jreleaser.model.Active
 import org.jreleaser.model.Signing
 import org.jreleaser.model.api.deploy.maven.MavenCentralMavenDeployer
@@ -152,7 +153,7 @@ tasks.withType<Test> {
     }
     useJUnitPlatform()
     testLogging {
-        events(FAILED, STANDARD_ERROR)
+        events(FAILED, STANDARD_OUT, STANDARD_ERROR)
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 
         debug {
