@@ -2,6 +2,15 @@ plugins {
     `kotlin-dsl`
 }
 
+gradlePlugin {
+    plugins {
+        register("qalipsis-build") {
+            id = "io.qalipsis.build"
+            implementationClass = "io.qalipsis.gradle.build.QalipsisBuildPlugin"
+        }
+    }
+}
+
 repositories {
     mavenLocal()
     mavenCentral()
@@ -14,5 +23,11 @@ dependencies {
     implementation("org.jreleaser:jreleaser-gradle-plugin:1.18.0")
     implementation("com.github.jk1:gradle-license-report:2.9")
     implementation("com.palantir.gradle.gitversion:gradle-git-version:3.0.0")
-    implementation("io.qalipsis:qalipsis-build-plugin:0.1.1")
+
+    testImplementation(platform("org.junit:junit-bom:5.11.4"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

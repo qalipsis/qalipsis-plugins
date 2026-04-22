@@ -33,8 +33,9 @@ plugins {
     id("org.jreleaser")
     id("com.github.jk1.dependency-license-report")
     id("com.palantir.git-version")
-    id("io.qalipsis.build")
 }
+
+apply(plugin = "io.qalipsis.build")
 
 group = "io.qalipsis.plugin"
 version = file("project.version").readText().trim()
@@ -43,7 +44,7 @@ val testNumCpuCore: String? by project
 
 // ---- QALIPSIS Build Plugin ----
 
-qalipsisBuild {
+configure<io.qalipsis.gradle.build.QalipsisBuildExtension> {
     metricsReport {
         enabled.set(true)
     }
@@ -186,9 +187,12 @@ afterEvaluate {
                 project.description ?: project.name
             )
         )
-        allowedLicensesFile = file("build-config/allowed-licenses.json")
+        allowedLicensesFile = rootProject.file("build-config/allowed-licenses.json")
         filters = arrayOf<com.github.jk1.license.filter.DependencyFilter>(
-            com.github.jk1.license.filter.LicenseBundleNormalizer()
+            com.github.jk1.license.filter.LicenseBundleNormalizer(
+                rootProject.file("build-config/license-normalizer-bundle.json").path,
+                true
+            )
         )
     }
 }

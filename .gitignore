@@ -2,6 +2,7 @@
 .gradle/
 build/
 buildSrc/build/
+!buildSrc/src/main/kotlin/io/qalipsis/gradle/build
 
 # IntelliJ IDEA
 .idea/
