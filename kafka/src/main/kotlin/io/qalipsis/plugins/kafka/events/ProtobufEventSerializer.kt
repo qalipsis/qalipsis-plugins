@@ -21,21 +21,19 @@ package io.qalipsis.plugins.kafka.events
 
 import io.micronaut.context.annotation.Requires
 import io.qalipsis.api.events.Event
-import io.qalipsis.api.events.EventJsonConverter
 import jakarta.inject.Singleton
-import java.nio.charset.StandardCharsets
 
 /**
- * Implementation of [EventKafkaSerializer] using JSON.
+ * Implementation of [EventKafkaSerializer] using protobuf.
+ * It first converts the event to a protobuf object before serializing.
  */
 @Singleton
-@Requires(property = "events.export.kafka.serializer", value = "json", defaultValue = "json")
-internal class JsonEventSerializer(
-    private val eventsConverter: EventJsonConverter,
-) : EventKafkaSerializer {
+@Requires(property = "events.export.kafka.serializer", value = "protobuf")
+internal class ProtobufEventSerializer : EventKafkaSerializer {
+
+    private val protobufEventConverter = ProtobufEventConverter()
 
     override fun serialize(topic: String, data: Event): ByteArray {
-        return eventsConverter.convert(data).toByteArray(StandardCharsets.UTF_8)
+        return protobufEventConverter.convert(data).toByteArray()
     }
-
 }

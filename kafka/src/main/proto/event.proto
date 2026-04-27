@@ -1,0 +1,58 @@
+/*
+ * QALIPSIS
+ * Copyright (C) 2025 AERIS IT Solutions GmbH
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+syntax = "proto3";
+package io.qalipsis.plugins.kafka.events;
+
+import "google/protobuf/timestamp.proto";
+
+/**
+ * Event schema used to serialize api events api with protobuf.
+ */
+message Event{
+
+  enum Level {
+    TRACE = 0;
+    DEBUG = 1;
+    INFO = 2;
+    WARN = 3;
+    ERROR = 4;
+    OFF = 5;
+  }
+
+  message Tag{
+    map<string, string> tags = 1;
+  }
+
+  google.protobuf.Timestamp timestamp = 1;
+  Level level = 2;
+  string name = 3;
+  optional string tenant = 4;
+  optional string campaign = 5;
+  optional string scenario = 6;
+  optional Tag tag = 7;
+  optional string message = 8;
+  optional string stackTrace = 9;
+  optional string error = 10;
+  optional google.protobuf.Timestamp date = 11;
+  optional bool boolean = 12;
+  optional double number = 13;
+  optional int64 durationNano = 14;
+
+}

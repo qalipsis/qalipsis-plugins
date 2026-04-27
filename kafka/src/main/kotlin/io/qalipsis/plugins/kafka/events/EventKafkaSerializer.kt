@@ -19,23 +19,12 @@
 
 package io.qalipsis.plugins.kafka.events
 
-import io.micronaut.context.annotation.Requires
 import io.qalipsis.api.events.Event
-import io.qalipsis.api.events.EventJsonConverter
-import jakarta.inject.Singleton
-import java.nio.charset.StandardCharsets
+import org.apache.kafka.common.serialization.Serializer
 
 /**
- * Implementation of [EventKafkaSerializer] using JSON.
+ * Kafka serializer interface for the events.
  */
-@Singleton
-@Requires(property = "events.export.kafka.serializer", value = "json", defaultValue = "json")
-internal class JsonEventSerializer(
-    private val eventsConverter: EventJsonConverter,
-) : EventKafkaSerializer {
-
-    override fun serialize(topic: String, data: Event): ByteArray {
-        return eventsConverter.convert(data).toByteArray(StandardCharsets.UTF_8)
-    }
-
+internal interface EventKafkaSerializer : Serializer<Event> {
+    override fun serialize(topic: String, data: Event): ByteArray
 }

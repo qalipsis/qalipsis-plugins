@@ -17,25 +17,20 @@
  *
  */
 
-package io.qalipsis.plugins.kafka.events
+package io.qalipsis.plugins.kafka.meters
 
-import io.micronaut.context.annotation.Requires
-import io.qalipsis.api.events.Event
-import io.qalipsis.api.events.EventJsonConverter
-import jakarta.inject.Singleton
-import java.nio.charset.StandardCharsets
+import io.qalipsis.api.meters.MeterSnapshot
+import org.apache.kafka.common.serialization.Serializer
 
 /**
- * Implementation of [EventKafkaSerializer] using JSON.
+ * Kafka serializer for the meters using Protobuf.
+ * It first converts the meter to a protobuf object before serializing.
  */
-@Singleton
-@Requires(property = "events.export.kafka.serializer", value = "json", defaultValue = "json")
-internal class JsonEventSerializer(
-    private val eventsConverter: EventJsonConverter,
-) : EventKafkaSerializer {
+internal class ProtobufMeterSerializer(
+    private val protobufMeterConverter: ProtobufMeterConverter,
+) : Serializer<MeterSnapshot> {
 
-    override fun serialize(topic: String, data: Event): ByteArray {
-        return eventsConverter.convert(data).toByteArray(StandardCharsets.UTF_8)
+    override fun serialize(topic: String, data: MeterSnapshot): ByteArray {
+        return protobufMeterConverter.convert(data).toByteArray()
     }
-
 }

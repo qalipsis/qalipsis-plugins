@@ -35,6 +35,7 @@ import javax.validation.constraints.NotNull
  * @property minLevel minimal accepted level of events defaults to INFO.
  * @property bootstrap bootstraps of the Kafka broker, defaults to localhost:9092.
  * @property topic name of the topic to write the events to, default to qalipsis-events.
+ * @property serializer name of the serializer to use to serialize events. Should be explicitly set to "protobuf" to use the protobuf serializer, defaults to "json".
  * @property durationAsNano converts the duration as nanoseconds defaults to false to convert them as milliseconds.
  * @property lingerPeriod maximal period between two batches sending to the brokers, defaults to 1 second.
  * @property batchSize maximal number of events buffered between two publications of events to Kafka defaults to 2000.
@@ -55,6 +56,9 @@ internal class KafkaEventsConfiguration {
 
     @field:NotBlank
     var topic: String = "qalipsis-events"
+
+    @field:NotBlank
+    var serializer: String = "json"
 
     var durationAsNano: Boolean = false
 

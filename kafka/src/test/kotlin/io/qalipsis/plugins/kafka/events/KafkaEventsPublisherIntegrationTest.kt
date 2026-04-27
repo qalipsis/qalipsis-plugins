@@ -34,6 +34,14 @@ import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.plugins.kafka.Constants
 import io.qalipsis.test.mockk.relaxedMockk
+import java.io.PrintWriter
+import java.nio.charset.StandardCharsets
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZonedDateTime
+import java.util.Properties
+import kotlin.math.pow
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
@@ -47,14 +55,6 @@ import org.testcontainers.containers.KafkaContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
-import java.io.PrintWriter
-import java.nio.charset.StandardCharsets
-import java.time.Duration
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZonedDateTime
-import java.util.Properties
-import kotlin.math.pow
 
 @Testcontainers
 internal class KafkaEventsPublisherIntegrationTest {
@@ -94,7 +94,7 @@ internal class KafkaEventsPublisherIntegrationTest {
     @Timeout(30)
     internal fun `should export data`() {
         // given
-        val publisher = KafkaEventsPublisher(configuration, meterRegistry, eventsConverter)
+        val publisher = KafkaEventsPublisher(configuration, meterRegistry, JsonEventSerializer(eventsConverter))
         publisher.start()
 
         val events = mutableListOf<Event>()

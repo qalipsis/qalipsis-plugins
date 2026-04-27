@@ -24,11 +24,12 @@ import io.qalipsis.api.lang.tryAndLogOrNull
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.MeasurementPublisher
 import io.qalipsis.api.meters.MeterSnapshot
+import java.time.Duration
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.Serdes
-import java.time.Duration
+import org.apache.kafka.common.serialization.Serializer
 
 /**
  * Measurement publisher for Apache Kafka.
@@ -38,6 +39,7 @@ import java.time.Duration
 @Requires(beans = [KafkaMeterConfig::class])
 internal class KafkaMeasurementPublisher(
     private val config: KafkaMeterConfig,
+    private val serializer: Serializer<MeterSnapshot>,
 ) : MeasurementPublisher {
 
     private lateinit var producer: Producer<ByteArray, MeterSnapshot>
@@ -48,7 +50,7 @@ internal class KafkaMeasurementPublisher(
         producer = KafkaProducer(
             config.configuration(),
             Serdes.ByteArray().serializer(),
-            JsonMeterSerializer(config.timestampFieldName)
+            serializer
         )
     }
     override suspend fun stop() {

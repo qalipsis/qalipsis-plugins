@@ -1,3 +1,5 @@
+import com.google.protobuf.gradle.id
+
 /*
  * QALIPSIS
  * Copyright (C) 2025 AERIS IT Solutions GmbH
@@ -19,6 +21,7 @@
 
 plugins {
     id("qalipsis-plugin")
+    id("com.google.protobuf") version "0.9.4"
     `java-test-fixtures`
 }
 
@@ -26,13 +29,25 @@ description = "QALIPSIS plugin for Apache Kafka"
 
 val kafkaVersion = "3.9.0"
 val pluginPlatformVersion: String by project
+val protobufVersion: String by project
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${protobufVersion}"
+    }
+    generateProtoTasks {
+        all().forEach { task -> task.plugins { id("kotlin") } }
+    }
+}
 
 dependencies {
     implementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
     compileOnly("io.micronaut:micronaut-runtime")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+    compileOnly("io.aeris-consulting:catadioptre-annotations")
     api("org.apache.kafka:kafka-clients:$kafkaVersion")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("com.google.protobuf:protobuf-kotlin:${protobufVersion}")
     implementation("org.apache.commons:commons-text:1.11.0")
 
     api("io.qalipsis:qalipsis-api-common")

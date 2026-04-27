@@ -1,0 +1,55 @@
+/*
+ * QALIPSIS
+ * Copyright (C) 2025 AERIS IT Solutions GmbH
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+syntax = "proto3";
+package io.qalipsis.plugins.kafka.meters;
+
+import "google/protobuf/timestamp.proto";
+
+/**
+ * Meter schema used to serialize micronaut meters with protobuf.
+ */
+message Meter{
+
+  message Tag{
+    map<string, string> tags = 1;
+  }
+
+  message Percentile{
+    double percentage = 1;
+    double value = 2;
+  }
+
+  string name = 1;
+  optional Tag tag = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  string type = 4;
+  optional string tenant = 5;
+  optional string campaign = 6;
+  optional string scenario = 7;
+  optional string step = 8;
+  optional int64 count = 9;
+  optional double value = 10;
+  optional double sum = 11;
+  optional double mean = 12;
+  optional double max = 13;
+  optional string unit = 20;
+  repeated Percentile percentiles = 21;
+
+}
