@@ -1,23 +1,26 @@
 /*
- * Copyright 2022 AERIS IT Solutions GmbH
+ * QALIPSIS
+ * Copyright (C) 2025 AERIS IT Solutions GmbH
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 package io.qalipsis.plugins.kafka.consumer
 
 import io.qalipsis.api.annotations.Scenario
-import io.qalipsis.api.executionprofile.regular
+import io.qalipsis.api.executionprofile.immediate
 import io.qalipsis.api.lang.concurrentSet
 import io.qalipsis.api.scenario.scenario
 import io.qalipsis.api.steps.blackHole
@@ -25,6 +28,7 @@ import io.qalipsis.api.steps.filterNotNull
 import io.qalipsis.api.steps.innerJoin
 import io.qalipsis.api.steps.map
 import io.qalipsis.api.steps.onEach
+import io.qalipsis.plugins.kafka.configuration.defaults
 import io.qalipsis.plugins.kafka.kafka
 import org.apache.kafka.clients.consumer.OffsetResetStrategy
 import org.apache.kafka.common.serialization.Serdes
@@ -41,6 +45,8 @@ internal object KafkaConsumerScenario {
 
     const val topicRight = "right"
 
+    const val topicDefaults = "defaults"
+
     val receivedMessages = concurrentSet<String>()
 
     internal var bootstrap: String = ""
@@ -55,7 +61,7 @@ internal object KafkaConsumerScenario {
             minionsCount = minions
             profile {
                 // Starts all at once.
-                regular(100, minionsCount)
+                immediate()
             }
         }
             .start()
@@ -85,6 +91,31 @@ internal object KafkaConsumerScenario {
             .map { joinResult -> joinResult?.first?.let { "${it.record.value} - ${joinResult.second.record.value}" } }
             .filterNotNull()
             .onEach { receivedMessages.add(it) }
+            .blackHole()
+    }
+
+    @Scenario("consumer-kafka-with-defaults")
+    fun consumeRecordsWithDefaults() {
+        scenario {
+            minionsCount = minions
+            profile {
+                immediate()
+            }
+            kafka().defaults {
+                bootstrap(bootstrap)
+            }
+        }
+            .start()
+            .kafka()
+            .consume {
+                name = "kafka-consumer-defaults"
+                // bootstrap inherited from defaults
+                topics(topicDefaults)
+                groupId("kafka-defaults")
+                pollTimeout(100)
+                offsetReset(OffsetResetStrategy.EARLIEST)
+            }.flatten(intDeserializer, stringDeserializer)
+            .onEach { receivedMessages.add("${it.record.key} - ${it.record.value}") }
             .blackHole()
     }
 }

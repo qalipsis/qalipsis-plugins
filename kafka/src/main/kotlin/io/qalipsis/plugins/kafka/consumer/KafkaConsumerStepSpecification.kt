@@ -1,17 +1,20 @@
 /*
- * Copyright 2022 AERIS IT Solutions GmbH
+ * QALIPSIS
+ * Copyright (C) 2025 AERIS IT Solutions GmbH
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 package io.qalipsis.plugins.kafka.consumer
@@ -29,14 +32,15 @@ import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.UnicastSpecification
 import io.qalipsis.plugins.kafka.KafkaScenarioSpecification
 import io.qalipsis.plugins.kafka.KafkaStepSpecification
-import org.apache.kafka.clients.consumer.OffsetResetStrategy
-import org.apache.kafka.common.serialization.Deserializer
-import org.apache.kafka.common.serialization.Serdes
+import io.qalipsis.plugins.kafka.configuration.findKafkaDefaults
 import java.time.Duration
 import java.util.regex.Pattern
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.Positive
 import kotlin.reflect.KClass
+import org.apache.kafka.clients.consumer.OffsetResetStrategy
+import org.apache.kafka.common.serialization.Deserializer
+import org.apache.kafka.common.serialization.Serdes
 
 interface KafkaConsumerConfigurableSpecification<K : Any, V : Any> : UnicastSpecification,
     ConfigurableStepSpecification<Unit, List<KafkaConsumerResult<K?, V?>>, KafkaDeserializerSpecification<K, V>> {
@@ -182,7 +186,7 @@ internal class KafkaConsumerStepSpecification<K : Any, V : Any> internal constru
     KafkaStepSpecification<Unit, List<KafkaConsumerResult<K?, V?>>, KafkaDeserializerSpecification<K, V>>,
     SingletonStepSpecification {
 
-    internal var monitoringConfig = StepMonitoringConfiguration()
+    internal var monitoringConfig = StepMonitoringConfiguration().all()
     internal val configuration =
         KafkaConsumerConfiguration(keyDeserializer = keyDeserializer, valueDeserializer = valueDeserializer)
 
@@ -343,6 +347,7 @@ fun KafkaScenarioSpecification.consume(
 ): KafkaDeserializerSpecification<ByteArray, ByteArray> {
     val defaultDeserializer = Serdes.ByteArray().deserializer()
     val step = KafkaConsumerStepSpecification(defaultDeserializer, defaultDeserializer)
+    findKafkaDefaults(this as StepSpecificationRegistry)?.applyTo(step)
     step.configurationBlock()
     (this as StepSpecificationRegistry).add(step)
     return step

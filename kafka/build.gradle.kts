@@ -24,7 +24,7 @@ plugins {
 
 description = "QALIPSIS plugin for Apache Kafka"
 
-val kafkaVersion = "3.2.2"
+val kafkaVersion = "3.9.0"
 val pluginPlatformVersion: String by project
 
 dependencies {

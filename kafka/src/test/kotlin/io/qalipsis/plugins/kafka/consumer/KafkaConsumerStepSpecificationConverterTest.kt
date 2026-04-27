@@ -1,17 +1,20 @@
 /*
- * Copyright 2022 AERIS IT Solutions GmbH
+ * QALIPSIS
+ * Copyright (C) 2025 AERIS IT Solutions GmbH
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 package io.qalipsis.plugins.kafka.consumer
@@ -24,7 +27,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.key
 import io.aerisconsulting.catadioptre.getProperty
 import io.aerisconsulting.catadioptre.invokeInvisible
@@ -43,6 +46,9 @@ import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.mockk.verifyOnce
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
+import java.time.Duration
+import java.util.Properties
+import java.util.regex.Pattern
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.OffsetResetStrategy
@@ -50,9 +56,6 @@ import org.apache.kafka.common.serialization.Serdes
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.time.Duration
-import java.util.Properties
-import java.util.regex.Pattern
 
 /**
  *
@@ -133,7 +136,7 @@ internal class KafkaConsumerStepSpecificationConverterTest :
                     typedProp<Pattern>("topicsPattern").isNull()
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
@@ -191,7 +194,7 @@ internal class KafkaConsumerStepSpecificationConverterTest :
                     typedProp<Pattern>("topicsPattern").transform { it.pattern() }.isEqualTo(".*")
                 }
                 prop("processor").isNotNull().isInstanceOf(NoopDatasourceObjectProcessor::class)
-                prop("converter").isNotNull().isSameAs(recordsConverter)
+                prop("converter").isNotNull().isSameInstanceAs(recordsConverter)
             }
         }
     }
@@ -206,15 +209,15 @@ internal class KafkaConsumerStepSpecificationConverterTest :
             valueDeserializer = valueDeserializer,
             flattenOutput = true
         )
-        val monitoringConfiguration = StepMonitoringConfiguration()
+        val monitoringConfiguration = StepMonitoringConfiguration().all()
 
         // when
         val recordsConverter = converter.invokeInvisible<DatasourceObjectConverter<ConsumerRecords<ByteArray?, ByteArray?>, out Any?>>("buildConverter", configuration, monitoringConfiguration)
 
         // then
         assertThat(recordsConverter).isNotNull().isInstanceOf(KafkaConsumerSingleConverter::class).all {
-            prop("keyDeserializer").isSameAs(keyDeserializer)
-            prop("valueDeserializer").isSameAs(valueDeserializer)
+            prop("keyDeserializer").isSameInstanceAs(keyDeserializer)
+            prop("valueDeserializer").isSameInstanceAs(valueDeserializer)
             prop("consumedKeyBytesCounter").isNull()
             prop("consumedValueBytesCounter").isNull()
             prop("consumedRecordsCounter").isNull()
@@ -231,15 +234,15 @@ internal class KafkaConsumerStepSpecificationConverterTest :
             valueDeserializer = valueDeserializer,
             flattenOutput = false
         )
-        val monitoringConfiguration = StepMonitoringConfiguration()
+        val monitoringConfiguration = StepMonitoringConfiguration().all()
 
         // when
         val recordsConverter = converter.invokeInvisible<DatasourceObjectConverter<ConsumerRecords<ByteArray?, ByteArray?>, out Any?>>("buildConverter", configuration, monitoringConfiguration)
 
         // then
         assertThat(recordsConverter).isNotNull().isInstanceOf(KafkaConsumerBatchConverter::class).all {
-            prop("keyDeserializer").isSameAs(keyDeserializer)
-            prop("valueDeserializer").isSameAs(valueDeserializer)
+            prop("keyDeserializer").isSameInstanceAs(keyDeserializer)
+            prop("valueDeserializer").isSameInstanceAs(valueDeserializer)
             prop("consumedKeyBytesCounter").isNull()
             prop("consumedValueBytesCounter").isNull()
             prop("consumedRecordsCounter").isNull()

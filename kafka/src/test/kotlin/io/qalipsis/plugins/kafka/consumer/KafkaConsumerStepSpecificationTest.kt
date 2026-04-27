@@ -1,17 +1,20 @@
 /*
- * Copyright 2022 AERIS IT Solutions GmbH
+ * QALIPSIS
+ * Copyright (C) 2025 AERIS IT Solutions GmbH
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 package io.qalipsis.plugins.kafka.consumer
@@ -24,7 +27,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.key
 import assertk.assertions.prop
@@ -33,15 +36,16 @@ import io.qalipsis.api.scenario.TestScenarioFactory
 import io.qalipsis.api.steps.SingletonConfiguration
 import io.qalipsis.api.steps.SingletonType
 import io.qalipsis.api.steps.StepMonitoringConfiguration
+import io.qalipsis.plugins.kafka.configuration.defaults
 import io.qalipsis.plugins.kafka.kafka
+import java.time.Duration
+import java.util.regex.Pattern
+import kotlin.reflect.jvm.jvmName
 import org.apache.kafka.clients.consumer.OffsetResetStrategy
 import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.common.serialization.Deserializer
 import org.junit.jupiter.api.Test
-import java.time.Duration
-import java.util.regex.Pattern
-import kotlin.reflect.jvm.jvmName
 
 /**
  *
@@ -95,7 +99,7 @@ internal class KafkaConsumerStepSpecificationTest {
 
             unicast(6, Duration.ofDays(1))
             monitoring {
-                events = true
+                meters = false
             }
         }
 
@@ -150,7 +154,7 @@ internal class KafkaConsumerStepSpecificationTest {
             unicast(6, Duration.ofDays(1))
 
             monitoring {
-                meters = true
+                events = false
             }
         }
 
@@ -218,8 +222,8 @@ internal class KafkaConsumerStepSpecificationTest {
 
         assertThat(scenario.rootSteps[0]).isInstanceOf(KafkaConsumerStepSpecification::class).all {
             prop(KafkaConsumerStepSpecification<*, *>::configuration).all {
-                prop(KafkaConsumerConfiguration<*, *>::keyDeserializer).isSameAs(keyDeserializer)
-                prop(KafkaConsumerConfiguration<*, *>::valueDeserializer).isSameAs(valueDeserializer)
+                prop(KafkaConsumerConfiguration<*, *>::keyDeserializer).isSameInstanceAs(keyDeserializer)
+                prop(KafkaConsumerConfiguration<*, *>::valueDeserializer).isSameInstanceAs(valueDeserializer)
                 prop(KafkaConsumerConfiguration<*, *>::flattenOutput).isTrue()
             }
         }
@@ -273,8 +277,8 @@ internal class KafkaConsumerStepSpecificationTest {
 
         assertThat(scenario.rootSteps[0]).isInstanceOf(KafkaConsumerStepSpecification::class).all {
             prop(KafkaConsumerStepSpecification<*, *>::configuration).all {
-                prop(KafkaConsumerConfiguration<*, *>::keyDeserializer).isSameAs(keyDeserializer)
-                prop(KafkaConsumerConfiguration<*, *>::valueDeserializer).isSameAs(valueDeserializer)
+                prop(KafkaConsumerConfiguration<*, *>::keyDeserializer).isSameInstanceAs(keyDeserializer)
+                prop(KafkaConsumerConfiguration<*, *>::valueDeserializer).isSameInstanceAs(valueDeserializer)
                 prop(KafkaConsumerConfiguration<*, *>::flattenOutput).isFalse()
             }
         }
@@ -313,6 +317,82 @@ internal class KafkaConsumerStepSpecificationTest {
                     ValueDeserializer::class
                 )
                 prop(KafkaConsumerConfiguration<*, *>::flattenOutput).isFalse()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should apply defaults from KafkaDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            kafka().defaults {
+                bootstrap("default-host:9092", "default-host:9093")
+                properties("security.protocol" to "SASL_SSL")
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        })
+
+        scenario.start().kafka().consume {
+            name = "my-step"
+            topics("topic-1")
+            groupId("my-group")
+        }
+
+        assertThat((scenario as StepSpecificationRegistry).rootSteps[0]).isInstanceOf(
+            KafkaConsumerStepSpecification::class
+        ).all {
+            prop(KafkaConsumerStepSpecification<*, *>::configuration).all {
+                prop(KafkaConsumerConfiguration<*, *>::bootstrap).isEqualTo("default-host:9092,default-host:9093")
+                prop(KafkaConsumerConfiguration<*, *>::properties).all {
+                    key("security.protocol").isEqualTo("SASL_SSL")
+                }
+            }
+            transform { it.monitoringConfig }.all {
+                prop(StepMonitoringConfiguration::events).isTrue()
+                prop(StepMonitoringConfiguration::meters).isTrue()
+            }
+        }
+    }
+
+    @Test
+    internal fun `should allow overriding defaults from KafkaDefaultsExtension`() {
+        val scenario = TestScenarioFactory.scenario("my-scenario", {
+            kafka().defaults {
+                bootstrap("default-host:9092")
+                properties("security.protocol" to "SASL_SSL", "key-1" to "value-1")
+                monitoring {
+                    events = true
+                    meters = true
+                }
+            }
+        })
+
+        scenario.start().kafka().consume {
+            name = "my-step"
+            topics("topic-1")
+            groupId("my-group")
+            bootstrap("override-host:9092")
+            monitoring {
+                events = false
+                // meters not set -> inherits true from defaults
+            }
+        }
+
+        assertThat((scenario as StepSpecificationRegistry).rootSteps[0]).isInstanceOf(
+            KafkaConsumerStepSpecification::class
+        ).all {
+            prop(KafkaConsumerStepSpecification<*, *>::configuration).all {
+                prop(KafkaConsumerConfiguration<*, *>::bootstrap).isEqualTo("override-host:9092")
+                prop(KafkaConsumerConfiguration<*, *>::properties).all {
+                    key("security.protocol").isEqualTo("SASL_SSL")
+                    key("key-1").isEqualTo("value-1")
+                }
+            }
+            transform { it.monitoringConfig }.all {
+                prop(StepMonitoringConfiguration::events).isFalse()
+                prop(StepMonitoringConfiguration::meters).isTrue()
             }
         }
     }

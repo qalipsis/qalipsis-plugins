@@ -1,17 +1,20 @@
 /*
- * Copyright 2022 AERIS IT Solutions GmbH
+ * QALIPSIS
+ * Copyright (C) 2025 AERIS IT Solutions GmbH
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 package io.qalipsis.plugins.kafka.consumer
@@ -22,7 +25,7 @@ import assertk.assertions.hasSize
 import assertk.assertions.index
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
-import assertk.assertions.isSameAs
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.key
 import assertk.assertions.prop
 import io.mockk.coEvery
@@ -39,6 +42,7 @@ import io.qalipsis.api.meters.Meter
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.CleanMockkRecordedCalls
 import io.qalipsis.test.mockk.relaxedMockk
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.channels.Channel
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.ConsumerRecords
@@ -51,7 +55,6 @@ import org.apache.kafka.common.serialization.Deserializer
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  *
@@ -65,11 +68,11 @@ internal class KafkaConsumerBatchConverterTest {
     val testDispatcherProvider = TestDispatcherProvider()
 
     private val keySerializer: Deserializer<Int> = relaxedMockk {
-        every { deserialize(any(), any(), any()) } answers { thirdArg<ByteArray?>()?.size ?: Int.MIN_VALUE }
+        every { deserialize(any(), any<Headers>(), any<ByteArray>()) } answers { thirdArg<ByteArray?>()?.size ?: Int.MIN_VALUE }
     }
 
     private val valueSerializer: Deserializer<Int> = relaxedMockk {
-        every { deserialize(any(), any(), any()) } answers { thirdArg<ByteArray?>()?.size ?: Int.MAX_VALUE }
+        every { deserialize(any(), any<Headers>(), any<ByteArray>()) } answers { thirdArg<ByteArray?>()?.size ?: Int.MAX_VALUE }
     }
 
     private val metersTags = mockk<Map<String, String>>()
@@ -221,7 +224,7 @@ internal class KafkaConsumerBatchConverterTest {
                     prop(KafkaConsumerRecord<*, *>::value).isEqualTo(value2.size)
                     prop(KafkaConsumerRecord<*, *>::headers).all {
                         hasSize(1)
-                        key("header2").isSameAs(value2)
+                        key("header2").isSameInstanceAs(value2)
                     }
                     prop(KafkaConsumerRecord<*, *>::consumedTimestamp).isNotNull()
                     prop(KafkaConsumerRecord<*, *>::offset).isEqualTo(22)
@@ -253,8 +256,8 @@ internal class KafkaConsumerBatchConverterTest {
             valueSerializer.deserialize("topic-1", refEq(headers1), refEq(value1))
             keySerializer.deserialize("topic-2", refEq(headers2), refEq(key2))
             valueSerializer.deserialize("topic-2", refEq(headers2), refEq(value2))
-            keySerializer.deserialize("topic-2", refEq(headers3), isNull())
-            valueSerializer.deserialize("topic-2", refEq(headers3), isNull())
+            keySerializer.deserialize("topic-2", refEq(headers3), isNull<ByteArray>())
+            valueSerializer.deserialize("topic-2", refEq(headers3), isNull<ByteArray>())
         }
     }
 
