@@ -21,6 +21,7 @@ package io.qalipsis.plugins.http
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
 import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify
@@ -45,7 +46,6 @@ import io.qalipsis.plugins.http.request.HttpRequest
 import io.qalipsis.plugins.http.request.InternalHttpRequest
 import io.qalipsis.plugins.http.request.SimpleHttpRequest
 import io.qalipsis.plugins.http.response.DefaultHttpResponse
-import io.qalipsis.plugins.http.response.HttpResponse
 import io.qalipsis.plugins.http.response.ResponseConverter
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
@@ -130,7 +130,7 @@ internal class HttpClientStepTest {
     }
 
     private fun stubContext(
-        context: StepContext<String, HttpResponse<String>>,
+        context: StepContext<String, HttpResult<String, String>>,
         withMonitoring: Boolean = false,
     ) {
         if (withMonitoring) {
@@ -196,7 +196,7 @@ internal class HttpClientStepTest {
         testDispatcherProvider.runTest {
             //given
             stubMonitoring()
-            val context = mockk<StepContext<String, HttpResponse<String>>>()
+            val context = mockk<StepContext<String, HttpResult<String, String>>>()
             stubContext(context, withMonitoring = true)
             coEvery { context.receive() } returns "hello world"
             val httpClient = mockk<HttpAsyncClient>()
@@ -238,7 +238,7 @@ internal class HttpClientStepTest {
                 callbackSlot.captured.completed(response)
                 CompletableFuture.completedFuture(response)
             }
-            val sentResponseSlot = slot<HttpResponse<String>>()
+            val sentResponseSlot = slot<HttpResult<String, String>>()
             coEvery { context.send(capture(sentResponseSlot)) } returns Unit
             val step = HttpClientStep<String, String>(
                 id = "my-step",
@@ -259,12 +259,13 @@ internal class HttpClientStepTest {
             coVerify(exactly = 1) { context.receive() }
             coVerify(exactly = 1) { connectionProvider.acquire(context) }
             verify(exactly = 1) { internalRequest.toAsyncRequest(connectionConfiguration) }
-            coVerify(exactly = 1) { context.send(defaultResponse) }
+            coVerify(exactly = 1) { context.send(any()) }
             coVerify(exactly = 1) { connectionProvider.release(context, httpClient) }
-            val actualResponse = sentResponseSlot.captured
-            assertThat(actualResponse.reason).isEqualTo("Ok")
-            assertThat(actualResponse.code).isEqualTo(200)
-            assertThat(actualResponse.body).isEqualTo("Test body")
+            val actualResult = sentResponseSlot.captured
+            assertThat(actualResult.isSuccess).isEqualTo(true)
+            assertThat(actualResult.response?.reason).isEqualTo("Ok")
+            assertThat(actualResult.response?.code).isEqualTo(200)
+            assertThat(actualResult.response?.body).isEqualTo("Test body")
 
             // Verify monitoring events were recorded.
             verify { eventsLogger.info("http.apache.connecting", null, any(), any<Map<String, String>>()) }
@@ -292,7 +293,7 @@ internal class HttpClientStepTest {
     fun `should execute without monitoring when eventsLogger and meterRegistry are null`() =
         testDispatcherProvider.runTest {
             //given
-            val context = mockk<StepContext<String, HttpResponse<String>>>()
+            val context = mockk<StepContext<String, HttpResult<String, String>>>()
             coEvery { context.receive() } returns "hello world"
             val httpClient = mockk<HttpAsyncClient>()
             every { connectionProvider.acquire(context) } returns httpClient
@@ -324,7 +325,7 @@ internal class HttpClientStepTest {
                 callbackSlot.captured.completed(response)
                 CompletableFuture.completedFuture(response)
             }
-            val sentResponseSlot = slot<HttpResponse<String>>()
+            val sentResponseSlot = slot<HttpResult<String, String>>()
             coEvery { context.send(capture(sentResponseSlot)) } returns Unit
             val step = HttpClientStep<String, String>(
                 id = "my-step",
@@ -342,8 +343,10 @@ internal class HttpClientStepTest {
             step.execute(context)
 
             //then
-            coVerify(exactly = 1) { context.send(defaultResponse) }
+            coVerify(exactly = 1) { context.send(any()) }
             coVerify(exactly = 1) { connectionProvider.release(context, httpClient) }
+            val capturedResult = sentResponseSlot.captured
+            assertThat(capturedResult.response).isEqualTo(defaultResponse)
             // No monitoring calls should have been made.
             verify(exactly = 0) { eventsLogger.info(any(), any(), any(), any<Map<String, String>>()) }
             verify(exactly = 0) { meterRegistry.counter(any(), any(), any(), any<Map<String, String>>()) }
@@ -353,7 +356,7 @@ internal class HttpClientStepTest {
     fun `execute should throw when http client callback fails and still release client`() =
         testDispatcherProvider.runTest {
             //given
-            val context = mockk<StepContext<String, HttpResponse<String>>>()
+            val context = mockk<StepContext<String, HttpResult<String, String>>>()
             coEvery { context.receive() } returns "in"
             val httpClient = mockk<HttpAsyncClient>()
             every { connectionProvider.acquire(context) } returns httpClient
@@ -388,9 +391,10 @@ internal class HttpClientStepTest {
             )
 
             //when + then
-            assertThrows<IllegalStateException> {
+            val thrown = assertThrows<HttpRequestException> {
                 step.execute(context)
             }
+            assertThat(thrown.result.cause!!).isInstanceOf(IllegalStateException::class)
             coVerify(exactly = 1) { connectionProvider.release(context, httpClient) }
             coVerifyNever { context.send(any()) }
         }
@@ -400,7 +404,7 @@ internal class HttpClientStepTest {
         testDispatcherProvider.runTest {
             //given
             stubMonitoring()
-            val context = mockk<StepContext<String, HttpResponse<String>>>()
+            val context = mockk<StepContext<String, HttpResult<String, String>>>()
             stubContext(context, withMonitoring = true)
             coEvery { context.receive() } returns "in"
             val httpClient = mockk<HttpAsyncClient>()
@@ -436,9 +440,10 @@ internal class HttpClientStepTest {
             )
 
             //when + then
-            assertThrows<IllegalStateException> {
+            val thrown = assertThrows<HttpRequestException> {
                 step.execute(context)
             }
+            assertThat(thrown.result.cause!!).isInstanceOf(IllegalStateException::class)
             coVerify(exactly = 1) { connectionProvider.release(context, httpClient) }
             coVerifyNever { context.send(any()) }
 
@@ -467,7 +472,7 @@ internal class HttpClientStepTest {
     fun `execute should throw CancellationException when http client callback is cancelled and still release client`() =
         testDispatcherProvider.runTest {
             //given
-            val context = mockk<StepContext<String, HttpResponse<String>>>()
+            val context = mockk<StepContext<String, HttpResult<String, String>>>()
             coEvery { context.receive() } returns "in"
             val httpClient = mockk<HttpAsyncClient>()
             every { connectionProvider.acquire(context) } returns httpClient
@@ -503,9 +508,10 @@ internal class HttpClientStepTest {
             )
 
             //when + then
-            assertThrows<CancellationException> {
+            val thrown = assertThrows<HttpRequestException> {
                 step.execute(context)
             }
+            assertThat(thrown.result.cause!!).isInstanceOf(CancellationException::class)
             coVerify(exactly = 1) { connectionProvider.release(context, httpClient) }
             coVerifyNever { context.send(any()) }
         }

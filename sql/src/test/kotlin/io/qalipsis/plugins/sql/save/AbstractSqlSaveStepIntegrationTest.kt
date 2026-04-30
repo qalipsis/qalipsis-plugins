@@ -20,8 +20,11 @@
 package io.qalipsis.plugins.sql.save
 
 import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotEmpty
 import io.mockk.confirmVerified
 import io.mockk.every
+import io.mockk.excludeRecords
 import io.mockk.verify
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
@@ -39,6 +42,8 @@ import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.StepTestHelper
 import io.r2dbc.pool.ConnectionPool
+import java.time.LocalDateTime
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
@@ -47,8 +52,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.time.LocalDateTime
-import java.util.concurrent.TimeUnit
 
 /**
  * Integration test for the usage of the save step.
@@ -348,13 +351,177 @@ internal abstract class AbstractSqlSaveStepIntegrationTest(
 
         verify {
             recordsCounter.increment(1.0)
-            recordsCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
             failureCounter.increment(1.0)
-            failureCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
         }
-        confirmVerified(recordsCounter, failureCounter)
+        excludeRecords {
+            recordsCounter.report(any())
+            failureCounter.report(any())
+            successCounter.report(any())
+        }
+        confirmVerified(recordsCounter, failureCounter, successCounter)
+
+        assertThat(context.errors).isNotEmpty()
 
         val output = (context.output as Channel).receive().value
-        assertThat(output.input == "input data")
+        assertThat(output.input).isEqualTo("input data")
+        assertThat(output.sqlSaveStepMeters.successSavedDocuments).isEqualTo(0)
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should fail when the target table does not exist`() = testDispatcherProvider.run {
+        val id = "step-id"
+        val recordsList = listOf(SqlSaveRecord(listOf(LocalDateTime.of(2020, 10, 20, 12, 34, 21), "IN", "alice", true)))
+        val columns = listOf("timestamp", "action", "username", "enabled")
+        val tableName = "unknown_table"
+
+        val metersTags = mapOf("kit" to "kat")
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "sql-save-records",
+                    refEq(metersTags)
+                )
+            } returns recordsCounter
+            every { recordsCounter.report(any()) } returns recordsCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "sql-save-records-success",
+                    refEq(metersTags)
+                )
+            } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "sql-save-records-failures",
+                    refEq(metersTags)
+                )
+            } returns failureCounter
+            every { failureCounter.report(any()) } returns failureCounter
+        }
+
+        val startStopContext = relaxedMockk<StepStartStopContext> {
+            every { toMetersTags() } returns metersTags
+            every { scenarioName } returns "scenario-test"
+            every { stepName } returns "step-test"
+        }
+
+        val step = SqlSaveStep<String>(
+            id = id,
+            retryPolicy = null,
+            connectionPoolFactory = { connectionPool },
+            recordsFactory = { _, _ -> recordsList },
+            columnsFactory = { _, _ -> columns },
+            tableNameFactory = { _, _ -> tableName },
+            dialect = dialect,
+            meterRegistry = meterRegistry,
+            eventsLogger = eventsLogger
+        )
+        val input = "input data"
+        val context = StepTestHelper.createStepContext<String, SqlSaveResult<String>>(input)
+        step.start(startStopContext)
+        step.execute(context)
+
+        verify {
+            recordsCounter.increment(1.0)
+            failureCounter.increment(1.0)
+        }
+        excludeRecords {
+            recordsCounter.report(any())
+            failureCounter.report(any())
+            successCounter.report(any())
+        }
+        confirmVerified(recordsCounter, failureCounter, successCounter)
+
+        assertThat(context.errors).isNotEmpty()
+
+        val output = (context.output as Channel).receive().value
+        assertThat(output.input).isEqualTo("input data")
+        assertThat(output.sqlSaveStepMeters.successSavedDocuments).isEqualTo(0)
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should fail when one of the columns does not exist`() = testDispatcherProvider.run {
+        val id = "step-id"
+        val recordsList = listOf(SqlSaveRecord(listOf(LocalDateTime.of(2020, 10, 20, 12, 34, 21), "IN", "alice", true)))
+        val columns = listOf("timestamp", "action", "username", "unknown_column")
+        val tableName = "buildingentries"
+
+        val metersTags = mapOf("kit" to "kat")
+        val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "sql-save-records",
+                    refEq(metersTags)
+                )
+            } returns recordsCounter
+            every { recordsCounter.report(any()) } returns recordsCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "sql-save-records-success",
+                    refEq(metersTags)
+                )
+            } returns successCounter
+            every { successCounter.report(any()) } returns successCounter
+            every {
+                counter(
+                    "scenario-test",
+                    "step-test",
+                    "sql-save-records-failures",
+                    refEq(metersTags)
+                )
+            } returns failureCounter
+            every { failureCounter.report(any()) } returns failureCounter
+        }
+
+        val startStopContext = relaxedMockk<StepStartStopContext> {
+            every { toMetersTags() } returns metersTags
+            every { scenarioName } returns "scenario-test"
+            every { stepName } returns "step-test"
+        }
+
+        val step = SqlSaveStep<String>(
+            id = id,
+            retryPolicy = null,
+            connectionPoolFactory = { connectionPool },
+            recordsFactory = { _, _ -> recordsList },
+            columnsFactory = { _, _ -> columns },
+            tableNameFactory = { _, _ -> tableName },
+            dialect = dialect,
+            meterRegistry = meterRegistry,
+            eventsLogger = eventsLogger
+        )
+        val input = "input data"
+        val context = StepTestHelper.createStepContext<String, SqlSaveResult<String>>(input)
+        step.start(startStopContext)
+        step.execute(context)
+
+        verify {
+            recordsCounter.increment(1.0)
+            failureCounter.increment(1.0)
+        }
+        excludeRecords {
+            recordsCounter.report(any())
+            failureCounter.report(any())
+            successCounter.report(any())
+        }
+        confirmVerified(recordsCounter, failureCounter, successCounter)
+
+        assertThat(context.errors).isNotEmpty()
+
+        val output = (context.output as Channel).receive().value
+        assertThat(output.input).isEqualTo("input data")
+        assertThat(output.sqlSaveStepMeters.successSavedDocuments).isEqualTo(0)
     }
 }

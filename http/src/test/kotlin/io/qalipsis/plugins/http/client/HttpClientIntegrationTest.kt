@@ -26,10 +26,10 @@ import io.mockk.spyk
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.plugins.http.HttpClientConfiguration
 import io.qalipsis.plugins.http.HttpClientStep
+import io.qalipsis.plugins.http.HttpResult
 import io.qalipsis.plugins.http.connectionProvider.impl.OnDemandConnectionProvider
 import io.qalipsis.plugins.http.request.HttpMethod
 import io.qalipsis.plugins.http.request.SimpleHttpRequest
-import io.qalipsis.plugins.http.response.HttpResponse
 import io.qalipsis.plugins.http.response.JsonHttpBodyDeserializer
 import io.qalipsis.plugins.http.response.ResponseConverter
 import io.qalipsis.test.coroutines.TestDispatcherProvider
@@ -86,7 +86,7 @@ internal class DummyHttpClientIntegrationTest {
         }
 
         val stepContext =
-            spyk(StepTestHelper.createStepContext<String, HttpResponse<String>>(input = "test"))
+            spyk(StepTestHelper.createStepContext<String, HttpResult<String, String>>(input = "test"))
 
         val step = HttpClientStep<String, String>(
             id = "http-client-step",
@@ -103,9 +103,9 @@ internal class DummyHttpClientIntegrationTest {
         step.execute(stepContext)
 
         val output =
-            (stepContext.output as Channel<StepContext.StepOutputRecord<HttpResponse<String>>>).receive().value
+            (stepContext.output as Channel<StepContext.StepOutputRecord<HttpResult<String, String>>>).receive().value
         step.stop(mockk())
-        assertThat(output.code).isEqualTo(200)
+        assertThat(output.response?.code).isEqualTo(200)
     }
 
     companion object {

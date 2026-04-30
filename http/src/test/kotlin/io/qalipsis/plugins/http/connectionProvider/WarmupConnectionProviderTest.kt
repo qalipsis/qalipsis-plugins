@@ -20,6 +20,8 @@
 package io.qalipsis.plugins.http.connectionProvider
 
 import assertk.assertThat
+import assertk.assertions.contains
+import assertk.assertions.doesNotContain
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
@@ -119,18 +121,19 @@ internal class WarmupConnectionProviderUnitTest {
     }
 
     @Test
-    fun `release should close client if not shared and is tail`() {
+    fun `release should keep client active if not shared and is tail and put it back in the queue`() {
         provider.init(stepStartStopContext)
         every { stepContext.isTail } returns true
 
         val client = provider.acquire(stepContext)
         provider.release(stepContext, client)
 
-        assertThat(client.status).isEqualTo(SHUT_DOWN)
+        assertThat(client.status).isEqualTo(ACTIVE)
+        assertThat(provider.preparedConnections()).contains(client)
     }
 
     @Test
-    fun `release should return client to queue if shared or not tail`() {
+    fun `release should keep client for minion if shared or not tail`() {
         provider.init(stepStartStopContext)
         every { stepContext.isTail } returns false
 
@@ -139,6 +142,7 @@ internal class WarmupConnectionProviderUnitTest {
 
         // Should still be active
         assertThat(client.status).isEqualTo(ACTIVE)
+        assertThat(provider.preparedConnections()).doesNotContain(client)
     }
 
     @Test

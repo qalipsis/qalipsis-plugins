@@ -70,7 +70,7 @@ object Http2Scenario {
                 iterate(REPEAT)
             }
             .verify {
-                assertThat(it.code).isNotNull().isEqualTo(200)
+                assertThat(it.response?.code).isNotNull().isEqualTo(200)
             }
     }
 
@@ -99,7 +99,7 @@ object Http2Scenario {
                 request { _, _ -> request }
                 iterate(Http1Scenario.REPEAT)
             }.verify {
-                assertThat(it.code).isNotNull().isEqualTo(200)
+                assertThat(it.response?.code).isNotNull().isEqualTo(200)
             }
     }
 }

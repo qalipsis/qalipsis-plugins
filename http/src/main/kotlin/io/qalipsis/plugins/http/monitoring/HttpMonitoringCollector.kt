@@ -26,12 +26,17 @@ import io.qalipsis.api.meters.Counter
 import io.qalipsis.api.meters.Throughput
 import io.qalipsis.api.meters.Timer
 import io.qalipsis.api.report.ReportMessageSeverity
+import io.qalipsis.plugins.http.HttpResult
+import io.qalipsis.plugins.http.response.HttpResponse
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 
 /**
- * Collector of monitoring metrics and events for the HTTP Apache step.
+ * Collector of monitoring metrics and events for the HTTP Apache step. Holds the per-request
+ * meter state and connection/failure outcomes, and assembles them into an [HttpResult]
+ * via [toResult]. Recording calls also emit events and meters when an [EventsLogger] or
+ * [CampaignMeterRegistry] is provided.
  *
  * @author Eric Jessé
  */
@@ -41,13 +46,23 @@ internal class HttpMonitoringCollector(
     private val meterRegistry: CampaignMeterRegistry?,
 ) {
 
-    private val eventTags = stepContext.toEventTags()
+    private val eventTags by lazy(LazyThreadSafetyMode.NONE) { stepContext.toEventTags() }
 
-    private val metersTags = stepContext.toMetersTags()
+    private val metersTags by lazy(LazyThreadSafetyMode.NONE) { stepContext.toMetersTags() }
 
-    private val scenarioName = stepContext.scenarioName
+    private val scenarioName: String get() = stepContext.scenarioName
 
-    private val stepName = stepContext.stepName
+    private val stepName: String get() = stepContext.stepName
+
+    private val meters = HttpResult.MetersImpl()
+
+    private var connected: Boolean = false
+
+    private var connectionFailure: Throwable? = null
+
+    private var tlsFailure: Throwable? = null
+
+    private var sendingFailure: Throwable? = null
 
     private val connectingCounter by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.counter(scenarioName, stepName, "$METER_PREFIX-connecting", metersTags)?.report {
@@ -238,21 +253,37 @@ internal class HttpMonitoringCollector(
     }
 
     fun recordConnected(duration: Duration) {
+        connected = true
+        meters.timeToSuccessfulConnect = duration
         eventsLogger?.info("$EVENT_PREFIX.connected", duration, tags = eventTags)
         connectedTimer?.record(duration)
     }
 
     fun recordConnectionFailure(duration: Duration, throwable: Throwable) {
+        if (connectionFailure == null) {
+            connectionFailure = throwable
+        }
+        meters.timeToFailedConnect = duration
         eventsLogger?.warn("$EVENT_PREFIX.connection-failure", arrayOf(duration, throwable), tags = eventTags)
         connectionFailureTimer?.record(duration)
     }
 
     fun recordTlsConnected(duration: Duration) {
+        connected = true
+        meters.timeToSuccessfulTlsConnect = duration
         eventsLogger?.info("$EVENT_PREFIX.tls-connected", duration, tags = eventTags)
         tlsConnectedTimer?.record(duration)
     }
 
+    fun recordTlsConnectionFailure(duration: Duration, throwable: Throwable) {
+        if (tlsFailure == null) {
+            tlsFailure = throwable
+        }
+        meters.timeToFailedTlsConnect = duration
+    }
+
     fun recordSentBytes(bytesCount: Long) {
+        meters.sentBytes += bytesCount
         if (bytesCount > 0) {
             eventsLogger?.debug("$EVENT_PREFIX.sent-bytes", bytesCount, tags = eventTags)
         }
@@ -260,11 +291,13 @@ internal class HttpMonitoringCollector(
     }
 
     fun recordTimeToFirstByte(duration: Duration) {
+        meters.timeToFirstByte = duration
         eventsLogger?.debug("$EVENT_PREFIX.time-to-first-byte", duration, tags = eventTags)
         timeToFirstByteTimer?.record(duration)
     }
 
     fun recordReceivedResponse(duration: Duration, receivedBytes: Long) {
+        meters.timeToLastByte = duration
         eventsLogger?.info("$EVENT_PREFIX.received-response", arrayOf(duration, receivedBytes), tags = eventTags)
         receivedResponseTimer?.record(duration)
         requestThroughput?.record()
@@ -272,6 +305,7 @@ internal class HttpMonitoringCollector(
     }
 
     fun recordReceivedBytes(bytesCount: Long) {
+        meters.receivedBytes += bytesCount
         if (bytesCount > 0) {
             eventsLogger?.debug("$EVENT_PREFIX.received-bytes", bytesCount, tags = eventTags)
         }
@@ -279,9 +313,27 @@ internal class HttpMonitoringCollector(
     }
 
     fun recordRequestFailure(duration: Duration, throwable: Throwable) {
+        if (sendingFailure == null) {
+            sendingFailure = throwable
+        }
         eventsLogger?.warn("$EVENT_PREFIX.request-failure", arrayOf(duration, throwable), tags = eventTags)
         requestFailureCounter?.increment()
     }
+
+    fun <I, O> toResult(
+        input: I,
+        response: HttpResponse<O>?,
+        failure: Throwable?,
+    ): HttpResult<I, O> = HttpResult(
+        connected = connected,
+        connectionFailure = connectionFailure,
+        tlsFailure = tlsFailure,
+        sendingFailure = sendingFailure,
+        failure = failure,
+        input = input,
+        response = response,
+        meters = meters,
+    )
 
     fun recordHttpStatus(statusCode: Int) {
         eventsLogger?.info("$EVENT_PREFIX.status", statusCode, tags = eventTags)

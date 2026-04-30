@@ -30,8 +30,8 @@ import io.qalipsis.api.annotations.Spec
  */
 @Spec
 data class TlsConfiguration internal constructor(
-    internal var disableCertificateVerification: Boolean = false,
-    internal var disableHostnameVerification: Boolean = false,
+    var disableCertificateVerification: Boolean = false,
+    var disableHostnameVerification: Boolean = false,
 ) {
     internal var protocols = arrayOf<String>()
 

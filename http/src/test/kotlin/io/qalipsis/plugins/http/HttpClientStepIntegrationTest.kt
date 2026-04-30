@@ -21,6 +21,7 @@ package io.qalipsis.plugins.http
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
 import io.mockk.mockk
 import io.mockk.spyk
 import io.qalipsis.api.context.StepContext
@@ -30,7 +31,6 @@ import io.qalipsis.plugins.http.request.HttpMethod
 import io.qalipsis.plugins.http.request.HttpRequest
 import io.qalipsis.plugins.http.request.HttpRequestBuilder
 import io.qalipsis.plugins.http.request.SimpleHttpRequest
-import io.qalipsis.plugins.http.response.HttpResponse
 import io.qalipsis.plugins.http.response.JsonHttpBodyDeserializer
 import io.qalipsis.plugins.http.response.ResponseConverter
 import io.qalipsis.test.coroutines.TestDispatcherProvider
@@ -88,7 +88,7 @@ internal class SimpleHttpClientStepIntegrationTest {
             )
 
             val stepContext =
-                spyk(StepTestHelper.createStepContext<String, HttpResponse<String>>(input = "This is a test"))
+                spyk(StepTestHelper.createStepContext<String, HttpResult<String, String>>(input = "This is a test"))
             val requestFactory: suspend HttpRequestBuilder.(StepContext<*, *>, String) -> HttpRequest<*> =
                 { _, _ -> SimpleHttpRequest(method = HttpMethod.GET, uri = "/test") }
             val step = HttpClientStep(
@@ -109,11 +109,12 @@ internal class SimpleHttpClientStepIntegrationTest {
 
             // then
             val output =
-                (stepContext.output as Channel<StepContext.StepOutputRecord<HttpResponse<String>>>).receive().value
+                (stepContext.output as Channel<StepContext.StepOutputRecord<HttpResult<String, String>>>).receive().value
             step.stop(mockk())
-            assertThat(output.reason).isEqualTo("OK")
-            assertThat(output.code).isEqualTo(200)
-            assertThat(output.body).isEqualTo("hello world")
+            assertThat(output.response).isNotNull()
+            assertThat(output.response!!.reason).isEqualTo("OK")
+            assertThat(output.response!!.code).isEqualTo(200)
+            assertThat(output.response!!.body).isEqualTo("hello world")
         }
 
     @Test
@@ -126,7 +127,7 @@ internal class SimpleHttpClientStepIntegrationTest {
                     .setBody("server error")
             )
             val stepContext =
-                spyk(StepTestHelper.createStepContext<String, HttpResponse<String>>(input = "ignored-input"))
+                spyk(StepTestHelper.createStepContext<String, HttpResult<String, String>>(input = "ignored-input"))
             val requestFactory: suspend HttpRequestBuilder.(StepContext<*, *>, String) -> HttpRequest<*> =
                 { _, _ -> SimpleHttpRequest(method = HttpMethod.GET, uri = "/test") }
 
@@ -147,10 +148,11 @@ internal class SimpleHttpClientStepIntegrationTest {
 
             // then
             val response =
-                (stepContext.output as Channel<StepContext.StepOutputRecord<HttpResponse<String>>>).receive().value
-            assertThat(response.code).isEqualTo(500)
-            assertThat(response.reason).isEqualTo("Internal Server Error")
-            assertThat(response.body).isEqualTo(null)
+                (stepContext.output as Channel<StepContext.StepOutputRecord<HttpResult<String, String>>>).receive().value
+            assertThat(response.response).isNotNull()
+            assertThat(response.response!!.code).isEqualTo(500)
+            assertThat(response.response!!.reason).isEqualTo("Internal Server Error")
+            assertThat(response.response!!.body).isEqualTo(null)
         }
 
 }

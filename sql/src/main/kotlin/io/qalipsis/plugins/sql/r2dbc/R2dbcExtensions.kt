@@ -114,25 +114,30 @@ suspend fun Connection.executeUpdate(sql: String, params: List<Any?>): Long {
 }
 
 /**
- * Executes a prepared INSERT and returns the generated key (if any).
- * Uses [Long.MIN_VALUE] as an internal sentinel for failed inserts, mapped back to null after collection.
+ * Outcome of a single prepared INSERT execution: either a generated id (possibly `null` when no
+ * value is returned by the driver) or the [error] that prevented the insert.
  */
-suspend fun Connection.executePreparedInsert(sql: String, params: List<List<Any?>>): List<Long?> {
-    val failureSentinel = Long.MIN_VALUE
+data class SqlInsertOutcome(val id: Long?, val error: Throwable?)
+
+/**
+ * Executes a prepared INSERT for each set of [params] and returns the per-record outcome,
+ * preserving the original cause when an insert fails so callers can surface it as a step error.
+ */
+suspend fun Connection.executePreparedInsert(sql: String, params: List<List<Any?>>): List<SqlInsertOutcome> {
     return Flux.fromIterable(params)
         .concatMap { queryParams ->
-            val statement = this.createStatement(sql).returnGeneratedValues()
-            statement.bindParams(queryParams)
-            Flux.from(statement.execute())
-                .concatMap { result ->
-                    result.map { row ->
-                        val value = row.get(0)
-                        if (value is Number) value.toLong() else 0L
+            Flux.defer {
+                val statement = createStatement(sql).returnGeneratedValues()
+                statement.bindParams(queryParams)
+                Flux.from(statement.execute())
+                    .concatMap { result ->
+                        result.map { row ->
+                            val value = row.get(0)
+                            SqlInsertOutcome(if (value is Number) value.toLong() else 0L, null)
+                        }
                     }
-                }
-                .onErrorResume { Flux.just(failureSentinel) }
+            }.onErrorResume { error -> Flux.just(SqlInsertOutcome(null, error)) }
         }
-        .map { id -> if (id == failureSentinel) null else id }
         .collectList()
         .awaitLast()
 }

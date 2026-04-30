@@ -17,25 +17,13 @@
  *
  */
 
-plugins {
-    idea
-}
+package io.qalipsis.plugins.http
 
-tasks.withType<Wrapper> {
-    distributionType = Wrapper.DistributionType.BIN
-    gradleVersion = "8.14.1"
-}
-
-allprojects {
-    if (!project.gradle.startParameter.isOffline) {
-        configurations.configureEach {
-            resolutionStrategy.cacheChangingModulesFor(0, TimeUnit.SECONDS)
-            resolutionStrategy.cacheDynamicVersionsFor(0, TimeUnit.SECONDS)
-        }
-    }
-
-    // TODO Add the --write-locks flag to the release process.
-    if (!version.toString().endsWith("-SNAPSHOT")) {
-        dependencyLocking.lockAllConfigurations()
-    }
-}
+/**
+ * Exception thrown by the [HttpClientStep] when an HTTP request execution fails. The full
+ * [HttpResult] — including the populated meters and any partial response — is exposed via
+ * [result] so downstream observers can inspect what was captured before the failure.
+ *
+ * @author Eric Jessé
+ */
+data class HttpRequestException(val result: HttpResult<*, *>) : RuntimeException(result.cause)

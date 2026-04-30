@@ -28,7 +28,6 @@ import io.qalipsis.plugins.http.HttpClientConfiguration
 import io.qalipsis.plugins.http.connectionProvider.ConnectionProvider
 import io.qalipsis.plugins.http.connectionProvider.HttpAsyncClientFactory
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import org.apache.hc.client5.http.async.HttpAsyncClient
 import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
@@ -51,28 +50,27 @@ class WarmupConnectionProvider(
     private val clients = ConcurrentHashMap<MinionId, CloseableHttpAsyncClient>()
 
     @KTestable
-    private lateinit var preparedConnections: LinkedBlockingQueue<CloseableHttpAsyncClient>
+    private lateinit var preparedConnections: MutableList<CloseableHttpAsyncClient>
 
     override fun init(context: StepStartStopContext) {
         if (initialized.compareAndSet(false, true)) {
-            preparedConnections = LinkedBlockingQueue(context.scheduledMinionCount)
+            preparedConnections = mutableListOf()
             repeat(context.scheduledMinionCount) {
-                preparedConnections.put(HttpAsyncClientFactory.createPooledClient(httpClientConfiguration))
+                preparedConnections.add(HttpAsyncClientFactory.createPooledClient(httpClientConfiguration))
             }
         }
     }
 
     override fun acquire(context: StepContext<*, *>): CloseableHttpAsyncClient {
-        return clients.computeIfAbsent(context.minionId) { preparedConnections.take() }
+        return clients.computeIfAbsent(context.minionId) {
+            preparedConnections.removeFirst()
+        }
     }
 
     override fun release(context: StepContext<*, *>, client: HttpAsyncClient) {
-        val closeableHttpAsyncClient = client as CloseableHttpAsyncClient
         if (!shared && context.isTail) {
-            closeableHttpAsyncClient.close()
-            initialized.set(false)
-        } else {
-            preparedConnections.put(closeableHttpAsyncClient)
+            preparedConnections.add(client as CloseableHttpAsyncClient)
+            clients.remove(context.minionId)
         }
     }
 

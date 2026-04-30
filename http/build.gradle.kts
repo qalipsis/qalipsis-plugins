@@ -54,10 +54,10 @@ dependencies {
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml")
     implementation("io.reactivex.rxjava3:rxjava:3.+")
     implementation("org.apache.httpcomponents.client5:httpclient5:$apacheHttpComponentsClientVersion")
-    implementation("org.apache.httpcomponents.core5:httpcore5:$apacheHttpComponentsCoreVersion")
     implementation("org.apache.httpcomponents.core5:httpcore5-h2:$apacheHttpComponentsCoreVersion")
     implementation("org.apache.httpcomponents.core5:httpcore5-reactive:$apacheHttpComponentsCoreVersion")
 
+    api("org.apache.httpcomponents.core5:httpcore5:${apacheHttpComponentsCoreVersion}")
     api("io.qalipsis:qalipsis-api-common")
     api("io.qalipsis:qalipsis-api-dsl")
 

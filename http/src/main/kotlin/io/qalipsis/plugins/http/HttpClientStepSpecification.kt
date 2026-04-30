@@ -29,12 +29,11 @@ import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.plugins.http.configuration.findHttpApacheDefaults
 import io.qalipsis.plugins.http.request.HttpRequest
 import io.qalipsis.plugins.http.request.HttpRequestBuilder
-import io.qalipsis.plugins.http.response.HttpResponse
 import kotlin.reflect.KClass
 
 
 interface HttpClientStepSpecification<INPUT, OUTPUT> :
-    ConfigurableStepSpecification<INPUT, HttpResponse<OUTPUT>, HttpClientStepSpecification<INPUT, OUTPUT>> {
+    ConfigurableStepSpecification<INPUT, HttpResult<INPUT, OUTPUT>, HttpClientStepSpecification<INPUT, OUTPUT>> {
 
     /**
      * Configures the creation of the payload to send to the remote address, using the [StepContext] and the input received
@@ -67,7 +66,7 @@ interface HttpClientStepSpecification<INPUT, OUTPUT> :
  */
 @Spec
 internal class HttpClientStepSpecificationImpl<INPUT, OUTPUT> :
-    AbstractStepSpecification<INPUT, HttpResponse<OUTPUT>, HttpClientStepSpecification<INPUT, OUTPUT>>(),
+    AbstractStepSpecification<INPUT, HttpResult<INPUT, OUTPUT>, HttpClientStepSpecification<INPUT, OUTPUT>>(),
     HttpClientStepSpecification<INPUT, OUTPUT> {
 
     lateinit var requestFactory: suspend HttpRequestBuilder.(StepContext<*, *>, INPUT) -> HttpRequest<*>

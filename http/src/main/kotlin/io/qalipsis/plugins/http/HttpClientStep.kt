@@ -26,7 +26,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.apache.hc.client5.http.async.HttpAsyncClient
 import org.apache.hc.client5.http.async.methods.SimpleHttpResponse
-import org.apache.hc.client5.http.async.methods.SimpleResponseConsumer
 import org.apache.hc.client5.http.protocol.HttpClientContext
 import org.apache.hc.core5.concurrent.FutureCallback
 import org.apache.hc.core5.http.nio.AsyncRequestProducer
@@ -46,23 +45,25 @@ internal class HttpClientStep<IN, OUT>(
     private val responseConverter: ResponseConverter<OUT>,
     private val eventsLogger: EventsLogger?,
     private val meterRegistry: CampaignMeterRegistry?,
-) : AbstractStep<IN, HttpResponse<OUT>>(id, retryPolicy) {
-
-    private val monitoringEnabled = eventsLogger != null || meterRegistry != null
+) : AbstractStep<IN, HttpResult<IN, OUT>>(id, retryPolicy) {
 
     override suspend fun start(context: StepStartStopContext) {
         connectionProvider.init(context)
     }
 
-    override suspend fun execute(context: StepContext<IN, HttpResponse<OUT>>) {
+    override suspend fun execute(context: StepContext<IN, HttpResult<IN, OUT>>) {
         val input = context.receive()
-        val monitoring = if (monitoringEnabled) HttpMonitoringCollector(context, eventsLogger, meterRegistry) else null
+        val monitoring = HttpMonitoringCollector(context, eventsLogger, meterRegistry)
         val httpClient = connectionProvider.acquire(context)
         try {
-            monitoring?.recordConnecting()
+            monitoring.recordConnecting()
             val requestProducer = buildAsyncRequestProducer(context, input)
-            val response = doExecute(httpClient, requestProducer, monitoring)
-            context.send(response)
+            val outcome = doExecute(httpClient, requestProducer, monitoring)
+            val result = monitoring.toResult(input, outcome.response, outcome.failure)
+            if (result.isFailure) {
+                throw HttpRequestException(result)
+            }
+            context.send(result)
         } finally {
             connectionProvider.release(context, httpClient)
         }
@@ -71,11 +72,10 @@ internal class HttpClientStep<IN, OUT>(
     private suspend fun doExecute(
         httpClient: HttpAsyncClient,
         requestProducer: AsyncRequestProducer,
-        monitoring: HttpMonitoringCollector?,
-    ): HttpResponse<OUT> {
-        val slot = Slot<Result<HttpResponse<OUT>>>()
-        val consumer =
-            if (monitoringEnabled) MonitoringResponseConsumer.Companion.create() else SimpleResponseConsumer.create()
+        monitoring: HttpMonitoringCollector,
+    ): RequestOutcome<OUT> {
+        val slot = Slot<RequestOutcome<OUT>>()
+        val consumer = MonitoringResponseConsumer.create()
         val callbackScope = CoroutineScope(ioCoroutineContext)
         val httpContext = HttpClientContext.create()
         val startNanos = System.nanoTime()
@@ -86,10 +86,10 @@ internal class HttpClientStep<IN, OUT>(
                     try {
                         recordSuccessMetrics(monitoring, httpContext, startNanos, response)
                         val converted = responseConverter.convert(response, httpContext)
-                        slot.set(Result.success(converted))
+                        slot.set(RequestOutcome(converted, null))
                     } catch (e: Exception) {
                         log.error(e) { "Error in HTTP response callback: ${e.message}" }
-                        slot.set(Result.failure(e))
+                        slot.set(RequestOutcome(null, e))
                     }
                 }
             }
@@ -97,7 +97,7 @@ internal class HttpClientStep<IN, OUT>(
             override fun failed(exception: Exception) {
                 callbackScope.launch {
                     recordFailureMetrics(monitoring, httpContext, startNanos, exception)
-                    slot.set(Result.failure(exception))
+                    slot.set(RequestOutcome(null, exception))
                 }
             }
 
@@ -105,23 +105,21 @@ internal class HttpClientStep<IN, OUT>(
                 callbackScope.launch {
                     val exception = CancellationException("The request was cancelled")
                     recordFailureMetrics(monitoring, httpContext, startNanos, exception)
-                    slot.set(Result.failure(exception))
+                    slot.set(RequestOutcome(null, exception))
                 }
             }
         }
         httpClient.execute(requestProducer, consumer, null, httpContext, callback)
 
-        return slot.get().getOrThrow()
+        return slot.get()
     }
 
     private fun recordSuccessMetrics(
-        monitoring: HttpMonitoringCollector?,
+        monitoring: HttpMonitoringCollector,
         httpContext: HttpClientContext,
         startNanos: Long,
         response: SimpleHttpResponse,
     ) {
-        if (monitoring == null) return
-
         val sentNanos = httpContext.getAttribute(RequestMonitoringInterceptor.Companion.SENT_ATTR) as? Long
         val firstByteNanos = httpContext.getAttribute(MonitoringResponseConsumer.Companion.FIRST_BYTE_ATTR) as? Long
         val lastByteNanos = httpContext.getAttribute(MonitoringResponseConsumer.Companion.LAST_BYTE_ATTR) as? Long
@@ -156,13 +154,11 @@ internal class HttpClientStep<IN, OUT>(
     }
 
     private fun recordFailureMetrics(
-        monitoring: HttpMonitoringCollector?,
+        monitoring: HttpMonitoringCollector,
         httpContext: HttpClientContext,
         startNanos: Long,
         exception: Exception,
     ) {
-        if (monitoring == null) return
-
         val sentNanos = httpContext.getAttribute(RequestMonitoringInterceptor.Companion.SENT_ATTR) as? Long
         val failDuration = Duration.ofNanos(System.nanoTime() - startNanos)
 
@@ -191,6 +187,8 @@ internal class HttpClientStep<IN, OUT>(
         val internal = httpRequest as InternalHttpRequest<*, *>
         return internal.toAsyncRequest(clientConfiguration)
     }
+
+    private data class RequestOutcome<OUT>(val response: HttpResponse<OUT>?, val failure: Throwable?)
 
     companion object {
 

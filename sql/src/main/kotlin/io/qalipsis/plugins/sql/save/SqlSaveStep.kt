@@ -32,6 +32,7 @@ import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
 import io.qalipsis.plugins.sql.dialect.Dialect
+import io.qalipsis.plugins.sql.r2dbc.SqlInsertOutcome
 import io.qalipsis.plugins.sql.r2dbc.acquireConnection
 import io.qalipsis.plugins.sql.r2dbc.closeConnection
 import io.qalipsis.plugins.sql.r2dbc.executePreparedInsert
@@ -131,7 +132,7 @@ internal class SqlSaveStep<I>(
         val tableName = tableNameFactory(context, input)
         val columns = columnsFactory(context, input)
         val records = recordsFactory(context, input)
-        var ids = emptyList<Long?>()
+        var outcomes = emptyList<SqlInsertOutcome>()
 
         eventsLogger?.info("${eventPrefix}.records", records.size, tags = context.toEventTags())
         recordsCounter?.increment(records.size.toDouble())
@@ -140,7 +141,7 @@ internal class SqlSaveStep<I>(
         try {
             val connection = connectionPool.acquireConnection()
             try {
-                ids = connection.executePreparedInsert(
+                outcomes = connection.executePreparedInsert(
                     sql = query,
                     params = records.map { it.parameters }
                 )
@@ -150,12 +151,20 @@ internal class SqlSaveStep<I>(
         } catch (e: Exception) {
             log.debug(e) { "${e.message}" }
             context.addError(StepError(e))
+            eventsLogger?.error("${eventPrefix}.records.failure", e, tags = context.toEventTags())
         }
 
         val timeToResponse = Duration.ofNanos(System.nanoTime() - requestStart)
         eventsLogger?.info("${eventPrefix}.records.time-to-response", timeToResponse, tags = context.toEventTags())
         this.timeToResponse?.record(timeToResponse.toNanos(), TimeUnit.NANOSECONDS)
-        val successSavedDocuments = ids.count { it != null }
+
+        outcomes.asSequence().mapNotNull { it.error }.forEach { error ->
+            log.debug(error) { "${error.message}" }
+            context.addError(StepError(error))
+            eventsLogger?.error("${eventPrefix}.records.failure", error, tags = context.toEventTags())
+        }
+
+        val successSavedDocuments = outcomes.count { it.error == null && it.id != null }
         if (successSavedDocuments > 0) {
             successCounter?.increment(successSavedDocuments.toDouble())
             eventsLogger?.info("${eventPrefix}.records.success", successSavedDocuments, tags = context.toEventTags())
@@ -169,7 +178,7 @@ internal class SqlSaveStep<I>(
         context.send(
             SqlSaveResult(
                 input,
-                ids.filterNotNull(),
+                outcomes.mapNotNull { it.id },
                 SqlQueryMeters(
                     totalDocuments = records.size,
                     timeToResponse = timeToResponse,
