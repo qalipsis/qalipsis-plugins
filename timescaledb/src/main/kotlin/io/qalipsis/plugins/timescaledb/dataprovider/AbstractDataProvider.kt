@@ -55,13 +55,21 @@ internal abstract class AbstractDataProvider(
         filters: Collection<String>,
         size: Int,
     ): Collection<String> {
+        val params = mutableMapOf<String, Any>()
+        params["$1"] = tenant
         val sql =
             StringBuilder("""SELECT DISTINCT "name" FROM ${databaseSchema}.${databaseTable} WHERE "tenant" = $1 AND "campaign" IS NOT NULL""")
+
+        var nextBindingIndex = 2
         if (filters.isNotEmpty()) {
-            sql.append(""" AND "name" ILIKE any (array[$2])""")
+            val binding = "\$${nextBindingIndex++}"
+            params[binding] = filters.map(this::convertWildcards).toTypedArray()
+            sql.append(""" AND "name" ILIKE any (array[$binding])""")
         }
         if (!campaignKey.isNullOrBlank()) {
-            sql.append(""" AND "campaign" = $3""")
+            val binding = "\$${nextBindingIndex++}"
+            params[binding] = campaignKey
+            sql.append(""" AND "campaign" = $binding""")
         }
         sql.append(""" ORDER BY "name" LIMIT $size""")
         val query = sql.toString()
@@ -72,14 +80,15 @@ internal abstract class AbstractDataProvider(
                 .doOnNext { log.debug { "Acquired a connection" } },
             { connection ->
                 log.debug { "Executing the SQL query: $query" }
-                Flux.from(connection.createStatement(query).bind("$1", tenant).also {
-                    if (filters.isNotEmpty()) {
-                        it.bind("$2", filters.map(this::convertWildcards).toTypedArray())
-                    }
-                    if (!campaignKey.isNullOrBlank()) {
-                        it.bind("$3", campaignKey)
-                    }
-                }.execute()).flatMap { result ->
+                Flux.from(
+                    connection.createStatement(query)
+                        .also {
+                            params.forEach { (binding, value) ->
+                                log.trace { "Binding $binding to $value" }
+                                it.bind(binding, value)
+                            }
+                        }.execute()
+                ).flatMap { result ->
                     result.map { row, _ -> row.get("name", String::class.java) }
                 }
             },

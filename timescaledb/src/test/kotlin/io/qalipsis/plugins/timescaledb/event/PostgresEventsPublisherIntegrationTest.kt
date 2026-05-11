@@ -19,13 +19,13 @@
 
 package io.qalipsis.plugins.timescaledb.event
 
+import java.time.Duration
+import kotlin.math.pow
+import kotlin.time.ExperimentalTime
 import org.testcontainers.containers.JdbcDatabaseContainer
 import org.testcontainers.containers.PostgreSQLContainerProvider
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.junit.jupiter.Container
-import java.time.Duration
-import kotlin.math.pow
-import kotlin.time.ExperimentalTime
 
 @ExperimentalTime
 internal class PostgresEventsPublisherIntegrationTest : AbstractTimescaledbEventsPublisherIntegrationTest() {
@@ -39,7 +39,7 @@ internal class PostgresEventsPublisherIntegrationTest : AbstractTimescaledbEvent
         @JvmStatic
         val db: JdbcDatabaseContainer<*> = PostgreSQLContainerProvider().newInstance().apply {
             withCreateContainerCmdModifier { cmd ->
-                cmd.hostConfig!!.withMemory(50 * 1024.0.pow(2).toLong()).withCpuCount(2)
+                cmd.hostConfig!!.withMemory(128 * 1024.0.pow(2).toLong()).withCpuCount(2)
             }
             waitingFor(Wait.forListeningPort())
             withStartupTimeout(Duration.ofSeconds(60))
