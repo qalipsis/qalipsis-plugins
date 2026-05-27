@@ -420,7 +420,7 @@ def write_curl_calls(payloads, filename='curl-calls.sh'):
   -X POST \\
   -H 'Accept: application/json' \\
   -H 'Accept-Encoding: gzip, deflate, br, zstd' \\
-  -H 'authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjkyNzhUOWV6Yy1EcWlXeWp3bWVHRSJ9.eyJpc3MiOiJodHRwczovL3FhbGlwc2lzLWRldi5ldS5hdXRoMC5jb20vIiwic3ViIjoiYXV0aDB8NjM1YjllMjE3NmQ2ZTdkOGQ4NTYzN2Q1IiwiYXVkIjpbImh0dHBzOi8vcWFsaXBzaXMtZGV2LmV1LmF1dGgwLmNvbS9hcGkvdjIvIiwiaHR0cHM6Ly9xYWxpcHNpcy1kZXYuZXUuYXV0aDAuY29tL3VzZXJpbmZvIl0sImlhdCI6MTc3MzI0MTM1MSwiZXhwIjoxNzczMzI3NzUxLCJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIiwiYXpwIjoiejhlalJ2cmZsUWZRekprcmpDUjBQTjF6d0g3OXpVMW4ifQ.IWvDzF06Ga4VC7PO4K1dbZojmvfMxXOW-aTkU-7aCPrc89vlG4puSGbVUFsBI9n6hRcuMZqnhrilvpBduszdLJMdwNoN-0XLUalMmoh4NSO8x5hkhsTxzpOemxhWMpVFPA0ekK779xTX1kv5E-1gGGU0YErwn9_sGtdbCIfZqyPQGjSZo-IuT35Rl2_xtTXCAc6iRhjOElSi8yHFuwVYvyj6EC_5r-hexVFHeq2ew_Rq5g22dOSB8yt0Ef0sWR0zF5WSgONFES_jgoRDNvVArm6v8f78OuNpZEFtgbZhjfv5StIehEek91tia52_B5291Ci-4metX5uq8X6heKP4Tw' \\
+  -H 'authorization: Bearer <-my-token->' \\
   -H 'content-type: application/json' \\
   -H 'x-tenant: _qalipsis_ten_' \\
   --data-raw '{p}'

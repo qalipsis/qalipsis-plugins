@@ -44,6 +44,7 @@ tasks.withType<Test> {
 val pluginPlatformVersion: String by project
 val apacheHttpComponentsClientVersion = "5.5.1"
 val apacheHttpComponentsCoreVersion = "5.3.6"
+val rxJavaVersion = "3.1.12"
 
 dependencies {
     implementation(platform("io.qalipsis:qalipsis-plugin-platform:${pluginPlatformVersion}"))
@@ -52,7 +53,7 @@ dependencies {
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml")
-    implementation("io.reactivex.rxjava3:rxjava:3.+")
+    implementation("io.reactivex.rxjava3:rxjava:$rxJavaVersion")
     implementation("org.apache.httpcomponents.client5:httpclient5:$apacheHttpComponentsClientVersion")
     implementation("org.apache.httpcomponents.core5:httpcore5-h2:$apacheHttpComponentsCoreVersion")
     implementation("org.apache.httpcomponents.core5:httpcore5-reactive:$apacheHttpComponentsCoreVersion")
