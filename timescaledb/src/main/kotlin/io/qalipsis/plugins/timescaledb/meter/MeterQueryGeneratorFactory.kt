@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.timescaledb.meter
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requirements
@@ -80,6 +81,13 @@ internal class MeterQueryGeneratorFactory {
             PostgresMeterQueryGenerator()
         }
     }
+
+    @Singleton
+    fun meterNameStatsRepository(
+        @Named("meter-data-provider") connectionPool: ConnectionPool,
+        configuration: TimescaledbMeterDataProviderConfiguration,
+        objectMapper: ObjectMapper,
+    ): MeterNameStatsRepository = MeterNameStatsRepository(connectionPool, configuration.schema, objectMapper)
 
     @PreDestroy
     fun close() {

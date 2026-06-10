@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 """
-Generate meter and event payloads from metrics-and-events.csv.
+Generate meter and event payloads from metrics-and-events.csv files in plugin build directories.
 
 Usage:
-  python generate_payloads.py --init    # Read metrics-and-events.csv, generate recap + payloads + curl
-  python generate_payloads.py           # Read payloads-recap.csv and regenerate payloads.txt + curl-calls.sh
+  python generate_payloads.py --init                         # Scan all plugin build dirs, generate recap + payloads + curl
+  python generate_payloads.py --init --plugins kafka,netty   # Same, restricted to listed plugins
+  python generate_payloads.py --init --skip-events           # Same as --init, omit event data series
+  python generate_payloads.py                                # Read payloads-recap.csv, regenerate payloads.txt + curl-calls.sh
+  python generate_payloads.py --skip-events                  # Same as above, omit event data series
 """
 
+import argparse
 import csv
 import json
 import re
-import sys
+from pathlib import Path
 
 # --- Plugin prefixes (longest first for correct matching) ---
 # Both dash and dot variants are needed for multi-word prefixes.
@@ -207,7 +211,7 @@ def parse_value_type(value_type):
     for t in types:
         if t == 'Duration':
             if 'duration_nano' not in seen:
-                fields.append('duration_nano')/res
+                fields.append('duration_nano')
                 seen.add('duration_nano')
         elif t in NUMBER_TYPES:
             if 'number' not in seen:
@@ -317,51 +321,74 @@ def generate_event_data_series(event_name, value_type):
     return entries
 
 
+# --- CSV discovery ---
+
+PLUGINS_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+def discover_csv_files(plugins_filter=None):
+    """Find metrics-and-events.csv files under <module>/build/docs/analysis/ for each plugin module."""
+    csv_files = []
+    for module_dir in sorted(PLUGINS_ROOT.iterdir()):
+        if not module_dir.is_dir():
+            continue
+        if plugins_filter and module_dir.name not in plugins_filter:
+            continue
+        csv_path = module_dir / 'build' / 'docs' / 'analysis' / 'metrics-and-events.csv'
+        if csv_path.exists():
+            csv_files.append(csv_path)
+    return csv_files
+
+
 # --- CSV I/O ---
 
-def read_metrics_and_events_csv(filename='metrics-and-events.csv'):
-    """Read the unified metrics-and-events CSV, expand variables, generate data series entries."""
+def read_metrics_and_events_csv(csv_files, skip_events=False):
+    """Read one or more metrics-and-events CSV files, expand variables, generate data series entries."""
     entries = []
     seen_rows = set()
     seen_entries = set()
 
-    with open(filename, 'r') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            category = row['category'].strip()
-            name = row['name'].strip()
-            meter_type = (row['type'].strip().lower() if row.get('type') else '')
-            value_type = (row['value_type'].strip() if row.get('value_type') else '')
-            source_file = (row['source_file'].strip() if row.get('source_file') else '')
+    for filepath in csv_files:
+        with open(filepath, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                category = row['category'].strip()
+                name = row['name'].strip()
+                meter_type = (row['type'].strip().lower() if row.get('type') else '')
+                value_type = (row['value_type'].strip() if row.get('value_type') else '')
+                source_file = (row['source_file'].strip() if row.get('source_file') else '')
 
-            # Skip code expressions used as event names
-            if '[' in name or '(' in name:
-                continue
-
-            # Deduplicate input rows
-            dedup_key = (category, name, meter_type, value_type, source_file)
-            if dedup_key in seen_rows:
-                continue
-            seen_rows.add(dedup_key)
-
-            # Expand variables to concrete names
-            concrete_names = expand_variables(name, source_file)
-
-            for concrete_name in concrete_names:
-                if category == 'meter':
-                    new_entries = generate_meter_data_series(concrete_name, meter_type)
-                elif category == 'event':
-                    new_entries = generate_event_data_series(concrete_name, value_type)
-                else:
+                if skip_events and category == 'event':
                     continue
 
-                # Deduplicate generated entries
-                for entry in new_entries:
-                    entry_key = (entry['dataType'], entry['valueName'], entry['fieldName'],
-                                 entry['aggregationOperation'])
-                    if entry_key not in seen_entries:
-                        seen_entries.add(entry_key)
-                        entries.append(entry)
+                # Skip code expressions used as event names
+                if '[' in name or '(' in name:
+                    continue
+
+                # Deduplicate input rows
+                dedup_key = (category, name, meter_type, value_type, source_file)
+                if dedup_key in seen_rows:
+                    continue
+                seen_rows.add(dedup_key)
+
+                # Expand variables to concrete names
+                concrete_names = expand_variables(name, source_file)
+
+                for concrete_name in concrete_names:
+                    if category == 'meter':
+                        new_entries = generate_meter_data_series(concrete_name, meter_type)
+                    elif category == 'event':
+                        new_entries = generate_event_data_series(concrete_name, value_type)
+                    else:
+                        continue
+
+                    # Deduplicate generated entries
+                    for entry in new_entries:
+                        entry_key = (entry['dataType'], entry['valueName'], entry['fieldName'],
+                                     entry['aggregationOperation'])
+                        if entry_key not in seen_entries:
+                            seen_entries.add(entry_key)
+                            entries.append(entry)
 
     return entries
 
@@ -430,10 +457,41 @@ def write_curl_calls(payloads, filename='curl-calls.sh'):
 
 
 def main():
-    if '--init' in sys.argv:
-        print('Reading metrics-and-events.csv...')
-        entries = read_metrics_and_events_csv()
-        print(f'  {len(entries)} data series entries')
+    parser = argparse.ArgumentParser(
+        description='Generate meter and event data series payloads from plugin build artifacts.'
+    )
+    parser.add_argument(
+        '--init',
+        action='store_true',
+        help='Scan plugin build directories for metrics-and-events.csv and regenerate all outputs',
+    )
+    parser.add_argument(
+        '--plugins',
+        metavar='PLUGIN,...',
+        help='Comma-separated list of plugin module names to include (e.g. kafka,netty,cassandra). '
+             'Only used with --init.',
+    )
+    parser.add_argument(
+        '--skip-events',
+        action='store_true',
+        help='Omit event data series from the output',
+    )
+    args = parser.parse_args()
+
+    plugins_filter = {p.strip() for p in args.plugins.split(',')} if args.plugins else None
+
+    if args.init:
+        csv_files = discover_csv_files(plugins_filter)
+        if not csv_files:
+            scope = f"plugins {sorted(plugins_filter)}" if plugins_filter else "any plugin module"
+            print(f'No metrics-and-events.csv found under build/docs/analysis/ for {scope}.')
+            print(f'Run ./gradlew build (or the relevant plugin build) first.')
+            return
+        print(f'Found {len(csv_files)} CSV file(s):')
+        for f in csv_files:
+            print(f'  {f.relative_to(PLUGINS_ROOT)}')
+        entries = read_metrics_and_events_csv(csv_files, skip_events=args.skip_events)
+        print(f'{len(entries)} data series entries')
         write_recap_csv(entries)
         payloads = generate_payloads(entries)
         write_payloads(payloads)
@@ -441,6 +499,8 @@ def main():
     else:
         print('Reading payloads-recap.csv...')
         entries = read_recap_csv()
+        if args.skip_events:
+            entries = [e for e in entries if e.get('dataType', 'METERS') != 'EVENTS']
         payloads = generate_payloads(entries)
         write_payloads(payloads)
         write_curl_calls(payloads)

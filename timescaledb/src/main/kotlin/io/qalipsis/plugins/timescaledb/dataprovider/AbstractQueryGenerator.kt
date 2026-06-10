@@ -53,9 +53,9 @@ internal abstract class AbstractQueryGenerator(
      * Prepares the query to aggregate the data in time-buckets.
      */
     private fun prepareAggregationQuery(tenant: String?, query: QueryDescription, preparedQueries: PreparedQueries) {
-        require(query.fieldName == null || query.fieldName in queryFieldsByName.keys) { "The field ${query.fieldName} is not valid for a data series of type $dataType" }
+        require(query.fieldName == null || isValidFieldName(query.fieldName!!)) { "The field ${query.fieldName} is not valid for a data series of type $dataType" }
         if (query.aggregationOperation != QueryAggregationOperator.COUNT) {
-            require(query.fieldName in numericFields) { "The field ${query.fieldName} is not numeric and cannot be aggregated" }
+            require(isNumericFieldName(query.fieldName)) { "The field ${query.fieldName} is not numeric and cannot be aggregated" }
         }
         addDefaultParametersForAggregationStatement(tenant, query.timeframeUnit?.toMillis(), preparedQueries)
 
@@ -64,7 +64,7 @@ internal abstract class AbstractQueryGenerator(
 
         if (query.fieldName != null) {
             // If count aggregation and field name are set, select only the records where the field is not null.
-            sql.append(""" AND ${databaseTable}.${query.fieldName} IS NOT NULL""")
+            appendFieldNotNullFilter(sql, query.fieldName!!)
         }
         addClauses(
             queryClauses = query.filters,
@@ -110,6 +110,14 @@ internal abstract class AbstractQueryGenerator(
         )
     }
 
+    protected open fun isValidFieldName(fieldName: String): Boolean = fieldName in queryFieldsByName.keys
+
+    protected open fun isNumericFieldName(fieldName: String?): Boolean = fieldName in numericFields
+
+    protected open fun appendFieldNotNullFilter(sql: StringBuilder, fieldName: String) {
+        sql.append(" AND $databaseTable.$fieldName IS NOT NULL")
+    }
+
     abstract fun buildRootQueryForAggregation(
         query: QueryDescription,
         boundParameters: Map<String, SerializableBoundParameter>
@@ -133,7 +141,7 @@ internal abstract class AbstractQueryGenerator(
 
         if (query.fieldName != null) {
             // If count aggregation and field name are set, select only the records where the field is not null.
-            sql.append(""" AND ${databaseTable}.${query.fieldName} IS NOT NULL""")
+            appendFieldNotNullFilter(sql, query.fieldName!!)
         }
 
         addClauses(
@@ -225,12 +233,12 @@ internal abstract class AbstractQueryGenerator(
         }
     }
 
-    private fun convertComparator(
+    protected fun convertComparator(
         fieldName: String?,
         operator: QueryClauseOperator,
         value: String,
         boundParametersCollector: (key: String, SerializableBoundParameter) -> Unit,
-        nextIdentifierIndex: Int
+        nextIdentifierIndex: Int,
     ): String {
         val bindingParam = "$${nextIdentifierIndex}"
         var paramType = resolveParameterType(fieldName, value)
@@ -276,9 +284,9 @@ internal abstract class AbstractQueryGenerator(
      * @param fieldName name of the field in the database if not a key of tags
      * @param value the value to bind
      */
-    private fun resolveParameterType(
+    protected open fun resolveParameterType(
         fieldName: String?,
-        value: String
+        value: String,
     ): SerializableBoundParameter.Type {
         return when (fieldName) {
             in booleanFields -> {

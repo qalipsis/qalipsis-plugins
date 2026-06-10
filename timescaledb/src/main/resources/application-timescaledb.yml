@@ -23,3 +23,10 @@ meters:
       schema: meters
       username: qalipsis_user
       password: qalipsis-pwd
+  provider:
+    timescaledb:
+      metadata:
+        refresh-delay: PT5M
+        initial-delay: PT1M
+        min-age: PT5M
+        chunk-size: 50
