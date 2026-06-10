@@ -23,7 +23,6 @@ import assertk.all
 import assertk.assertThat
 import assertk.assertions.hasSize
 import assertk.assertions.index
-import assertk.assertions.isBetween
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.prop
@@ -33,6 +32,8 @@ import io.qalipsis.api.query.QueryClauseOperator
 import io.qalipsis.api.query.QueryDescription
 import io.qalipsis.api.report.TimeSeriesAggregationResult
 import io.qalipsis.plugins.timescaledb.TimescaleDbContainerProvider
+import java.time.Duration
+import kotlin.math.pow
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledIfSystemProperty
@@ -40,8 +41,6 @@ import org.testcontainers.containers.JdbcDatabaseContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.utility.DockerImageName
-import java.time.Duration
-import kotlin.math.pow
 
 @DisabledIfSystemProperty(
     named = "os.arch",
@@ -69,23 +68,20 @@ internal class TimescaledbMeterQueryGeneratorIntegrationTest : AbstractMeterQuer
             )
             val result = executeAggregation(query, start, latestTimestamp - timeStep)
 
-            // then
+            // then 11 raw records since meters always return raw values regardless of aggregation operator
             assertThat(result).all {
-                hasSize(3)
+                hasSize(11)
                 index(0).all {
                     prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }
-                        .isBetween(7.92, 7.93)
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(2.0)
                 }
-                index(1).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }
-                        .isBetween(55.15, 55.16)
+                index(5).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofMillis(2500))
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(21.0)
                 }
-                index(2).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }
-                        .isBetween(232.78, 232.79)
+                index(10).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(233.0)
                 }
             }
         }

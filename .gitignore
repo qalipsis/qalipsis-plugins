@@ -22,8 +22,6 @@ Thumbs.db
 *.log
 *.log.*
 
-# Test output
-qalipsis-test.log
-qalipsis-events-test.log
-qalipsis-events.log
-qalipsis.log
+# Tools
+tools/
+!tools/data-series/generate_payloads.py

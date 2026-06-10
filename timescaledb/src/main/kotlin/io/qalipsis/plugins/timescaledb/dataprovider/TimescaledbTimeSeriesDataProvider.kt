@@ -26,9 +26,9 @@ import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.query.AggregationQueryExecutionContext
 import io.qalipsis.api.query.DataRetrievalQueryExecutionContext
 import io.qalipsis.api.query.Page
-import io.qalipsis.api.report.TimeSeriesAggregationResult
 import io.qalipsis.api.report.TimeSeriesDataProvider
 import io.qalipsis.api.report.TimeSeriesRecord
+import io.qalipsis.api.report.TimeSeriesValues
 import io.qalipsis.plugins.timescaledb.event.TimescaledbEventDataProviderConfiguration
 import io.qalipsis.plugins.timescaledb.meter.TimescaledbMeterDataProviderConfiguration
 import io.qalipsis.plugins.timescaledb.utils.DbUtils
@@ -36,13 +36,13 @@ import io.r2dbc.pool.ConnectionPool
 import jakarta.annotation.Nullable
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withTimeout
-import java.time.Duration
 
 @Singleton
 @Requires(bean = AbstractDataProvider::class)
@@ -59,8 +59,8 @@ internal class TimescaledbTimeSeriesDataProvider(
 
     override suspend fun executeAggregations(
         preparedQueries: Map<String, String>,
-        context: AggregationQueryExecutionContext
-    ): Map<String, List<TimeSeriesAggregationResult>> {
+        context: AggregationQueryExecutionContext,
+    ): Map<String, TimeSeriesValues> {
         return prepareAndExecuteConcurrentQueries(preparedQueries) { connectionPool, databaseSchema, query ->
             buildAggregationExecutor(
                 connectionPool,
@@ -77,13 +77,14 @@ internal class TimescaledbTimeSeriesDataProvider(
         context: AggregationQueryExecutionContext,
         query: PreparedQueries
     ) = AggregationExecutor(
-        connectionPool,
-        databaseSchema,
-        context,
-        query.aggregationStatement,
-        query.aggregationBoundParameters,
-        query.nextAvailableAggregationParameterIdentifierIndex,
-        query.dataType
+        connectionPool = connectionPool,
+        databaseSchema = databaseSchema,
+        context = context,
+        statement = query.aggregationStatement,
+        boundParameters = query.aggregationBoundParameters,
+        nextParameterIndex = query.nextAvailableAggregationParameterIdentifierIndex,
+        dataType = query.dataType,
+        splitByScope = query.dataType == DataType.METER
     )
 
     override suspend fun retrieveRecords(
@@ -127,19 +128,19 @@ internal class TimescaledbTimeSeriesDataProvider(
         context: DataRetrievalQueryExecutionContext,
         query: PreparedQueries
     ) = DataRetrievalExecutor(
-        ioCoroutineScope,
-        when (query.dataType) {
+        ioCoroutineScope = ioCoroutineScope,
+        converter = when (query.dataType) {
             DataType.METER -> timeSeriesMeterRecordConverter
             DataType.EVENT -> timeSeriesEventRecordConverter
         },
-        connectionPool,
-        databaseSchema,
-        context,
-        query.countStatement,
-        query.retrievalStatement,
-        query.retrievalBoundParameters,
-        query.nextAvailableRetrievalParameterIdentifierIndex,
-        query.dataType
+        connectionPool = connectionPool,
+        databaseSchema = databaseSchema,
+        context = context,
+        countStatement = query.countStatement,
+        selectStatement = query.retrievalStatement,
+        boundParameters = query.retrievalBoundParameters,
+        nextParameterIndex = query.nextAvailableRetrievalParameterIdentifierIndex,
+        dataType = query.dataType
     )
 
     private suspend fun <T> prepareAndExecuteConcurrentQueries(

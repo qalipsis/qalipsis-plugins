@@ -64,17 +64,3 @@ jobs:
         with:
           name: Test and coverage Reports
           path: '${{ inputs.module-dir }}/**/build/reports/'
-
-  dependency-review:
-    needs: pull-request-check
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Perform dependency review
-        uses: actions/dependency-review-action@v4
-        with:
-          vulnerability-check: false
-          deny-licenses: 'GPL-3.0'

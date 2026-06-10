@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~ Copyright 2022 AERIS IT Solutions GmbH
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~ http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+  ~ or implied. See the License for the specific language governing
+  ~ permissions and limitations under the License.
+  -->
+
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.4.xsd">
+
+  <changeSet id="01" author="Eric Jesse">
+    <!--
+      Cache of which fields and tags are actually populated for each meter name, used to
+      provide relevant suggestions when configuring a data series.  The table is refreshed
+      periodically by chunk (oldest entries first).
+    -->
+    <createTable tableName="meter_name_stats">
+      <column name="tenant" type="varchar(30)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="name" type="text">
+        <constraints nullable="false"/>
+      </column>
+      <!-- JSON array of field names that contain non-null values for this meter, e.g. ["count","mean","max"] -->
+      <column name="fields" type="jsonb">
+        <constraints nullable="false"/>
+      </column>
+      <!-- JSON object mapping tag key -> sorted array of distinct values, e.g. {"env":["prod","staging"]} -->
+      <column name="tags" type="jsonb">
+        <constraints nullable="false"/>
+      </column>
+      <column name="last_updated" type="TIMESTAMP WITH TIME ZONE">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+
+    <addPrimaryKey tableName="meter_name_stats" columnNames="tenant, name" constraintName="pk_meter_name_stats"/>
+
+    <createIndex tableName="meter_name_stats" indexName="meter_name_stats_last_updated_idx">
+      <column name="last_updated"/>
+    </createIndex>
+  </changeSet>
+
+</databaseChangeLog>

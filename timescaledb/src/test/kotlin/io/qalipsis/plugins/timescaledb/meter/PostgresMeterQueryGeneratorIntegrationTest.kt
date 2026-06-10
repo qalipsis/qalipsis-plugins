@@ -31,14 +31,14 @@ import io.qalipsis.api.query.QueryClause
 import io.qalipsis.api.query.QueryClauseOperator
 import io.qalipsis.api.query.QueryDescription
 import io.qalipsis.api.report.TimeSeriesAggregationResult
+import java.time.Duration
+import kotlin.math.pow
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.testcontainers.containers.JdbcDatabaseContainer
 import org.testcontainers.containers.PostgreSQLContainerProvider
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.junit.jupiter.Container
-import java.time.Duration
-import kotlin.math.pow
 
 internal class PostgresMeterQueryGeneratorIntegrationTest : AbstractMeterQueryGeneratorIntegrationTest() {
 
@@ -61,19 +61,19 @@ internal class PostgresMeterQueryGeneratorIntegrationTest : AbstractMeterQueryGe
             )
             val result = executeAggregation(query, start, latestTimestamp - timeStep)
 
-            // then
+            // then 11 raw records since meters always return raw values regardless of aggregation operator
             assertThat(result).all {
-                hasSize(3)
+                hasSize(11)
                 index(0).all {
                     prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(5.0)
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(2.0)
                 }
-                index(1).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(34.0)
+                index(5).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofMillis(2500))
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(21.0)
                 }
-                index(2).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
+                index(10).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                     prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(233.0)
                 }
             }

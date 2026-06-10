@@ -34,7 +34,7 @@ import assertk.assertions.isLessThan
 import assertk.assertions.isNotEqualTo
 import assertk.assertions.isNotIn
 import assertk.assertions.isNotNull
-import assertk.assertions.isStrictlyBetween
+import assertk.assertions.isNull
 import assertk.assertions.key
 import assertk.assertions.prop
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
@@ -55,6 +55,7 @@ import io.qalipsis.plugins.timescaledb.TestUtils.fibonacciFromSize
 import io.qalipsis.plugins.timescaledb.dataprovider.AggregationExecutor
 import io.qalipsis.plugins.timescaledb.dataprovider.DataProviderConfiguration
 import io.qalipsis.plugins.timescaledb.dataprovider.DataRetrievalExecutor
+import io.qalipsis.plugins.timescaledb.dataprovider.DataType
 import io.qalipsis.plugins.timescaledb.dataprovider.PreparedQueries
 import io.qalipsis.plugins.timescaledb.dataprovider.TimeSeriesMeterRecordConverter
 import io.qalipsis.plugins.timescaledb.meter.catadioptre.doPublish
@@ -64,6 +65,10 @@ import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.postgresql.client.SSLMode
 import io.r2dbc.spi.Connection
 import jakarta.inject.Inject
+import java.sql.Timestamp
+import java.time.Duration
+import java.time.Instant
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.count
@@ -77,11 +82,6 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.testcontainers.junit.jupiter.Testcontainers
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.sql.Timestamp
-import java.time.Duration
-import java.time.Instant
-import java.time.temporal.ChronoUnit
-import java.util.concurrent.TimeUnit
 
 @Testcontainers
 @MicronautTest(startApplication = false, environments = ["standalone", "timescaledb"], transactional = false)
@@ -173,18 +173,18 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-1", "zone":"zone-a"}""",
+                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-1", "zone":"zone-a"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
                     ),
                     TimescaledbMeter(
-                        // This one has in the unexpected value tags.scope and should be ignored.
+                        // This one has an unexpected scope value and should be ignored.
                         name = "my-meter-1",
                         tenant = "tenant-1",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"scope":"not-period", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-1", "zone":"zone-b"}""",
+                        tags = """{"scope":"other", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-1", "zone":"zone-b"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -194,7 +194,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-2",
-                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-2", "zone":"zone-a"}""",
+                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-2", "zone":"zone-a"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -204,7 +204,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-2",
                         scenario = "my-scenario-1",
-                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-2","scenario-tag":"my-scenario-1", "zone":"zone-a"}""",
+                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-2","scenario-tag":"my-scenario-1", "zone":"zone-a"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -213,7 +213,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         name = "my-meter-1",
                         tenant = "tenant-1",
                         campaign = "my-campaign-3",
-                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-3"}""",
+                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-3"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -231,7 +231,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"tenant-1","scenario-tag":"my-scenario-1"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -248,7 +248,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-2",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-2","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"tenant-2","scenario-tag":"my-scenario-1"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -266,7 +266,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "default-tenant",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"default-tenant","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"default-tenant","scenario-tag":"my-scenario-1"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -275,7 +275,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         name = "my-meter-1",
                         tenant = "default-tenant",
                         campaign = "my-campaign-3",
-                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"default-tenant","campaign-tag":"my-campaign-3"}""",
+                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"default-tenant","campaign-tag":"my-campaign-3"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -293,7 +293,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "default-tenant",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"default-tenant","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"default-tenant","scenario-tag":"my-scenario-1"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -1451,7 +1451,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
             }
 
         @Test
-        internal fun `should calculate the average of the number values of the expected meter name, tenant and time range`() =
+        internal fun `should return raw meter records for the expected name, tenant and time range`() =
             testDispatcherProvider.run {
                 // given
                 val queryForMeter1InTenant1 = meterQueryGenerator.prepareQueries(
@@ -1462,58 +1462,86 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         timeframeUnit = Duration.ofSeconds(2)
                     )
                 )
+                // when meters in [start, latestTimestamp - timeStep] are selected
                 var result = executeAggregation(queryForMeter1InTenant1, start, latestTimestamp - timeStep)
 
-                // then
+                // then 11 raw records are returned since no aggregation is applied to meters
                 assertThat(result).all {
-                    hasSize(3)
+                    hasSize(11)
                     index(0).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.5)
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(2.0)
                     }
                     index(1).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }
-                            .isEqualTo(30.75)
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofMillis(500))
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
                     }
                     index(2).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(1))
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(5.0)
+                    }
+                    index(3).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofMillis(1500))
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(8.0)
+                    }
+                    index(4).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(13.0)
+                    }
+                    index(5).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofMillis(2500))
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(21.0)
+                    }
+                    index(6).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(3))
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(34.0)
+                    }
+                    index(7).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofMillis(3500))
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(55.0)
+                    }
+                    index(8).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(89.0)
+                    }
+                    index(9).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofMillis(4500))
                         prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }
-                            .isEqualTo(155.0 + 1.0 / 3)
+                            .isEqualTo(144.0)
+                    }
+                    index(10).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }
+                            .isEqualTo(233.0)
                     }
                 }
 
-                // when all the meters "my-meter-1" of tenant-1 are selected.
+                // when extended range includes the record at start - timeStep
                 result = executeAggregation(
                     queryForMeter1InTenant1,
                     start - Duration.ofMinutes(1),
                     latestTimestamp + Duration.ofMinutes(1)
                 )
 
-                // then
+                // then all 12 records are returned including the earliest one at start - timeStep
                 assertThat(result).all {
-                    hasSize(4)
+                    hasSize(12)
                     index(0).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start - Duration.ofSeconds(2))
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start - timeStep)
                         prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(1.0)
                     }
                     index(1).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.5)
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(2.0)
                     }
-                    index(2).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                    index(11).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                         prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }
-                            .isEqualTo(30.75)
-                    }
-                    index(3).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }
-                            .isEqualTo(155.0 + 1.0 / 3)
+                            .isEqualTo(233.0)
                     }
                 }
 
-                // when all the meters "my-meter-2" of tenant-1 are selected.
+                // when my-meter-2 is selected (fibonacciFromSize(5, 12) values starting at position 1: 5,8,13,21,...)
                 val queryForMeter2InTenant1 = meterQueryGenerator.prepareQueries(
                     "tenant-1", QueryDescription(
                         filters = listOf(QueryClause("name", QueryClauseOperator.IS, "my-meter-2")),
@@ -1524,30 +1552,21 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                 )
                 result = executeAggregation(queryForMeter2InTenant1, start, latestTimestamp - timeStep)
 
-                // then
+                // then 11 raw records for my-meter-2
                 assertThat(result).all {
-                    hasSize(3)
+                    hasSize(11)
                     index(0).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start.truncatedTo(ChronoUnit.SECONDS))
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }
-                            .isEqualTo(11.75)
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start)
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(5.0)
                     }
-                    index(1).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(
-                            start.truncatedTo(ChronoUnit.SECONDS) + Duration.ofSeconds(
-                                2
-                            )
-                        )
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(80.5)
+                    index(5).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofMillis(2500))
+                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(55.0)
                     }
-                    index(2).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(
-                            start.truncatedTo(ChronoUnit.SECONDS) + Duration.ofSeconds(
-                                4
-                            )
-                        )
+                    index(10).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                         prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }
-                            .isEqualTo(406.0 + (2.0 / 3))
+                            .isEqualTo(610.0)
                     }
                 }
             }
@@ -1565,20 +1584,16 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
             )
             val result = executeAggregation(query, start, latestTimestamp - timeStep)
 
-            // then
+            // then 11 raw records with null values since no fieldName produces NULL::decimal in SQL
             assertThat(result).all {
-                hasSize(3)
+                hasSize(11)
                 index(0).all {
                     prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
+                    prop(TimeSeriesAggregationResult::value).isNull()
                 }
-                index(1).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
-                }
-                index(2).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
+                index(10).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
+                    prop(TimeSeriesAggregationResult::value).isNull()
                 }
             }
         }
@@ -1596,20 +1611,16 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
             )
             val result = executeAggregation(query, start, latestTimestamp - timeStep)
 
-            // then
+            // then 11 raw records with actual values (aggregation operator ignored for meters)
             assertThat(result).all {
-                hasSize(3)
+                hasSize(11)
                 index(0).all {
                     prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(2.0)
                 }
-                index(1).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
-                }
-                index(2).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
+                index(10).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(233.0)
                 }
             }
         }
@@ -1627,20 +1638,16 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
             )
             val result = executeAggregation(query, start, latestTimestamp - timeStep)
 
-            // then
+            // then raw records are returned since aggregation operators are ignored for meters
             assertThat(result).all {
-                hasSize(3)
+                hasSize(11)
                 index(0).all {
                     prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                     prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(2.0)
                 }
-                index(1).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(13.0)
-                }
-                index(2).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(89.0)
+                index(10).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(233.0)
                 }
             }
         }
@@ -1664,20 +1671,16 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                 scenariosNames = emptySet()
             )
 
-            // then
+            // then 11 raw records for campaign-3 meters (matched by AND scenario IS NULL)
             assertThat(result).all {
-                hasSize(3)
+                hasSize(11)
                 index(0).all {
                     prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                     prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(2.0)
                 }
-                index(1).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(13.0)
-                }
-                index(2).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(89.0)
+                index(10).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(233.0)
                 }
             }
         }
@@ -1695,19 +1698,15 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
             )
             val result = executeAggregation(query, start, latestTimestamp - timeStep)
 
-            // then
+            // then raw records are returned since aggregation operators are ignored for meters
             assertThat(result).all {
-                hasSize(3)
+                hasSize(11)
                 index(0).all {
                     prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(8.0)
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(2.0)
                 }
-                index(1).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(55.0)
-                }
-                index(2).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
+                index(10).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                     prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(233.0)
                 }
             }
@@ -1732,19 +1731,15 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                 scenariosNames = emptySet()
             )
 
-            // then
+            // then 11 raw records for campaign-3 meters (matched by AND scenario IS NULL)
             assertThat(result).all {
-                hasSize(3)
+                hasSize(11)
                 index(0).all {
                     prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(8.0)
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(2.0)
                 }
-                index(1).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(55.0)
-                }
-                index(2).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
+                index(10).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                     prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(233.0)
                 }
             }
@@ -1763,20 +1758,16 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
             )
             val result = executeAggregation(query, start, latestTimestamp - timeStep)
 
-            // then
+            // then raw records are returned since aggregation operators are ignored for meters
             assertThat(result).all {
-                hasSize(3)
+                hasSize(11)
                 index(0).all {
                     prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(18.0)
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(2.0)
                 }
-                index(1).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(123.0)
-                }
-                index(2).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(466.0)
+                index(10).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(233.0)
                 }
             }
         }
@@ -1800,20 +1791,16 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                 scenariosNames = emptySet()
             )
 
-            // then
+            // then 11 raw records for campaign-3 meters (matched by AND scenario IS NULL)
             assertThat(result).all {
-                hasSize(3)
+                hasSize(11)
                 index(0).all {
                     prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(18.0)
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(2.0)
                 }
-                index(1).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(123.0)
-                }
-                index(2).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(466.0)
+                index(10).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(233.0)
                 }
             }
         }
@@ -1831,23 +1818,16 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
             )
             val result = executeAggregation(query, start, latestTimestamp - timeStep)
 
-            // then
+            // then raw records are returned since aggregation operators are ignored for meters
             assertThat(result).all {
-                hasSize(3)
+                hasSize(11)
                 index(0).all {
                     prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }
-                        .isStrictlyBetween(2.64, 2.65)
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(2.0)
                 }
-                index(1).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }
-                        .isStrictlyBetween(18.33, 18.34)
-                }
-                index(2).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }
-                        .isStrictlyBetween(72.66, 72.67)
+                index(10).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(233.0)
                 }
             }
         }
@@ -1865,19 +1845,15 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
             )
             val result = executeAggregation(query, start, latestTimestamp - timeStep)
 
-            // then
+            // then raw records are returned since aggregation operators are ignored for meters
             assertThat(result).all {
-                hasSize(3)
+                hasSize(11)
                 index(0).all {
                     prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(8.0)
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(2.0)
                 }
-                index(1).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(55.0)
-                }
-                index(2).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
+                index(10).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                     prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(233.0)
                 }
             }
@@ -1896,19 +1872,15 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
             )
             val result = executeAggregation(query, start, latestTimestamp - timeStep)
 
-            // then
+            // then raw records are returned since aggregation operators are ignored for meters
             assertThat(result).all {
-                hasSize(3)
+                hasSize(11)
                 index(0).all {
                     prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(8.0)
+                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(2.0)
                 }
-                index(1).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(55.0)
-                }
-                index(2).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
+                index(10).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                     prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(233.0)
                 }
             }
@@ -1929,23 +1901,16 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     campaigns = setOf("my-campaign-1")
                 )
 
-                // then
+                // then 22 raw records for campaign-1, scenario-1 (my-meter-1 + my-meter-2)
                 assertThat(result).all {
-                    hasSize(3)
+                    hasSize(22)
                     index(0).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(8.0)
                     }
-                    index(1).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                    index(21).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(8.0)
-                    }
-                    index(2).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(6.0)
                     }
                 }
 
@@ -1957,27 +1922,20 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     campaigns = setOf("my-campaign-2")
                 )
 
-                // then
+                // then 11 raw records for campaign-2, scenario-1 (only my-meter-1 is in campaign-2)
                 assertThat(result).all {
-                    hasSize(3)
+                    hasSize(11)
                     index(0).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
                     }
-                    index(1).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                    index(10).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
-                    }
-                    index(2).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
                     }
                 }
 
-                // when
+                // when both campaigns are selected
                 result = executeAggregation(
                     query = query,
                     start = start,
@@ -1985,38 +1943,24 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     campaigns = setOf("my-campaign-1", "my-campaign-2")
                 )
 
-                // then
+                // then 33 raw records ordered by campaign then timestamp (22 from campaign-1, 11 from campaign-2)
                 assertThat(result).all {
-                    hasSize(6)
+                    hasSize(33)
                     index(0).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(8.0)
                     }
-                    index(1).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                    index(21).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(8.0)
                     }
-                    index(2).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(6.0)
-                    }
-                    index(3).all {
+                    index(22).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
                     }
-                    index(4).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                    index(32).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
-                    }
-                    index(5).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
                     }
                 }
             }
@@ -2037,27 +1981,20 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     scenariosNames = setOf("my-scenario-1")
                 )
 
-                // then
+                // then 22 raw records for campaign-1, scenario-1 (my-meter-1 + my-meter-2)
                 assertThat(result).all {
-                    hasSize(3)
+                    hasSize(22)
                     index(0).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(8.0)
                     }
-                    index(1).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                    index(21).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(8.0)
-                    }
-                    index(2).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(6.0)
                     }
                 }
 
-                // when
+                // when both campaigns and scenario-1
                 result = executeAggregation(
                     query = query,
                     start = start,
@@ -2066,42 +2003,28 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     scenariosNames = setOf("my-scenario-1")
                 )
 
-                // then
+                // then 33 raw records for both campaigns with scenario-1 (22 from campaign-1, 11 from campaign-2)
                 assertThat(result).all {
-                    hasSize(6)
+                    hasSize(33)
                     index(0).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(8.0)
                     }
-                    index(1).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                    index(21).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(8.0)
                     }
-                    index(2).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(6.0)
-                    }
-                    index(3).all {
+                    index(22).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
                     }
-                    index(4).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                    index(32).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
-                    }
-                    index(5).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
                     }
                 }
 
-                // when
+                // when scenario-2 is selected (only campaign-1 has scenario-2 records)
                 result = executeAggregation(
                     query = query,
                     start = start,
@@ -2110,27 +2033,20 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     scenariosNames = setOf("my-scenario-2")
                 )
 
-                // then
+                // then 11 raw records for campaign-1 only (campaign-2 has no scenario-2)
                 assertThat(result).all {
-                    hasSize(3)
+                    hasSize(11)
                     index(0).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
                     }
-                    index(1).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                    index(10).all {
+                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
-                    }
-                    index(2).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
                     }
                 }
 
-                // when
+                // when zone-a filter is applied (zone-a records have scope:step and pass the scope filter)
                 result = executeAggregation(
                     query = query,
                     start = start,
@@ -2140,42 +2056,20 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     zones = setOf("zone-a")
                 )
 
-                // then
+                // then 22 raw records for both campaigns in zone-a
                 assertThat(result).all {
-                    hasSize(6)
+                    hasSize(22)
                     index(0).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
                     }
-                    index(1).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
-                    }
-                    index(2).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
-                    }
-                    index(3).all {
+                    index(11).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
-                    }
-                    index(4).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
-                    }
-                    index(5).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                        prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
                     }
                 }
 
-                // when
+                // when zone-b filter is applied (zone-b records have scope:other, excluded by scope filter)
                 result = executeAggregation(
                     query = query,
                     start = start,
@@ -2185,7 +2079,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     zones = setOf("zone-b")
                 )
 
-                // then
+                // then no records since zone-b records have scope:other, filtered out by meters.tags->>'scope' IN ('step', 'campaign')
                 assertThat(result).isEmpty()
             }
 
@@ -2204,23 +2098,16 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                 scenariosNames = emptySet()
             )
 
-            // then
+            // then 11 raw records for campaign-3 meters (which have no scenario, matched by AND scenario IS NULL)
             assertThat(result).all {
-                hasSize(3)
+                hasSize(11)
                 index(0).all {
                     prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                     prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-3")
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
                 }
-                index(1).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(2))
+                index(10).all {
+                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                     prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-3")
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(4.0)
-                }
-                index(2).all {
-                    prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(4))
-                    prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-3")
-                    prop(TimeSeriesAggregationResult::value).isNotNull().transform { it.toDouble() }.isEqualTo(3.0)
                 }
             }
         }
@@ -2259,8 +2146,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
             query.countStatement,
             query.retrievalStatement,
             query.retrievalBoundParameters,
-            query.nextAvailableRetrievalParameterIdentifierIndex,
-            query.dataType
+            query.nextAvailableRetrievalParameterIdentifierIndex
         ).execute()
     }
 
@@ -2288,8 +2174,9 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
             query.aggregationStatement,
             query.aggregationBoundParameters,
             query.nextAvailableAggregationParameterIdentifierIndex,
-            query.dataType
-        ).execute()
+            dataType = DataType.METER,
+            splitByScope = true
+        ).execute().values
     }
 
     companion object {

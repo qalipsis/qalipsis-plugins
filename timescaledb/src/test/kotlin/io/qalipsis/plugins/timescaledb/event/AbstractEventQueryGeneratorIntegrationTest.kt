@@ -67,6 +67,11 @@ import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.postgresql.client.SSLMode
 import io.r2dbc.spi.Connection
 import jakarta.inject.Inject
+import java.sql.Timestamp
+import java.time.Duration
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -82,11 +87,6 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.testcontainers.junit.jupiter.Testcontainers
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.sql.Timestamp
-import java.time.Duration
-import java.time.Instant
-import java.time.temporal.ChronoUnit
-import java.util.concurrent.TimeUnit
 
 @Testcontainers
 @MicronautTest(startApplication = false, environments = ["standalone"], transactional = false)
@@ -2060,7 +2060,7 @@ internal abstract class AbstractEventQueryGeneratorIntegrationTest : TestPropert
             query.aggregationStatement,
             query.aggregationBoundParameters,
             query.nextAvailableAggregationParameterIdentifierIndex
-        ).execute()
+        ).execute().values
     }
 
     companion object {
