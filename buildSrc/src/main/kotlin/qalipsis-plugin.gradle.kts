@@ -17,6 +17,7 @@
  *
  */
 
+import groovy.lang.Closure
 import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
 import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_ERROR
 import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_OUT
@@ -75,9 +76,10 @@ kotlin.sourceSets["test"].kotlin.srcDir("build/generated/source/kaptKotlin/catad
 
 // ---- Repositories ----
 
+val pluginPlatformVersion: String by project
 repositories {
     mavenLocal()
-    if (version.toString().endsWith("-SNAPSHOT")) {
+    if (pluginPlatformVersion.endsWith("-SNAPSHOT")) {
         maven {
             name = "QALIPSIS OSS Snapshots"
             url = uri("https://maven.qalipsis.com/repository/oss-snapshots")
@@ -251,6 +253,12 @@ afterEvaluate {
 
 // ---- JReleaser ----
 
+val versionDetails: Closure<com.palantir.gradle.gitversion.VersionDetails> by extra
+val currentGitBranch = versionDetails().branchName ?: ""
+if (currentGitBranch != "main") {
+    project.logger.lifecycle("Maven Central deploy disabled for branch '${currentGitBranch}' in ${project.name}")
+}
+
 jreleaser {
     gitRootSearch.set(true)
 
@@ -276,7 +284,7 @@ jreleaser {
         maven {
             mavenCentral {
                 register("qalipsis-releases") {
-                    active.set(Active.RELEASE_PRERELEASE)
+                    active.set(if (currentGitBranch == "main" && !pluginPlatformVersion.endsWith("-SNAPSHOT")) Active.RELEASE_PRERELEASE else Active.NEVER)
                     namespace.set("io.qalipsis")
                     applyMavenCentralRules.set(true)
                     stage.set(MavenCentralMavenDeployer.Stage.UPLOAD)
