@@ -134,7 +134,7 @@ internal class MeterNameStatsRefresher(
             SELECT tags.key, STRING_AGG(DISTINCT tags.value, ',' ORDER BY tags.value) AS values
             FROM ${databaseSchema}.meters, lateral jsonb_each_text(tags) AS tags
             WHERE tenant = $1 AND name = $2
-              AND tags.key <> ALL (array['dag'])
+              AND tags.key <> ALL (array['dag', 'scope', 'source', 'step', 'previous-step'])
               AND tags.value <> ''
             GROUP BY tags.key
             ORDER BY tags.key
