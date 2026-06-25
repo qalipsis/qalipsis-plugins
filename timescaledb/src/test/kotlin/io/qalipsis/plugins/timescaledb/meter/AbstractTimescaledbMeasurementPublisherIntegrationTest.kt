@@ -47,6 +47,10 @@ import io.r2dbc.postgresql.PostgresqlConnectionFactory
 import io.r2dbc.postgresql.codec.Json
 import io.r2dbc.spi.Connection
 import jakarta.inject.Inject
+import java.math.BigDecimal
+import java.sql.Timestamp
+import java.time.Instant
+import java.time.OffsetDateTime
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.reactive.awaitLast
 import org.junit.jupiter.api.BeforeAll
@@ -55,10 +59,6 @@ import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.testcontainers.junit.jupiter.Testcontainers
 import reactor.core.publisher.Mono
-import java.math.BigDecimal
-import java.sql.Timestamp
-import java.time.Instant
-import java.time.OffsetDateTime
 
 @Testcontainers
 @WithMockk
@@ -223,6 +223,25 @@ internal abstract class AbstractTimescaledbMeasurementPublisherIntegrationTest :
                     DistributionMeasurementMetric(42.0, Statistic.PERCENTILE, 85.0),
                     DistributionMeasurementMetric(30.0, Statistic.PERCENTILE, 50.0),
                 )
+            }, mockk<MeterSnapshot> {
+                every { timestamp } returns now
+                every { meterId } returns Meter.Id(
+                    "my statistics",
+                    MeterType.STATISTICS,
+                    mapOf(
+                        "scenario" to "seventh scenario",
+                        "campaign" to "seventh CAMPAIGN 938472",
+                        "step" to "step number seven",
+                    )
+                )
+                every { measurements } returns listOf(
+                    MeasurementMetric(100.0, Statistic.COUNT),
+                    MeasurementMetric(5000.0, Statistic.TOTAL),
+                    MeasurementMetric(50.0, Statistic.MEAN),
+                    MeasurementMetric(200.0, Statistic.MAX),
+                    DistributionMeasurementMetric(180.0, Statistic.PERCENTILE, 95.0),
+                    DistributionMeasurementMetric(120.0, Statistic.PERCENTILE, 50.0),
+                )
             })
         measurementPublisher.publish(meterSnapshots)
 
@@ -232,7 +251,7 @@ internal abstract class AbstractTimescaledbMeasurementPublisherIntegrationTest :
             val recordsCounts =
                 executeSelect("select name from the_meters.meters ")
             log.info { "Found meters: ${recordsCounts.joinToString { it["name"] as String }}" }
-        } while (recordsCounts.size < 6) // One count by meter is expected.
+        } while (recordsCounts.size < 7) // One count by meter is expected.
         measurementPublisher.stop()
 
         // then
@@ -256,7 +275,7 @@ internal abstract class AbstractTimescaledbMeasurementPublisherIntegrationTest :
                 )
             }
         assertThat(savedMeters).all {
-            hasSize(6)
+            hasSize(7)
             any {
                 it.all {
                     prop(TimescaledbMeter::name).isEqualTo("my timer")
@@ -381,6 +400,29 @@ internal abstract class AbstractTimescaledbMeasurementPublisherIntegrationTest :
                     prop(TimescaledbMeter::unit).isNull()
                     prop(TimescaledbMeter::other).isNotNull()
                         .isEqualTo("""{"percentile_50.0": "30", "percentile_85.0": "42"}""")
+                }
+            }
+            any {
+                it.all {
+                    prop(TimescaledbMeter::name).isEqualTo("my statistics")
+                    prop(TimescaledbMeter::tenant).isNull()
+                    prop(TimescaledbMeter::campaign).isEqualTo("seventh CAMPAIGN 938472")
+                    prop(TimescaledbMeter::scenario).isEqualTo("seventh scenario")
+                    prop(TimescaledbMeter::timestamp).isNotNull()
+                    prop(TimescaledbMeter::type).isEqualTo("statistics")
+                    prop(TimescaledbMeter::tags).isEqualTo("""{"step": "step number seven"}""")
+                    prop(TimescaledbMeter::value).isNull()
+                    prop(TimescaledbMeter::count).isNotNull().transform { it.toInt() }
+                        .isEqualTo(100)
+                    prop(TimescaledbMeter::max).isNotNull().transform { it.toDouble() }
+                        .isEqualTo(200.0)
+                    prop(TimescaledbMeter::mean).isNotNull().transform { it.toDouble() }
+                        .isEqualTo(50.0)
+                    prop(TimescaledbMeter::sum).isNotNull().transform { it.toInt() }
+                        .isEqualTo(5000)
+                    prop(TimescaledbMeter::unit).isNull()
+                    prop(TimescaledbMeter::other).isNotNull()
+                        .isEqualTo("""{"percentile_50.0": "120", "percentile_95.0": "180"}""")
                 }
             }
         }

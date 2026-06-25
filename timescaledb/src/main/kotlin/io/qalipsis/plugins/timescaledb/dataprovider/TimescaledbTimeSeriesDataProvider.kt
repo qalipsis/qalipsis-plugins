@@ -27,12 +27,14 @@ import io.qalipsis.api.query.AggregationQueryExecutionContext
 import io.qalipsis.api.query.DataRetrievalQueryExecutionContext
 import io.qalipsis.api.query.Page
 import io.qalipsis.api.report.TimeSeriesDataProvider
+import io.qalipsis.api.report.TimeSeriesMeter
 import io.qalipsis.api.report.TimeSeriesRecord
 import io.qalipsis.api.report.TimeSeriesValues
 import io.qalipsis.plugins.timescaledb.event.TimescaledbEventDataProviderConfiguration
 import io.qalipsis.plugins.timescaledb.meter.TimescaledbMeterDataProviderConfiguration
 import io.qalipsis.plugins.timescaledb.utils.DbUtils
 import io.r2dbc.pool.ConnectionPool
+import io.r2dbc.spi.Connection
 import jakarta.annotation.Nullable
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -42,7 +44,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.withTimeout
+import reactor.core.publisher.Flux
 
 @Singleton
 @Requires(bean = AbstractDataProvider::class)
@@ -120,6 +124,56 @@ internal class TimescaledbTimeSeriesDataProvider(
         } ?: 0
 
         return eventsStorage + metersStorage
+    }
+
+    override suspend fun retrieveCampaignMeters(
+        tenant: String,
+        campaignKeys: Collection<String>,
+        scenarioNames: Collection<String>,
+    ): List<TimeSeriesMeter> {
+        val connectionPool = meterConnectionPool ?: return emptyList()
+        val schema = timescaledbMeterDataProviderConfiguration?.schema ?: return emptyList()
+
+        val params = mutableMapOf<String, Any>()
+        params["\$1"] = tenant
+        params["\$2"] = campaignKeys.toTypedArray()
+
+        val sql = StringBuilder(
+            """SELECT name, timestamp, type, campaign, scenario, tags, count, sum, mean, max, value, other"""
+                    + """ FROM $schema.meters WHERE tenant = $1 AND campaign = any(array[$2]) AND tags->>'scope' = 'campaign'"""
+        )
+
+        if (scenarioNames.isNotEmpty()) {
+            params["\$3"] = scenarioNames.toTypedArray()
+            sql.append(""" AND scenario = any (array[$3])""")
+        }
+
+        sql.append(""" ORDER BY name, timestamp""")
+
+        val query = sql.toString()
+        log.debug { "Retrieving campaign meters with query: $query" }
+
+        return Flux.usingWhen(
+            connectionPool.create()
+                .doOnNext { log.debug { "Acquired a connection" } },
+            { connection ->
+                Flux.from(
+                    connection.createStatement(query)
+                        .also {
+                            params.forEach { (binding, value) ->
+                                log.trace { "Binding $binding to $value" }
+                                it.bind(binding, value)
+                            }
+                        }.execute()
+                ).flatMap { result ->
+                    result.map { row, metadata ->
+                        timeSeriesMeterRecordConverter.convert(row, metadata)
+                    }
+                }
+            },
+            Connection::close
+        ).collectList().awaitSingleOrNull().orEmpty()
+            .filterIsInstance<TimeSeriesMeter>()
     }
 
     private fun buildRetrievalExecutor(

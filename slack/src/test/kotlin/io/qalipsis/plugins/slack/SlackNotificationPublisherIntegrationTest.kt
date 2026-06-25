@@ -19,18 +19,16 @@
 
 package io.qalipsis.plugins.slack
 
-import assertk.all
 import assertk.assertThat
+import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import com.slack.api.methods.AsyncMethodsClient
 import com.slack.api.model.Attachment
 import com.slack.api.model.Message
-import com.slack.api.model.block.HeaderBlock
 import com.slack.api.model.block.SectionBlock
 import com.slack.api.model.block.composition.MarkdownTextObject
-import com.slack.api.model.block.composition.PlainTextObject
 import io.micronaut.context.annotation.Value
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.coEvery
@@ -41,6 +39,7 @@ import io.mockk.spyk
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.report.CampaignReport
 import io.qalipsis.api.report.ExecutionStatus
+import io.qalipsis.api.report.ScenarioReport
 import io.qalipsis.api.sync.asSuspended
 import io.qalipsis.plugins.slack.notification.ReportExecutionStatus
 import io.qalipsis.plugins.slack.notification.SlackNotificationConfiguration
@@ -51,7 +50,6 @@ import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.coVerifyNever
 import io.qalipsis.test.mockk.coVerifyOnce
-import java.time.Duration
 import java.time.Instant
 import org.apache.commons.lang3.RandomStringUtils
 import org.junit.jupiter.api.BeforeEach
@@ -91,7 +89,33 @@ internal class SlackNotificationPublisherIntegrationTest {
             status = ExecutionStatus.SUCCESSFUL,
             scheduledMinions = 4,
             start = Instant.parse("2022-10-29T00:00:00.00Z"),
-            end = Instant.parse("2022-11-05T00:00:00.00Z")
+            end = Instant.parse("2022-11-05T00:00:00.00Z"),
+            scenariosReports = listOf(
+                ScenarioReport(
+                    campaignKey = "Campaign-1",
+                    scenarioName = "scenario-login-flow",
+                    start = Instant.parse("2022-10-29T00:00:00.00Z"),
+                    end = Instant.parse("2022-11-05T00:00:00.00Z"),
+                    startedMinions = 600,
+                    completedMinions = 600,
+                    successfulExecutions = 600,
+                    failedExecutions = 0,
+                    status = ExecutionStatus.SUCCESSFUL,
+                    messages = emptyList()
+                ),
+                ScenarioReport(
+                    campaignKey = "Campaign-1",
+                    scenarioName = "scenario-checkout-flow",
+                    start = Instant.parse("2022-10-29T00:00:00.00Z"),
+                    end = Instant.parse("2022-11-05T00:00:00.00Z"),
+                    startedMinions = 400,
+                    completedMinions = 390,
+                    successfulExecutions = 390,
+                    failedExecutions = 10,
+                    status = ExecutionStatus.FAILED,
+                    messages = emptyList()
+                )
+            )
         )
 
         slackNotificationConfiguration = mockk {
@@ -118,35 +142,20 @@ internal class SlackNotificationPublisherIntegrationTest {
         testDispatcherProvider.run {
             // given
             val campaignReport = campaignReportPrototype.copy(failedExecutions = 0)
-            val message = composeMessage(campaignReport)
-            val colorScheme = getColorScheme(campaignReport.status)
 
             // when
-            val response = slackNotificationPublisher.postChatMessageRequest(
-                campaignReport.campaignKey,
-                campaignReport,
-                message,
-                colorScheme
-            ).asSuspended().get()
+            val response = slackNotificationPublisher.postChatMessageRequest(campaignReport).asSuspended().get()
 
             // then
+            assertThat(response.isOk).isTrue()
             val retrievedMessage: Message = retrieveMessage(response.channel, response.ts)
-            val headerBlock = retrievedMessage.blocks[0] as HeaderBlock
-            val attachmentBlock = retrievedMessage.attachments[0]
-            assertThat(headerBlock.text).isEqualTo(
-                PlainTextObject(
-                    "${campaignReport.campaignKey} ${campaignReport.status} ${colorScheme.second}",
-                    true
-                )
-            )
-            assertThat(attachmentBlock.blocks[0] as SectionBlock).all {
-                prop(SectionBlock::getType).isEqualTo("section")
-                prop(SectionBlock::getText).isEqualTo(MarkdownTextObject(message, false))
-            }
-            assertThat(attachmentBlock).all {
-                prop(Attachment::getFallback).isEqualTo("${campaignReport.campaignKey} ${campaignReport.status}")
-                prop(Attachment::getColor).isEqualTo(colorScheme.first)
-            }
+            val attachment = retrievedMessage.attachments[0]
+            assertThat(attachment).prop(Attachment::getColor).isEqualTo("#36a64f")
+            assertThat(attachment).prop(Attachment::getFallback)
+                .isEqualTo("${campaignReport.campaignKey} ${campaignReport.status}")
+            val titleBlock = attachment.blocks[0] as SectionBlock
+            assertThat((titleBlock.text as MarkdownTextObject).text).contains(campaignReport.campaignKey)
+            assertThat((titleBlock.text as MarkdownTextObject).text).contains(campaignReport.status.name)
         }
 
     @Test
@@ -159,42 +168,26 @@ internal class SlackNotificationPublisherIntegrationTest {
             completedMinions = 100,
             campaignKey = "Campaign-2"
         )
-        val message = composeMessage(campaignReport)
-        val colorScheme = getColorScheme(campaignReport.status)
 
         // when
-        val response = slackNotificationPublisher.postChatMessageRequest(
-            campaignReport.campaignKey,
-            campaignReport,
-            message,
-            colorScheme
-        ).asSuspended().get()
+        val response = slackNotificationPublisher.postChatMessageRequest(campaignReport).asSuspended().get()
 
         // then
         assertThat(response.isOk).isTrue()
         val retrievedMessage: Message = retrieveMessage(response.channel, response.ts)
-        val headerBlock = retrievedMessage.blocks[0] as HeaderBlock
-        val attachmentBlock = retrievedMessage.attachments[0]
-        assertThat(headerBlock.text).isEqualTo(
-            PlainTextObject(
-                "${campaignReport.campaignKey} ${campaignReport.status} ${colorScheme.second}",
-                true
-            )
-        )
-        assertThat(attachmentBlock.blocks[0] as SectionBlock).all {
-            prop(SectionBlock::getType).isEqualTo("section")
-            prop(SectionBlock::getText).isEqualTo(MarkdownTextObject(message, false))
-        }
-        assertThat(attachmentBlock).all {
-            prop(Attachment::getFallback).isEqualTo("${campaignReport.campaignKey} ${campaignReport.status}")
-            prop(Attachment::getColor).isEqualTo(colorScheme.first)
-        }
+        val attachment = retrievedMessage.attachments[0]
+        assertThat(attachment).prop(Attachment::getColor).isEqualTo("#bf0606")
+        assertThat(attachment).prop(Attachment::getFallback)
+            .isEqualTo("${campaignReport.campaignKey} ${campaignReport.status}")
+        val titleBlock = attachment.blocks[0] as SectionBlock
+        assertThat((titleBlock.text as MarkdownTextObject).text).contains(campaignReport.campaignKey)
+        assertThat((titleBlock.text as MarkdownTextObject).text).contains(campaignReport.status.name)
     }
 
     @Test
     fun `should send notification for a campaign with warning status and with appropriate color scheme`() =
         testDispatcherProvider.run {
-            // when
+            // given
             val campaignReport = campaignReportPrototype.copy(
                 status = ExecutionStatus.WARNING,
                 failedExecutions = 500,
@@ -203,35 +196,20 @@ internal class SlackNotificationPublisherIntegrationTest {
                 startedMinions = 700,
                 campaignKey = "Campaign-3"
             )
-            val message = composeMessage(campaignReport)
-            val colorScheme = getColorScheme(campaignReport.status)
 
             // when
-            val response = slackNotificationPublisher.postChatMessageRequest(
-                campaignReport.campaignKey,
-                campaignReport,
-                message,
-                colorScheme
-            ).asSuspended().get()
+            val response = slackNotificationPublisher.postChatMessageRequest(campaignReport).asSuspended().get()
 
             // then
+            assertThat(response.isOk).isTrue()
             val retrievedMessage: Message = retrieveMessage(response.channel, response.ts)
-            val headerBlock = retrievedMessage.blocks[0] as HeaderBlock
-            val attachmentBlock = retrievedMessage.attachments[0]
-            assertThat(headerBlock.text).isEqualTo(
-                PlainTextObject(
-                    "${campaignReport.campaignKey} ${campaignReport.status} ${colorScheme.second}",
-                    true
-                )
-            )
-            assertThat(attachmentBlock.blocks[0] as SectionBlock).all {
-                prop(SectionBlock::getType).isEqualTo("section")
-                prop(SectionBlock::getText).isEqualTo(MarkdownTextObject(message, false))
-            }
-            assertThat(attachmentBlock).all {
-                prop(Attachment::getFallback).isEqualTo("${campaignReport.campaignKey} ${campaignReport.status}")
-                prop(Attachment::getColor).isEqualTo(colorScheme.first)
-            }
+            val attachment = retrievedMessage.attachments[0]
+            assertThat(attachment).prop(Attachment::getColor).isEqualTo("#e69d0b")
+            assertThat(attachment).prop(Attachment::getFallback)
+                .isEqualTo("${campaignReport.campaignKey} ${campaignReport.status}")
+            val titleBlock = attachment.blocks[0] as SectionBlock
+            assertThat((titleBlock.text as MarkdownTextObject).text).contains(campaignReport.campaignKey)
+            assertThat((titleBlock.text as MarkdownTextObject).text).contains(campaignReport.status.name)
         }
 
     @Test
@@ -317,21 +295,6 @@ internal class SlackNotificationPublisherIntegrationTest {
             coVerifyOnce { spiedNotificationPublisher["sendNotification"](campaignReport.campaignKey, campaignReport) }
         }
 
-    private fun composeMessage(report: CampaignReport): String {
-        val duration = report.end?.let { Duration.between(report.start, it).toSeconds() }
-        return """
-            *Campaign*.......................................${report.campaignKey}
-            *Start*.................................................${report.start}
-            *End*...................................................${report.end ?: "<Running>"}
-            *Duration*.........................................${duration?.let { "$it seconds" } ?: "<Running>"}
-            *Started minions*............................${report.startedMinions}
-            *Completed minions*.....................${report.completedMinions}
-            *Successful steps executions*.....${report.successfulExecutions}
-            *Failed steps executions*..............${report.failedExecutions}
-            *Status*..............................................${report.status}
-        """.trimIndent()
-    }
-
     /**
      * Fetch message using the channelId and the message id
      */
@@ -345,14 +308,6 @@ internal class SlackNotificationPublisherIntegrationTest {
                 .limit(1)
         }
         return result.get().messages[0]
-    }
-
-    private fun getColorScheme(status: ExecutionStatus): Pair<String, String> {
-        return when (status) {
-            ExecutionStatus.SUCCESSFUL -> Pair("#36a64f", ":large_green_circle:")
-            ExecutionStatus.WARNING -> Pair("#e69d0b", ":large_orange_circle:")
-            else -> Pair("#bf0606", ":red_circle:")
-        }
     }
 
     private companion object {

@@ -31,6 +31,7 @@ import java.util.zip.ZipInputStream
  * @author Francisca Eze
  */
 internal object TestUtil {
+
     fun unzip(zipFile: File, destDir: String) {
         val dir = File(destDir)
         // create output directory if it doesn't exist
@@ -65,4 +66,5 @@ internal object TestUtil {
             e.printStackTrace()
         }
     }
+
 }

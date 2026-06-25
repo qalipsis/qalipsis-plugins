@@ -23,15 +23,15 @@ import assertk.assertThat
 import assertk.assertions.isTrue
 import io.qalipsis.plugins.mail.notification.MailUtils
 import io.qalipsis.plugins.mail.utils.TestUtil
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.stream.Collectors
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.stream.Collectors
 
 internal class MailUtilsTest {
 
@@ -49,9 +49,31 @@ internal class MailUtilsTest {
     }
 
     @Test
+    fun `should compress a single file`() {
+        // given
+        val sourceFile = File.createTempFile("source", ".txt", tempDir)
+        val content = "test content for single file compression"
+        sourceFile.writeText(content)
+
+        // when
+        MailUtils.compressSFile(sourceFile, zippedFile)
+
+        // then
+        assertThat(zippedFile).transform("exists") { it.exists() }.isTrue()
+
+        TestUtil.unzip(zippedFile, unzipDirectory.absolutePath)
+        val unzippedFiles = Files.walk(unzipDirectory.toPath())
+            .filter(Files::isRegularFile)
+            .collect(Collectors.toList())
+        assertEquals(1, unzippedFiles.size)
+        assertEquals(sourceFile.name, unzippedFiles[0].fileName.toString())
+        assertEquals(content, Files.readString(unzippedFiles[0]))
+    }
+
+    @Test
     fun `should recursively compress a directory`() {
         // given
-        val reportDirectory = copyJunitReportsToTemp()
+        val reportDirectory = copyHtmlRootReportsToTemp()
 
         // when
         MailUtils.compressDirectory(reportDirectory.toFile(), zippedFile)
@@ -94,7 +116,7 @@ internal class MailUtilsTest {
         return first.contentEquals(second)
     }
 
-    private fun copyJunitReportsToTemp(): Path {
+    private fun copyHtmlRootReportsToTemp(): Path {
         val reportDirectory = Files.createTempDirectory(REPORT_FOLDER)
         val fileList = this.javaClass.getResourceAsStream("/$REPORT_FOLDER/index.txt")!!
             .bufferedReader().readLines()
@@ -114,7 +136,7 @@ internal class MailUtilsTest {
     }
 
     companion object {
-        const val REPORT_FOLDER = "junit-reports"
+        const val REPORT_FOLDER = "html-reports"
         const val CAMPAIGN_KEY = "campaign-8"
     }
 }

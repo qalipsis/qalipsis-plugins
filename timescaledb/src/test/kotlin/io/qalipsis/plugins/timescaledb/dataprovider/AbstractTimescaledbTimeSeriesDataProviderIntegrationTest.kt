@@ -19,7 +19,12 @@
 
 package io.qalipsis.plugins.timescaledb.dataprovider
 
+import assertk.all
 import assertk.assertThat
+import assertk.assertions.hasSize
+import assertk.assertions.index
+import assertk.assertions.isDataClassEqualTo
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
@@ -28,6 +33,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.qalipsis.api.events.EventLevel
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.report.TimeSeriesMeter
 import io.qalipsis.plugins.timescaledb.TestUtils.fibonacciFromSize
 import io.qalipsis.plugins.timescaledb.event.TimescaledbEvent
 import io.qalipsis.plugins.timescaledb.event.TimescaledbEventConverter
@@ -44,6 +50,11 @@ import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.postgresql.client.SSLMode
 import io.r2dbc.spi.Connection
 import jakarta.inject.Inject
+import java.math.BigDecimal
+import java.sql.Timestamp
+import java.time.Duration
+import java.time.Instant
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -58,10 +69,6 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.testcontainers.junit.jupiter.Testcontainers
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.sql.Timestamp
-import java.time.Duration
-import java.time.Instant
-import java.util.concurrent.TimeUnit
 
 /**
  * @author Joël Valère
@@ -332,7 +339,7 @@ internal abstract class AbstractTimescaledbTimeSeriesDataProviderIntegrationTest
                 // given tenant = tenant-1
                 // when + then
                 assertThat(timescaledbTimeSeriesDataProvider.retrieveUsedStorage("tenant-1")).isNotNull()
-                    .isEqualTo(46917)
+                    .isEqualTo(42613)
 
                 // adding events associated to tenant-1 should update its space used
                 // given
@@ -395,13 +402,13 @@ internal abstract class AbstractTimescaledbTimeSeriesDataProviderIntegrationTest
 
                 // when + then
                 assertThat(timescaledbTimeSeriesDataProvider.retrieveUsedStorage("tenant-1")).isNotNull()
-                    .isEqualTo(120645)
+                    .isEqualTo(116341)
 
 
                 // given tenant = tenant-2
                 // when + then
                 assertThat(timescaledbTimeSeriesDataProvider.retrieveUsedStorage("tenant-2")).isNotNull()
-                    .isEqualTo(9681)
+                    .isEqualTo(8793)
 
                 // adding events associated to tenant-2 should update its space used
                 // given
@@ -427,13 +434,13 @@ internal abstract class AbstractTimescaledbTimeSeriesDataProviderIntegrationTest
 
                 // when + then
                 assertThat(timescaledbTimeSeriesDataProvider.retrieveUsedStorage("tenant-2")).isNotNull()
-                    .isEqualTo(24426)
+                    .isEqualTo(23538)
 
 
                 // given tenant = default-tenant
                 // when + then
                 assertThat(timescaledbTimeSeriesDataProvider.retrieveUsedStorage("default-tenant")).isNotNull()
-                    .isEqualTo(17128)
+                    .isEqualTo(15557)
 
                 // adding events associated to default-tenant should update its space used
                 // given
@@ -476,8 +483,282 @@ internal abstract class AbstractTimescaledbTimeSeriesDataProviderIntegrationTest
 
                 // when + then
                 assertThat(timescaledbTimeSeriesDataProvider.retrieveUsedStorage("default-tenant")).isNotNull()
-                    .isEqualTo(38193)
+                    .isEqualTo(36622)
             }
+    }
+
+    @Nested
+    inner class CampaignMetersRetrieval {
+
+        @Test
+        internal fun `should return all campaign-scope meters ordered by name then timestamp`() =
+            testDispatcherProvider.run {
+                val t1 = Instant.parse("2024-01-15T10:00:00Z")
+                val t2 = t1.plusSeconds(1)
+
+                timescaledbMeasurementPublisher.doPublish(
+                    listOf(
+                        TimescaledbMeter(
+                            name = "counter-meter",
+                            tags = """{"scope":"campaign"}""",
+                            timestamp = Timestamp.from(t1),
+                            type = "counter",
+                            tenant = "campaign-tenant",
+                            campaign = "campaign-ordering",
+                            scenario = "scenario-1",
+                            count = BigDecimal("75"),
+                        ),
+                        TimescaledbMeter(
+                            name = "gauge-meter",
+                            tags = """{"scope":"campaign"}""",
+                            timestamp = Timestamp.from(t1),
+                            type = "gauge",
+                            tenant = "campaign-tenant",
+                            campaign = "campaign-ordering",
+                            scenario = "scenario-1",
+                            value = BigDecimal("150"),
+                        ),
+                        TimescaledbMeter(
+                            name = "gauge-meter",
+                            tags = """{"scope":"campaign"}""",
+                            timestamp = Timestamp.from(t2),
+                            type = "gauge",
+                            tenant = "campaign-tenant",
+                            campaign = "campaign-ordering",
+                            scenario = "scenario-1",
+                            value = BigDecimal("300"),
+                        ),
+                        // excluded: no scope tag
+                        TimescaledbMeter(
+                            name = "no-scope-meter",
+                            tags = null,
+                            timestamp = Timestamp.from(t1),
+                            type = "gauge",
+                            tenant = "campaign-tenant",
+                            campaign = "campaign-ordering",
+                            scenario = "scenario-1",
+                            value = BigDecimal("500"),
+                        ),
+                    )
+                )
+                delay(500)
+
+                val result = timescaledbTimeSeriesDataProvider.retrieveCampaignMeters(
+                    "campaign-tenant",
+                    listOf("campaign-ordering")
+                )
+
+                assertThat(result).all {
+                    hasSize(3)
+                    index(0).isDataClassEqualTo(
+                        TimeSeriesMeter(
+                            name = "counter-meter",
+                            timestamp = t1,
+                            type = "counter",
+                            tags = mapOf("scope" to "campaign"),
+                            campaign = "campaign-ordering",
+                            scenario = "scenario-1",
+                            count = 75L,
+                        )
+                    )
+                    index(1).isDataClassEqualTo(
+                        TimeSeriesMeter(
+                            name = "gauge-meter",
+                            timestamp = t1,
+                            type = "gauge",
+                            tags = mapOf("scope" to "campaign"),
+                            campaign = "campaign-ordering",
+                            scenario = "scenario-1",
+                            value = BigDecimal("150.000000"),
+                        )
+                    )
+                    index(2).isDataClassEqualTo(
+                        TimeSeriesMeter(
+                            name = "gauge-meter",
+                            timestamp = t2,
+                            type = "gauge",
+                            tags = mapOf("scope" to "campaign"),
+                            campaign = "campaign-ordering",
+                            scenario = "scenario-1",
+                            value = BigDecimal("300.000000"),
+                        )
+                    )
+                }
+            }
+
+        @Test
+        internal fun `should filter by scenario names when provided`() = testDispatcherProvider.run {
+            val t1 = Instant.parse("2024-02-01T08:00:00Z")
+
+            timescaledbMeasurementPublisher.doPublish(
+                listOf(
+                    TimescaledbMeter(
+                        name = "gauge-meter",
+                        tags = """{"scope":"campaign"}""",
+                        timestamp = Timestamp.from(t1),
+                        type = "gauge",
+                        tenant = "campaign-tenant",
+                        campaign = "campaign-scenarios",
+                        scenario = "scenario-1",
+                        value = BigDecimal("10"),
+                    ),
+                    TimescaledbMeter(
+                        name = "gauge-meter",
+                        tags = """{"scope":"campaign"}""",
+                        timestamp = Timestamp.from(t1),
+                        type = "gauge",
+                        tenant = "campaign-tenant",
+                        campaign = "campaign-scenarios",
+                        scenario = "scenario-2",
+                        value = BigDecimal("20"),
+                    ),
+                    TimescaledbMeter(
+                        name = "gauge-meter",
+                        tags = """{"scope":"campaign"}""",
+                        timestamp = Timestamp.from(t1),
+                        type = "gauge",
+                        tenant = "campaign-tenant",
+                        campaign = "campaign-scenarios",
+                        scenario = "scenario-3",
+                        value = BigDecimal("30"),
+                    ),
+                )
+            )
+            delay(500)
+
+            val result = timescaledbTimeSeriesDataProvider.retrieveCampaignMeters(
+                "campaign-tenant",
+                listOf("campaign-scenarios"),
+                listOf("scenario-1", "scenario-3")
+            )
+
+            assertThat(result).all {
+                hasSize(2)
+                index(0).isDataClassEqualTo(
+                    TimeSeriesMeter(
+                        name = "gauge-meter",
+                        timestamp = t1,
+                        type = "gauge",
+                        tags = mapOf("scope" to "campaign"),
+                        campaign = "campaign-scenarios",
+                        scenario = "scenario-1",
+                        value = BigDecimal("10.000000"),
+                    )
+                )
+                index(1).isDataClassEqualTo(
+                    TimeSeriesMeter(
+                        name = "gauge-meter",
+                        timestamp = t1,
+                        type = "gauge",
+                        tags = mapOf("scope" to "campaign"),
+                        campaign = "campaign-scenarios",
+                        scenario = "scenario-3",
+                        value = BigDecimal("30.000000"),
+                    )
+                )
+            }
+        }
+
+        @Test
+        internal fun `should return empty when no campaign-scope meters exist`() = testDispatcherProvider.run {
+            val t1 = Instant.parse("2024-03-01T12:00:00Z")
+
+            timescaledbMeasurementPublisher.doPublish(
+                listOf(
+                    TimescaledbMeter(
+                        name = "no-scope-meter",
+                        tags = null,
+                        timestamp = Timestamp.from(t1),
+                        type = "gauge",
+                        tenant = "campaign-tenant",
+                        campaign = "campaign-noscope",
+                        scenario = "scenario-1",
+                        value = BigDecimal("99"),
+                    ),
+                )
+            )
+            delay(500)
+
+            assertThat(
+                timescaledbTimeSeriesDataProvider.retrieveCampaignMeters("campaign-tenant", listOf("campaign-noscope"))
+            ).isEmpty()
+        }
+
+        @Test
+        internal fun `should return empty when tenant or campaign not found`() = testDispatcherProvider.run {
+            val t1 = Instant.parse("2024-04-01T09:00:00Z")
+
+            timescaledbMeasurementPublisher.doPublish(
+                listOf(
+                    TimescaledbMeter(
+                        name = "gauge-meter",
+                        tags = """{"scope":"campaign"}""",
+                        timestamp = Timestamp.from(t1),
+                        type = "gauge",
+                        tenant = "campaign-tenant",
+                        campaign = "campaign-notfound",
+                        scenario = "scenario-1",
+                        value = BigDecimal("42"),
+                    ),
+                )
+            )
+            delay(500)
+
+            assertThat(
+                timescaledbTimeSeriesDataProvider.retrieveCampaignMeters("other-tenant", listOf("campaign-notfound"))
+            ).isEmpty()
+
+            assertThat(
+                timescaledbTimeSeriesDataProvider.retrieveCampaignMeters("campaign-tenant", listOf("other-campaign"))
+            ).isEmpty()
+        }
+
+        @Test
+        internal fun `should deserialize timer meters with duration fields`() = testDispatcherProvider.run {
+            // sum/mean/max stored as microseconds; converter multiplies by 1000 to get nanoseconds.
+            // 2_000_000 µs * 1_000 = 2_000_000_000 ns = Duration.ofSeconds(2)
+            val t1 = Instant.parse("2024-05-01T07:00:00Z")
+
+            timescaledbMeasurementPublisher.doPublish(
+                listOf(
+                    TimescaledbMeter(
+                        name = "timer-meter",
+                        tags = """{"scope":"campaign"}""",
+                        timestamp = Timestamp.from(t1),
+                        type = "timer",
+                        tenant = "campaign-tenant",
+                        campaign = "campaign-timer",
+                        scenario = "scenario-1",
+                        count = BigDecimal("10"),
+                        sum = BigDecimal("2000000"),
+                        mean = BigDecimal("200000"),
+                        max = BigDecimal("500000"),
+                    ),
+                )
+            )
+            delay(500)
+
+            val result =
+                timescaledbTimeSeriesDataProvider.retrieveCampaignMeters("campaign-tenant", listOf("campaign-timer"))
+
+            assertThat(result).all {
+                hasSize(1)
+                index(0).isDataClassEqualTo(
+                    TimeSeriesMeter(
+                        name = "timer-meter",
+                        timestamp = t1,
+                        type = "timer",
+                        tags = mapOf("scope" to "campaign"),
+                        campaign = "campaign-timer",
+                        scenario = "scenario-1",
+                        count = 10L,
+                        sumDuration = Duration.ofSeconds(2),
+                        meanDuration = Duration.ofMillis(200),
+                        maxDuration = Duration.ofMillis(500),
+                    )
+                )
+            }
+        }
     }
 
     companion object {

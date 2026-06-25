@@ -26,7 +26,6 @@ import io.qalipsis.api.report.DataFieldType
 import io.qalipsis.plugins.timescaledb.dataprovider.AbstractQueryGenerator
 import io.qalipsis.plugins.timescaledb.dataprovider.DataType
 import io.qalipsis.plugins.timescaledb.dataprovider.SerializableBoundParameter
-import io.qalipsis.plugins.timescaledb.meter.AbstractMeterQueryGenerator.Companion.SQL_COLUMN_FIELDS
 import java.util.concurrent.TimeUnit
 
 internal abstract class AbstractMeterQueryGenerator : AbstractQueryGenerator(
@@ -65,8 +64,8 @@ internal abstract class AbstractMeterQueryGenerator : AbstractQueryGenerator(
         boundParametersCollector: (key: String, SerializableBoundParameter) -> Unit,
         nextIdentifierIndexSupplier: () -> Int
     ) {
-        // Scope is stored in the tags JSON field; return step-level and campaign-level meters.
-        sql.append(" AND meters.tags->>'scope' IN ('step', 'campaign')")
+        // Scope is stored in the tags JSON field; return period-level and campaign-level meters.
+        sql.append(" AND meters.tags->>'scope' IN ('period', 'campaign')")
         sql.append(" %s") // Placeholder for additional filters (specific campaigns or scenarios)
         queryClauses.forEach { clause ->
             when {

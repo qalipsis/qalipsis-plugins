@@ -26,11 +26,11 @@ import com.slack.api.methods.response.chat.ChatPostMessageResponse
 import com.slack.api.model.Attachments.asAttachments
 import com.slack.api.model.Attachments.attachment
 import com.slack.api.model.block.Blocks.asBlocks
-import com.slack.api.model.block.Blocks.header
+import com.slack.api.model.block.Blocks.context
+import com.slack.api.model.block.Blocks.divider
 import com.slack.api.model.block.Blocks.section
-import com.slack.api.model.block.SectionBlock
+import com.slack.api.model.block.LayoutBlock
 import com.slack.api.model.block.composition.BlockCompositions.markdownText
-import com.slack.api.model.block.composition.BlockCompositions.plainText
 import io.aerisconsulting.catadioptre.KTestable
 import io.micronaut.context.annotation.Requirements
 import io.micronaut.context.annotation.Requires
@@ -43,6 +43,9 @@ import io.qalipsis.api.sync.asSuspended
 import jakarta.inject.Singleton
 import java.io.IOException
 import java.time.Duration
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.CompletableFuture
 import javax.annotation.PostConstruct
 
@@ -80,13 +83,7 @@ internal class SlackNotificationPublisher(
 
     private suspend fun sendNotification(campaignKey: CampaignKey, report: CampaignReport) {
         try {
-            val messageBody = composeMessageBody(report)
-            val colorScheme = when (report.status) {
-                ExecutionStatus.SUCCESSFUL -> Pair(SUCCESS_COLOR, SUCCESS_MARK)
-                ExecutionStatus.WARNING -> Pair(WARNING_COLOR, WARNING_MARK)
-                else -> Pair(FAILURE_COLOR, FAILURE_MARK)
-            }
-            postChatMessageRequest(campaignKey, report, messageBody, colorScheme).asSuspended().get()
+            postChatMessageRequest(report).asSuspended().get()
             logger.info { "Notification sent" }
         } catch (requestFailureException: SlackApiException) {
             logger.error { "Failed to send notification: ${requestFailureException.message}" }
@@ -95,63 +92,93 @@ internal class SlackNotificationPublisher(
         }
     }
 
-    private fun composeMessageBody(report: CampaignReport): String {
-        val duration = report.end?.let { Duration.between(report.start, it).toSeconds() }
-        return """
-            *Campaign*.......................................${report.campaignKey}
-            *Start*.................................................${report.start}
-            *End*...................................................${report.end ?: RUNNING_INDICATOR}
-            *Duration*.........................................${duration?.let { "$it seconds" } ?: RUNNING_INDICATOR}
-            *Started minions*............................${report.startedMinions}
-            *Completed minions*.....................${report.completedMinions}
-            *Successful steps executions*......${report.successfulExecutions}
-            *Failed steps executions*...............${report.failedExecutions}
-            *Status*..............................................${report.status}
-        """.trimIndent()
-    }
-
     @KTestable
-    private fun postChatMessageRequest(
-        campaignKey: CampaignKey,
-        report: CampaignReport,
-        messageBody: String,
-        colorScheme: Pair<String, String>
-    ): CompletableFuture<ChatPostMessageResponse> {
-        val (color, emoji) = colorScheme
+    private fun postChatMessageRequest(report: CampaignReport): CompletableFuture<ChatPostMessageResponse> {
+        val color = statusColor(report.status)
+        val dateRange = formatDateRange(report.start, report.end)
+        val duration = formatDuration(report.start, report.end)
+        val startedMinions = report.startedMinions.formatted()
+        val completedMinions = report.completedMinions.formatted()
+        val successfulExecutions = report.successfulExecutions.formatted()
+        val failedExecutions = report.failedExecutions.formatted()
+        val rate = failureRate(report.successfulExecutions, report.failedExecutions)
+
+        val minionsText = markdownText("*Minions*\n↑ $startedMinions started  ✓ $completedMinions done")
+        val executionsText =
+            markdownText("*Executions*\n✅ $successfulExecutions  ❌ $failedExecutions  ·  *${rate}% fail*")
+
+        val blocks = mutableListOf<LayoutBlock>(
+            section { s -> s.text(markdownText("*${report.campaignKey}*  `${report.status}`")) },
+            context { c -> c.elements(listOf(markdownText("$dateRange  ·  $duration"))) },
+            section { s -> s.fields(listOf(minionsText, executionsText)) }
+        )
+
+        if (report.scenariosReports.isNotEmpty()) {
+            blocks += divider()
+            val scenarioLines = report.scenariosReports.joinToString("\n") { s ->
+                val sRate = failureRate(s.successfulExecutions, s.failedExecutions)
+                "${statusEmoji(s.status)} ${s.scenarioName}  `${s.status}`  ✅ ${s.successfulExecutions.formatted()} ❌ ${s.failedExecutions.formatted()} · *${sRate}% fail*"
+            }
+            blocks += section { s -> s.text(markdownText("*Scenarios*\n$scenarioLines")) }
+        }
+
         return asyncSlackMethodsClient.chatPostMessage { req ->
             req
                 .token(configuration.token)
                 .channel(configuration.channel)
-                .blocks(
-                    asBlocks(header {
-                        it.text(plainText("$campaignKey ${report.status} $emoji", true))
-                    })
-                )
                 .attachments(
                     asAttachments(attachment {
                         it
                             .color(color)
-                            .fallback("$campaignKey ${report.status}")
-                            .blocks(
-                                asBlocks(
-                                    section { s: SectionBlock.SectionBlockBuilder ->
-                                        s.text(markdownText(messageBody))
-                                    }
-                                )
-                            )
+                            .fallback("${report.campaignKey} ${report.status}")
+                            .blocks(asBlocks(*blocks.toTypedArray()))
                     })
                 )
         }
     }
 
+    private fun Int?.formatted() = this?.let { "%,d".format(it) } ?: "—"
+
+    private fun failureRate(ok: Int?, fail: Int?): Int {
+        val total = (ok ?: 0) + (fail ?: 0)
+        return if (total > 0) (fail ?: 0) * 100 / total else 0
+    }
+
+    private fun formatDateRange(start: Instant?, end: Instant?): String {
+        val fmt = DateTimeFormatter.ofPattern("MMM d, yyyy").withZone(ZoneOffset.UTC)
+        val s = start?.let { fmt.format(it) } ?: return "—"
+        val e = end?.let { fmt.format(it) }
+        return if (e != null && e != s) "$s → $e" else s
+    }
+
+    private fun formatDuration(start: Instant?, end: Instant?): String {
+        if (start == null || end == null) return "—"
+        val d = Duration.between(start, end)
+        return when {
+            d.toDays() >= 1 -> "${d.toDays()}d"
+            d.toHours() >= 1 -> "${d.toHours()}h ${d.toMinutesPart()}m"
+            d.toMinutes() >= 1 -> "${d.toMinutes()}m ${d.toSecondsPart()}s"
+            else -> "${d.seconds}s"
+        }
+    }
+
+    private fun statusEmoji(status: ExecutionStatus) = when (status) {
+        ExecutionStatus.SUCCESSFUL -> ":large_green_circle:"
+        ExecutionStatus.WARNING -> ":large_yellow_circle:"
+        ExecutionStatus.ABORTED -> ":white_circle:"
+        else -> ":red_circle:"
+    }
+
+    private fun statusColor(status: ExecutionStatus) = when (status) {
+        ExecutionStatus.SUCCESSFUL -> SUCCESS_COLOR
+        ExecutionStatus.WARNING -> WARNING_COLOR
+        else -> FAILURE_COLOR
+    }
+
     companion object {
-        private const val RUNNING_INDICATOR = "<Running>"
         private const val SUCCESS_COLOR = "#36a64f"
         private const val FAILURE_COLOR = "#bf0606"
         private const val WARNING_COLOR = "#e69d0b"
-        private const val SUCCESS_MARK = ":large_green_circle:"
-        private const val WARNING_MARK = ":large_orange_circle:"
-        private const val FAILURE_MARK = ":red_circle:"
         private val logger = logger()
     }
 

@@ -26,14 +26,17 @@ import io.qalipsis.api.context.CampaignKey
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.report.CampaignReport
 import io.qalipsis.api.report.CampaignReportPublisher
+import io.qalipsis.api.report.ExecutionStatus
 import io.qalipsis.plugins.mail.notification.MailNotificationPublisher.Companion.CHARSET
 import io.qalipsis.plugins.mail.notification.MailNotificationPublisher.Companion.CONTENT_TYPE
-import io.qalipsis.plugins.mail.notification.MailNotificationPublisher.Companion.RUNNING_INDICATOR
 import io.qalipsis.plugins.mail.notification.MailNotificationPublisher.Companion.TRANSPORT_PROTOCOL
 import io.qalipsis.plugins.mail.notification.MailNotificationPublisher.Companion.logger
 import jakarta.inject.Singleton
 import java.io.File
 import java.time.Duration
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.Properties
 import javax.activation.DataHandler
 import javax.activation.FileDataSource
@@ -47,8 +50,6 @@ import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeBodyPart
 import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 
 /**
@@ -63,7 +64,7 @@ import kotlinx.coroutines.withContext
 )
 internal class MailNotificationPublisher(
     val mailConfiguration: MailNotificationConfiguration,
-    @Value("\${report.export.junit.folder}") private val reportFolder: String
+    @Value("\${report.export.html.folder}") private val reportFolder: String,
 ) : CampaignReportPublisher {
 
     private val properties = Properties()
@@ -74,9 +75,7 @@ internal class MailNotificationPublisher(
                 ReportExecutionStatus.valueOf(reportStatus.toString())
             ))
         ) {
-            withContext(Dispatchers.IO) {
-                sendNotification(report)
-            }
+            sendNotification(report)
         }
     }
 
@@ -102,16 +101,14 @@ internal class MailNotificationPublisher(
             textPart.setText(composeMessageBody(report), CHARSET, CONTENT_TYPE)
             multipart.addBodyPart(textPart)
 
-            // Add the Junit report as attachments if it exists.
-            if (mailConfiguration.junit && reportFolder.isNotEmpty() && File(reportFolder).exists() && File(reportFolder).isDirectory) {
-                val reportDirectory = File("$reportFolder/${report.campaignKey}")
-                if (reportDirectory.exists() && (reportDirectory.listFiles()?.size ?: 0) > 0) {
-                    val attachmentPart = MimeBodyPart()
-                    MailUtils.compressDirectory(reportDirectory, attachmentFile)
-                    attachmentPart.dataHandler = DataHandler(FileDataSource(attachmentFile))
-                    attachmentPart.fileName = attachmentFile.name
-                    multipart.addBodyPart(attachmentPart)
-                }
+            // Add the HTML report as attachment if it exists.
+            val htmlReport = File("$reportFolder/${report.campaignKey}.html")
+            if (mailConfiguration.html && reportFolder.isNotEmpty() && htmlReport.canRead()) {
+                val attachmentPart = MimeBodyPart()
+                MailUtils.compressSFile(htmlReport, attachmentFile)
+                attachmentPart.dataHandler = DataHandler(FileDataSource(attachmentFile))
+                attachmentPart.fileName = attachmentFile.name
+                multipart.addBodyPart(attachmentPart)
             }
             message.setContent(multipart)
             Transport.send(message)
@@ -127,59 +124,99 @@ internal class MailNotificationPublisher(
         }
     }
 
-    private fun composeMessageBody(report: CampaignReport): String {
-        val duration = report.end?.let { Duration.between(report.start, it).toSeconds() }
-        return """
-            <!DOCTYPE html>
-            <html>
-                <head>
-                    <style>
-                        table, th, td {
-                          border:1px solid black;
-                        }
-                    </style>
-                </head>
-            <body>
-                <table>
-                    <tr>
-                      <td>Campaign</td>
-                      <td>${report.campaignKey}</td>
-                    </tr>
-                    <tr>
-                      <td>Start</td>
-                      <td>${report.start}</td>
-                    </tr>
-                    <tr>
-                      <td>End</td>
-                      <td>${report.end ?: RUNNING_INDICATOR}</td>
-                    </tr>
-                    <tr>
-                      <td>Duration</td>
-                      <td>${duration?.let { "$it seconds" } ?: RUNNING_INDICATOR}</td>
-                    </tr>
-                    <tr>
-                      <td>Started minions</td>
-                      <td>${report.startedMinions}</td> 
-                    </tr>
-                    <tr>
-                      <td>Completed minions</td>
-                      <td>${report.completedMinions}</td>
-                    </tr>
-                    <tr>
-                      <td>Successful steps executions</td>
-                      <td>${report.successfulExecutions}</td>
-                    </tr>
-                    <tr>
-                      <td>Failed steps executions</td>
-                      <td>${report.failedExecutions}</td>
-                    </tr>
-                    <tr>
-                      <td>Status</td>
-                      <td>${report.status}</td>
-                    </tr>
-                </table>
-            </body></html>
-        """.trimIndent()
+    internal fun composeMessageBody(report: CampaignReport): String {
+        val colors = statusColorScheme(report.status)
+
+        val failureRate = failureRate(report.successfulExecutions, report.failedExecutions)
+        val failRateColor = if (failureRate > 0) "#c0392b" else "#27ae60"
+        val dateRange = formatDateRange(report.start, report.end)
+        val duration = formatDuration(report.start, report.end)
+
+        val scenariosSection = if (report.scenariosReports.isNotEmpty()) {
+            val cards = report.scenariosReports.joinToString("\n") { scenario ->
+                val sc = statusColorScheme(scenario.status)
+                val scRate = failureRate(scenario.successfulExecutions, scenario.failedExecutions)
+                val scRateColor = if (scRate > 0) "#c0392b" else "#27ae60"
+                """        <div style="margin-bottom:6px;border-left:3px solid ${sc.color};background:${sc.headerBg};border-radius:0 3px 3px 0;padding:6px 10px">
+          <div style="margin-bottom:3px">
+            <span style="font-size:12px;color:#1d1c1d">${scenario.scenarioName}</span>
+            <span style="margin-left:8px;padding:1px 8px;background:#f0f0f0;color:${sc.color};border-radius:20px;font-size:10px;font-weight:700;font-family:'Courier New',Courier,monospace">${scenario.status}</span>
+          </div>
+          <div style="font-size:11px;color:#555">&#9989; <b style="color:#27ae60">${scenario.successfulExecutions ?: 0}</b>&nbsp;&nbsp;&#10060; <b style="color:#c0392b">${scenario.failedExecutions ?: 0}</b>&nbsp;&nbsp;<span style="color:${scRateColor};font-weight:700">${scRate}% failure</span></div>
+        </div>"""
+            }
+            """
+      <div style="padding:10px 16px;border-top:1px solid #f0f0f0">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#aaa;margin-bottom:8px">Scenarios</div>
+$cards
+      </div>"""
+        } else {
+            ""
+        }
+
+        return """<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,Helvetica,sans-serif">
+  <div style="max-width:600px;margin:20px auto">
+    <div style="border-left:4px solid ${colors.color};background:#fff;border-radius:0 4px 4px 0;overflow:hidden">
+      <div style="padding:12px 16px;background:${colors.headerBg}">
+        <span style="font-size:16px;font-weight:700;color:#1d1c1d">${report.campaignKey}</span>
+        <span style="margin-left:10px;padding:2px 10px;background:${colors.badgeBg};color:${colors.badgeFg};border-radius:20px;font-size:11px;font-weight:700;border:1px solid ${colors.borderColor};font-family:Arial,sans-serif">${report.status}</span>
+      </div>
+      <div style="padding:7px 16px;font-size:12px;color:#777;border-bottom:1px solid #f0f0f0">
+        ${dateRange}  &middot;  ${duration}
+      </div>
+      <table style="width:100%;border-collapse:collapse">
+        <tr>
+          <td style="padding:10px 16px;width:50%;vertical-align:top;border-bottom:1px solid #f0f0f0">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#aaa;margin-bottom:5px">Minions</div>
+            <div style="font-size:13px;color:#444">&#8593; <b>${report.startedMinions}</b> started &nbsp; &#10003; <b>${report.completedMinions}</b> done</div>
+          </td>
+          <td style="padding:10px 16px;width:50%;vertical-align:top;border-bottom:1px solid #f0f0f0;border-left:1px solid #f0f0f0">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#aaa;margin-bottom:5px">Executions</div>
+            <div style="font-size:13px;color:#444">&#9989; <b style="color:#27ae60">${report.successfulExecutions}</b> &nbsp; &#10060; <b style="color:#c0392b">${report.failedExecutions}</b></div>
+            <div style="font-size:11px;font-weight:700;color:${failRateColor};margin-top:3px">${failureRate}% failure rate</div>
+          </td>
+        </tr>
+      </table>${scenariosSection}
+    </div>
+  </div>
+</body>"""
+    }
+
+    private fun failureRate(ok: Int?, fail: Int?): Int {
+        val total = (ok ?: 0) + (fail ?: 0)
+        return if (total > 0) (fail ?: 0) * 100 / total else 0
+    }
+
+    private fun formatDateRange(start: Instant?, end: Instant?): String {
+        val fmt = DateTimeFormatter.ofPattern("MMM d, yyyy").withZone(ZoneOffset.UTC)
+        val s = start?.let { fmt.format(it) } ?: return "—"
+        val e = end?.let { fmt.format(it) }
+        return if (e != null && e != s) "$s → $e" else s
+    }
+
+    private fun formatDuration(start: Instant?, end: Instant?): String {
+        if (start == null || end == null) return "—"
+        val d = Duration.between(start, end)
+        return when {
+            d.toDays() >= 1 -> "${d.toDays()}d"
+            d.toHours() >= 1 -> "${d.toHours()}h ${d.toMinutesPart()}m"
+            d.toMinutes() >= 1 -> "${d.toMinutes()}m ${d.toSecondsPart()}s"
+            else -> "${d.seconds}s"
+        }
+    }
+
+    private data class StatusColorScheme(
+        val color: String,
+        val headerBg: String,
+        val badgeBg: String,
+        val badgeFg: String,
+        val borderColor: String,
+    )
+
+    private fun statusColorScheme(status: ExecutionStatus) = when (status) {
+        ExecutionStatus.SUCCESSFUL -> StatusColorScheme("#27ae60", "#f0faf5", "#d4efdf", "#1e8449", "#a9dfbf")
+        ExecutionStatus.WARNING -> StatusColorScheme("#e67e22", "#fdf6ee", "#fde9cc", "#b7570f", "#f5cba7")
+        else -> StatusColorScheme("#c0392b", "#fdf2f1", "#f9d2cf", "#922b21", "#f1948a")
     }
 
     /**
@@ -212,14 +249,12 @@ internal class MailNotificationPublisher(
     }
 
     /**
-     * @property RUNNING_INDICATOR alternate value to replace missing duration or end values
      * @property TRANSPORT_PROTOCOL specifies the protocol type to be used in configuring mail properties
      * @property logger to log mail publishing events
      * @property CHARSET character set used in encoding mail properties
      * @property CONTENT_TYPE specifies the content type to be used by [MimeBodyPart]
      */
     companion object {
-        private const val RUNNING_INDICATOR = "<Running>"
         private const val TRANSPORT_PROTOCOL = "smtp"
         private const val CONTENT_TYPE = "html"
         private const val CHARSET = "utf-8"
