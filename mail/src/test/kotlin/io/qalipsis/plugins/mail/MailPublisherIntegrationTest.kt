@@ -25,6 +25,7 @@ import assertk.assertions.contains
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotEmpty
+import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.prop
 import io.micronaut.context.annotation.Value
@@ -40,6 +41,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.qalipsis.api.report.CampaignReport
 import io.qalipsis.api.report.ExecutionStatus
+import io.qalipsis.api.report.ScenarioReport
 import io.qalipsis.plugins.mail.notification.AuthenticationMode
 import io.qalipsis.plugins.mail.notification.MailNotificationConfiguration
 import io.qalipsis.plugins.mail.notification.MailNotificationPublisher
@@ -47,7 +49,6 @@ import io.qalipsis.plugins.mail.notification.ReportExecutionStatus
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import jakarta.inject.Inject
-import java.time.Duration
 import java.time.Instant
 import kotlin.math.pow
 import org.apache.commons.lang3.RandomStringUtils
@@ -108,7 +109,33 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             status = ExecutionStatus.SUCCESSFUL,
             scheduledMinions = 4,
             start = Instant.parse("2022-10-29T00:00:00.00Z"),
-            end = Instant.parse("2022-11-05T00:00:00.00Z")
+            end = Instant.parse("2022-11-05T00:00:00.00Z"),
+            scenariosReports = listOf(
+                ScenarioReport(
+                    campaignKey = "Campaign-1",
+                    scenarioName = "scenario-login-flow",
+                    start = Instant.parse("2022-10-29T00:00:00.00Z"),
+                    end = Instant.parse("2022-11-05T00:00:00.00Z"),
+                    startedMinions = 600,
+                    completedMinions = 600,
+                    successfulExecutions = 600,
+                    failedExecutions = 0,
+                    status = ExecutionStatus.SUCCESSFUL,
+                    messages = emptyList()
+                ),
+                ScenarioReport(
+                    campaignKey = "Campaign-1",
+                    scenarioName = "scenario-checkout-flow",
+                    start = Instant.parse("2022-10-29T00:00:00.00Z"),
+                    end = Instant.parse("2022-11-05T00:00:00.00Z"),
+                    startedMinions = 400,
+                    completedMinions = 390,
+                    successfulExecutions = 390,
+                    failedExecutions = 10,
+                    status = ExecutionStatus.FAILED,
+                    messages = emptyList()
+                )
+            )
         )
         mailNotificationConfiguration = mockk {
             every { enabled } returns true
@@ -119,7 +146,7 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             every { port } returns noAuthenticationContainer.getMappedPort(SMTP_PORT)
             every { from } returns FROM
             every { authenticationMode } returns AuthenticationMode.PLAIN
-            every { junit } returns false
+            every { html } returns false
             every { to } returns setOf(TO)
             every { cc } returns null
             every { ssl } returns false
@@ -134,7 +161,7 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             // given
             val campaignReport = campaignReportPrototype.copy(failedExecutions = 0)
             val subject = "${campaignReport.campaignKey} ${campaignReport.status}"
-            val htmlMessage = composeMessage(campaignReport)
+            val htmlMessage = mailNotificationPublisher.composeMessageBody(campaignReport)
 
             // when
             mailNotificationPublisher.publish(
@@ -169,7 +196,7 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             val campaignReport = campaignReportPrototype.copy(failedExecutions = 0, campaignKey = "Campaign-2")
             val subject = "${campaignReport.campaignKey} ${campaignReport.status}"
             every { mailNotificationConfiguration.cc } returns setOf(CC)
-            val htmlMessage = composeMessage(campaignReport)
+            val htmlMessage = mailNotificationPublisher.composeMessageBody(campaignReport)
 
             // when
             mailNotificationPublisher.publish(
@@ -215,7 +242,7 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             every { mailNotificationConfiguration.from } returns "Qalipsis Sender <$FROM>"
             every { mailNotificationConfiguration.to } returns setOf("Qalipsis Recipient<$TO>")
             every { mailNotificationConfiguration.cc } returns setOf("Qalipsis Carbon Copy <$CC>")
-            val htmlMessage = composeMessage(campaignReport)
+            val htmlMessage = mailNotificationPublisher.composeMessageBody(campaignReport)
 
             // when
             mailNotificationPublisher.publish(
@@ -257,7 +284,7 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             val campaignReport = campaignReportPrototype.copy(failedExecutions = 0, campaignKey = "Campaign-4")
             every { mailNotificationConfiguration.authenticationMode } returns AuthenticationMode.USERNAME_PASSWORD
             val subject = "${campaignReport.campaignKey} ${campaignReport.status}"
-            val htmlMessage = composeMessage(campaignReport)
+            val htmlMessage = mailNotificationPublisher.composeMessageBody(campaignReport)
 
             // when
             mailNotificationPublisher.publish(
@@ -294,8 +321,8 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             every { mailNotificationConfiguration.from } returns "Qalipsis Sender <$FROM>"
             every { mailNotificationConfiguration.to } returns setOf("Qalipsis Recipient<$TO>")
             every { mailNotificationConfiguration.cc } returns setOf("Qalipsis Carbon Copy <$CC>")
-            every { mailNotificationConfiguration.junit } returns true
-            val htmlMessage = composeMessage(campaignReport)
+            every { mailNotificationConfiguration.html } returns true
+            val htmlMessage = mailNotificationPublisher.composeMessageBody(campaignReport)
 
             // when
             mailNotificationPublisher.publish(
@@ -312,7 +339,7 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
                 prop(MailResponse::html).isEqualTo(htmlMessage)
             }
             val attachments = response[0].attachments
-            assertFalse { attachments.isNullOrEmpty() }
+            assertThat(attachments).isNotNull().isNotEmpty()
             val firstAttachment = attachments?.get(0) as MailAttachment
             assertThat(firstAttachment).all {
                 prop(MailAttachment::fileName).contains(campaignReport.campaignKey)
@@ -379,7 +406,7 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             val campaignReport =
                 campaignReportPrototype.copy(campaignKey = "Campaign-6", status = ExecutionStatus.ABORTED)
             val subject = "${campaignReport.campaignKey} ${campaignReport.status}"
-            val htmlMessage = composeMessage(campaignReport)
+            val htmlMessage = mailNotificationPublisher.composeMessageBody(campaignReport)
 
             // when
             mailNotificationPublisher.publish(
@@ -416,8 +443,8 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             every { mailNotificationConfiguration.from } returns "Qalipsis Sender <$FROM>"
             every { mailNotificationConfiguration.to } returns setOf("Qalipsis Recipient<$TO>")
             every { mailNotificationConfiguration.cc } returns setOf("Qalipsis Carbon Copy <$CC>")
-            every { mailNotificationConfiguration.junit } returns true
-            val htmlMessage = composeMessage(campaignReport)
+            every { mailNotificationConfiguration.html } returns true
+            val htmlMessage = mailNotificationPublisher.composeMessageBody(campaignReport)
 
             // when
             mailNotificationPublisher.publish(
@@ -437,61 +464,6 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
             assertTrue { attachments.isNullOrEmpty() }
         }
 
-    private fun composeMessage(report: CampaignReport): String {
-        val duration = report.end?.let { Duration.between(report.start, it).toSeconds() }
-        return """
-            <!DOCTYPE html>
-            <html>
-                <head>
-                    <style>
-                        table, th, td {
-                          border:1px solid black;
-                        }
-                    </style>
-                </head>
-            <body>
-                <table>
-                    <tr>
-                      <td>Campaign</td>
-                      <td>${report.campaignKey}</td>
-                    </tr>
-                    <tr>
-                      <td>Start</td>
-                      <td>${report.start}</td>
-                    </tr>
-                    <tr>
-                      <td>End</td>
-                      <td>${report.end ?: "<Running>"}</td>
-                    </tr>
-                    <tr>
-                      <td>Duration</td>
-                      <td>${duration?.let { "$it seconds" } ?: "<Running>"}</td>
-                    </tr>
-                    <tr>
-                      <td>Started minions</td>
-                      <td>${report.startedMinions}</td> 
-                    </tr>
-                    <tr>
-                      <td>Completed minions</td>
-                      <td>${report.completedMinions}</td>
-                    </tr>
-                    <tr>
-                      <td>Successful steps executions</td>
-                      <td>${report.successfulExecutions}</td>
-                    </tr>
-                    <tr>
-                      <td>Failed steps executions</td>
-                      <td>${report.failedExecutions}</td>
-                    </tr>
-                    <tr>
-                      <td>Status</td>
-                      <td>${report.status}</td>
-                    </tr>
-                </table>
-            </body></html>
-        """.trimIndent()
-    }
-
     private fun retrieveBySubject(subject: String): List<MailResponse> {
         val getSubjectRequest: HttpRequest<*> = GET<Any>("/email/?subject=$subject")
         return httpClient.toBlocking().retrieve(getSubjectRequest, Argument.listOf(MailResponse::class.java))
@@ -504,7 +476,7 @@ internal class MailPublisherIntegrationTest : TestPropertyProvider {
         private const val USERNAME = "testqalipsis@test.com"
         private const val SMTP_PORT = 25
         private const val API_PORT = 80
-        private const val REPORT_FOLDER = "src/test/resources/junit-reports"
+        private const val REPORT_FOLDER = "src/test/resources/html-reports"
         private const val DOCKER_IMAGE = "djfarrelly/maildev"
 
 

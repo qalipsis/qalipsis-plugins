@@ -173,7 +173,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-1", "zone":"zone-a"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-1", "zone":"zone-a"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -194,7 +194,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-2",
-                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-2", "zone":"zone-a"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-1","scenario-tag":"my-scenario-2", "zone":"zone-a"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -204,7 +204,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-2",
                         scenario = "my-scenario-1",
-                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-2","scenario-tag":"my-scenario-1", "zone":"zone-a"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-2","scenario-tag":"my-scenario-1", "zone":"zone-a"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -213,7 +213,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         name = "my-meter-1",
                         tenant = "tenant-1",
                         campaign = "my-campaign-3",
-                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-3"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","campaign-tag":"my-campaign-3"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -231,7 +231,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-1",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"tenant-1","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-1","scenario-tag":"my-scenario-1"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -248,7 +248,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "tenant-2",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"tenant-2","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"tenant-2","scenario-tag":"my-scenario-1"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -266,7 +266,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "default-tenant",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"default-tenant","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"default-tenant","scenario-tag":"my-scenario-1"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -275,7 +275,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         name = "my-meter-1",
                         tenant = "default-tenant",
                         campaign = "my-campaign-3",
-                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"default-tenant","campaign-tag":"my-campaign-3"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"default-tenant","campaign-tag":"my-campaign-3"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -293,7 +293,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                         tenant = "default-tenant",
                         campaign = "my-campaign-1",
                         scenario = "my-scenario-1",
-                        tags = """{"scope":"step", "value-tag": "$value","tenant-tag":"default-tenant","scenario-tag":"my-scenario-1"}""",
+                        tags = """{"scope":"period", "value-tag": "$value","tenant-tag":"default-tenant","scenario-tag":"my-scenario-1"}""",
                         timestamp = Timestamp.from(currentMeterTimestamp),
                         type = "gauge",
                         value = value.toBigDecimal(),
@@ -1444,7 +1444,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     QueryClause("name", QueryClauseOperator.IS, "my-event-1")
                 )
                 val query = meterQueryGenerator.prepareQueries("other-tenant", aggregationQuery)
-                val result = executeAggregation(query, start, latestTimestamp - timeStep)
+                val result = executeAggregation(query, start, latestTimestamp - timeStep, zones = setOf("zone-a"))
 
                 // then
                 assertThat(result).isEmpty()
@@ -1463,7 +1463,12 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     )
                 )
                 // when meters in [start, latestTimestamp - timeStep] are selected
-                var result = executeAggregation(queryForMeter1InTenant1, start, latestTimestamp - timeStep)
+                var result = executeAggregation(
+                    queryForMeter1InTenant1,
+                    start,
+                    latestTimestamp - timeStep,
+                    zones = setOf("zone-a")
+                )
 
                 // then 11 raw records are returned since no aggregation is applied to meters
                 assertThat(result).all {
@@ -1520,7 +1525,8 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                 result = executeAggregation(
                     queryForMeter1InTenant1,
                     start - Duration.ofMinutes(1),
-                    latestTimestamp + Duration.ofMinutes(1)
+                    latestTimestamp + Duration.ofMinutes(1),
+                    zones = setOf("zone-a")
                 )
 
                 // then all 12 records are returned including the earliest one at start - timeStep
@@ -1582,7 +1588,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     timeframeUnit = Duration.ofSeconds(2)
                 )
             )
-            val result = executeAggregation(query, start, latestTimestamp - timeStep)
+            val result = executeAggregation(query, start, latestTimestamp - timeStep, zones = setOf("zone-a"))
 
             // then 11 raw records with null values since no fieldName produces NULL::decimal in SQL
             assertThat(result).all {
@@ -1609,7 +1615,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     timeframeUnit = Duration.ofSeconds(2)
                 )
             )
-            val result = executeAggregation(query, start, latestTimestamp - timeStep)
+            val result = executeAggregation(query, start, latestTimestamp - timeStep, zones = setOf("zone-a"))
 
             // then 11 raw records with actual values (aggregation operator ignored for meters)
             assertThat(result).all {
@@ -1636,7 +1642,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     timeframeUnit = Duration.ofSeconds(2)
                 )
             )
-            val result = executeAggregation(query, start, latestTimestamp - timeStep)
+            val result = executeAggregation(query, start, latestTimestamp - timeStep, zones = setOf("zone-a"))
 
             // then raw records are returned since aggregation operators are ignored for meters
             assertThat(result).all {
@@ -1696,7 +1702,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     timeframeUnit = Duration.ofSeconds(2)
                 )
             )
-            val result = executeAggregation(query, start, latestTimestamp - timeStep)
+            val result = executeAggregation(query, start, latestTimestamp - timeStep, zones = setOf("zone-a"))
 
             // then raw records are returned since aggregation operators are ignored for meters
             assertThat(result).all {
@@ -1756,7 +1762,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     timeframeUnit = Duration.ofSeconds(2)
                 )
             )
-            val result = executeAggregation(query, start, latestTimestamp - timeStep)
+            val result = executeAggregation(query, start, latestTimestamp - timeStep, zones = setOf("zone-a"))
 
             // then raw records are returned since aggregation operators are ignored for meters
             assertThat(result).all {
@@ -1816,7 +1822,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     timeframeUnit = Duration.ofSeconds(2)
                 )
             )
-            val result = executeAggregation(query, start, latestTimestamp - timeStep)
+            val result = executeAggregation(query, start, latestTimestamp - timeStep, zones = setOf("zone-a"))
 
             // then raw records are returned since aggregation operators are ignored for meters
             assertThat(result).all {
@@ -1843,7 +1849,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     timeframeUnit = Duration.ofSeconds(2)
                 )
             )
-            val result = executeAggregation(query, start, latestTimestamp - timeStep)
+            val result = executeAggregation(query, start, latestTimestamp - timeStep, zones = setOf("zone-a"))
 
             // then raw records are returned since aggregation operators are ignored for meters
             assertThat(result).all {
@@ -1870,7 +1876,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     timeframeUnit = Duration.ofSeconds(2)
                 )
             )
-            val result = executeAggregation(query, start, latestTimestamp - timeStep)
+            val result = executeAggregation(query, start, latestTimestamp - timeStep, zones = setOf("zone-a"))
 
             // then raw records are returned since aggregation operators are ignored for meters
             assertThat(result).all {
@@ -1901,14 +1907,14 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     campaigns = setOf("my-campaign-1")
                 )
 
-                // then 22 raw records for campaign-1, scenario-1 (my-meter-1 + my-meter-2)
+                // then 11 raw records for campaign-1, scenario-1: only my-meter-2 (no zone); my-meter-1 (zone-a) excluded by zone IS NULL filter
                 assertThat(result).all {
-                    hasSize(22)
+                    hasSize(11)
                     index(0).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
                     }
-                    index(21).all {
+                    index(10).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
                     }
@@ -1922,18 +1928,8 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     campaigns = setOf("my-campaign-2")
                 )
 
-                // then 11 raw records for campaign-2, scenario-1 (only my-meter-1 is in campaign-2)
-                assertThat(result).all {
-                    hasSize(11)
-                    index(0).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                    }
-                    index(10).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                    }
-                }
+                // then no records: my-meter-1/campaign-2 has zone-a, excluded by zone IS NULL filter (no zone-less meter in campaign-2)
+                assertThat(result).isEmpty()
 
                 // when both campaigns are selected
                 result = executeAggregation(
@@ -1943,24 +1939,16 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     campaigns = setOf("my-campaign-1", "my-campaign-2")
                 )
 
-                // then 33 raw records ordered by campaign then timestamp (22 from campaign-1, 11 from campaign-2)
+                // then 11 raw records: only my-meter-2 from campaign-1 (no zone); my-meter-1/campaign-1+2 excluded by zone IS NULL filter
                 assertThat(result).all {
-                    hasSize(33)
+                    hasSize(11)
                     index(0).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
                     }
-                    index(21).all {
+                    index(10).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                    }
-                    index(22).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                    }
-                    index(32).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
                     }
                 }
             }
@@ -1981,14 +1969,14 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     scenariosNames = setOf("my-scenario-1")
                 )
 
-                // then 22 raw records for campaign-1, scenario-1 (my-meter-1 + my-meter-2)
+                // then 11 raw records for campaign-1, scenario-1: only my-meter-2 (no zone); my-meter-1 (zone-a) excluded by zone IS NULL filter
                 assertThat(result).all {
-                    hasSize(22)
+                    hasSize(11)
                     index(0).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start)
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
                     }
-                    index(21).all {
+                    index(10).all {
                         prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
                         prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
                     }
@@ -2003,37 +1991,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     scenariosNames = setOf("my-scenario-1")
                 )
 
-                // then 33 raw records for both campaigns with scenario-1 (22 from campaign-1, 11 from campaign-2)
-                assertThat(result).all {
-                    hasSize(33)
-                    index(0).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                    }
-                    index(21).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
-                    }
-                    index(22).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start)
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                    }
-                    index(32).all {
-                        prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
-                        prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-2")
-                    }
-                }
-
-                // when scenario-2 is selected (only campaign-1 has scenario-2 records)
-                result = executeAggregation(
-                    query = query,
-                    start = start,
-                    end = latestTimestamp + Duration.ofSeconds(3),
-                    campaigns = setOf("my-campaign-1", "my-campaign-2"),
-                    scenariosNames = setOf("my-scenario-2")
-                )
-
-                // then 11 raw records for campaign-1 only (campaign-2 has no scenario-2)
+                // then 11 raw records: only my-meter-2 from campaign-1 (no zone); my-meter-1/campaign-1+2 excluded by zone IS NULL filter
                 assertThat(result).all {
                     hasSize(11)
                     index(0).all {
@@ -2046,7 +2004,19 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     }
                 }
 
-                // when zone-a filter is applied (zone-a records have scope:step and pass the scope filter)
+                // when scenario-2 is selected (only campaign-1 has scenario-2 records, but all have zone-a)
+                result = executeAggregation(
+                    query = query,
+                    start = start,
+                    end = latestTimestamp + Duration.ofSeconds(3),
+                    campaigns = setOf("my-campaign-1", "my-campaign-2"),
+                    scenariosNames = setOf("my-scenario-2")
+                )
+
+                // then no records: my-meter-1/campaign-1/scenario-2 has zone-a, excluded by zone IS NULL filter
+                assertThat(result).isEmpty()
+
+                // when zone-a filter is applied (zone-a records have scope:period and pass the scope filter)
                 result = executeAggregation(
                     query = query,
                     start = start,
@@ -2079,7 +2049,7 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                     zones = setOf("zone-b")
                 )
 
-                // then no records since zone-b records have scope:other, filtered out by meters.tags->>'scope' IN ('step', 'campaign')
+                // then no records since zone-b records have scope:other, filtered out by meters.tags->>'scope' IN ('period', 'campaign')
                 assertThat(result).isEmpty()
             }
 
@@ -2111,6 +2081,37 @@ internal abstract class AbstractMeterQueryGeneratorIntegrationTest : TestPropert
                 }
             }
         }
+
+        @Test
+        internal fun `should aggregate only meters without zone when no zone filter is specified`() =
+            testDispatcherProvider.run {
+                // given
+                val query = meterQueryGenerator.prepareQueries(
+                    "tenant-1",
+                    QueryDescription(aggregationOperation = QueryAggregationOperator.COUNT)
+                )
+                // campaign-1/scenario-1 has both my-meter-1 (zone-a) and my-meter-2 (no zone);
+                // omitting zones triggers AND tags->>'zone' IS NULL, which excludes my-meter-1
+                val result = executeAggregation(
+                    query = query,
+                    start = start,
+                    end = latestTimestamp + Duration.ofSeconds(3),
+                    campaigns = setOf("my-campaign-1", "my-campaign-2"),
+                    scenariosNames = setOf("my-scenario-1")
+                    // zones defaults to emptySet()
+                )
+
+                // then 11 raw records: only my-meter-2 from campaign-1 (tags have no zone key);
+                // my-meter-1 from both campaigns (zone-a) is excluded by the implicit AND tags->>'zone' IS NULL clause
+                assertThat(result).all {
+                    hasSize(11)
+                    each {
+                        it.prop(TimeSeriesAggregationResult::campaign).isEqualTo("my-campaign-1")
+                    }
+                    index(0).prop(TimeSeriesAggregationResult::start).isEqualTo(start)
+                    index(10).prop(TimeSeriesAggregationResult::start).isEqualTo(start + Duration.ofSeconds(5))
+                }
+            }
     }
 
     protected open suspend fun executeSelect(

@@ -60,6 +60,8 @@ internal abstract class AbstractQueryExecutor<T> {
             actualBoundParameters[nextIdentifier] =
                 RawBoundParameter(zones.toTypedArray(), nextIdentifier)
             additionalClauses.append(" AND tags->>'zone' = any (array[${nextIdentifier}])")
+        } else if (dataType == DataType.METER) {
+            additionalClauses.append(" AND tags->>'zone' IS NULL")
         }
 
         return additionalClauses

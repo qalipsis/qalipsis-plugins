@@ -76,7 +76,7 @@ interface MailNotificationConfiguration {
 
     @get:Bindable(defaultValue = "false")
     @get:NotNull
-    val junit: Boolean
+    val html: Boolean
 
     @get:Bindable(defaultValue = "false")
     @get:NotNull

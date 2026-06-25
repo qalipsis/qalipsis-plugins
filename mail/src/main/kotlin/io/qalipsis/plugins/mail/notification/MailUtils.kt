@@ -32,6 +32,14 @@ import java.util.zip.ZipOutputStream
  */
 internal object MailUtils {
 
+    fun compressSFile(sourceFile: File, attachmentFile: File) {
+        FileOutputStream(attachmentFile).use { fos ->
+            ZipOutputStream(fos).use { zos ->
+                writeFileToZip(sourceFile, sourceFile.name, zos)
+            }
+        }
+    }
+
     fun compressDirectory(reportDirectory: File, attachmentFile: File) {
         val collectedFiles = mutableListOf<File>()
         collectFiles(reportDirectory, collectedFiles)
@@ -39,17 +47,21 @@ internal object MailUtils {
             ZipOutputStream(fos).use { zos ->
                 collectedFiles.forEach { fileToCompress ->
                     val name = fileToCompress.relativeTo(reportDirectory).path.replace(File.separatorChar, '/')
-                    zos.putNextEntry(ZipEntry(name))
-                    FileInputStream(fileToCompress).use { fis ->
-                        val buffer = ByteArray(1024)
-                        var length: Int
-                        while (fis.read(buffer).also { length = it } > 0) {
-                            zos.write(buffer, 0, length)
-                        }
-                        zos.closeEntry()
-                    }
+                    writeFileToZip(fileToCompress, name, zos)
                 }
             }
+        }
+    }
+
+    private fun writeFileToZip(file: File, entryName: String, zos: ZipOutputStream) {
+        zos.putNextEntry(ZipEntry(entryName))
+        FileInputStream(file).use { fis ->
+            val buffer = ByteArray(1024)
+            var length: Int
+            while (fis.read(buffer).also { length = it } > 0) {
+                zos.write(buffer, 0, length)
+            }
+            zos.closeEntry()
         }
     }
 

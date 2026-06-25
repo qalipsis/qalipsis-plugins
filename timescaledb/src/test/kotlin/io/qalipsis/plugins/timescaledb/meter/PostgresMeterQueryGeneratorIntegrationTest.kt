@@ -59,7 +59,7 @@ internal class PostgresMeterQueryGeneratorIntegrationTest : AbstractMeterQueryGe
                     timeframeUnit = Duration.ofSeconds(2)
                 )
             )
-            val result = executeAggregation(query, start, latestTimestamp - timeStep)
+            val result = executeAggregation(query, start, latestTimestamp - timeStep, zones = setOf("zone-a"))
 
             // then 11 raw records since meters always return raw values regardless of aggregation operator
             assertThat(result).all {

@@ -19,16 +19,16 @@
 
 package io.qalipsis.plugins.timescaledb.meter
 
+import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.DistributionMeasurementMetric
 import io.qalipsis.api.meters.Measurement
 import io.qalipsis.api.meters.MeterSnapshot
 import io.qalipsis.api.meters.MeterType
 import io.qalipsis.api.meters.Statistic
-import io.qalipsis.api.meters.UnsupportedMeterException
-import org.apache.commons.text.StringEscapeUtils
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util.concurrent.TimeUnit
+import org.apache.commons.text.StringEscapeUtils
 
 /**
  * Converter for QALIPSIS meters for TimescaleDB.
@@ -40,7 +40,7 @@ internal class TimescaledbMeterConverter {
     fun convert(
         meterSnapshots: Collection<MeterSnapshot>
     ): List<TimescaledbMeter> {
-        return meterSnapshots.map { snapshot ->
+        return meterSnapshots.mapNotNull { snapshot ->
             val snapshotMeter = snapshot.meterId
             var tenant: String? = null
             var campaign: String? = null
@@ -90,11 +90,19 @@ internal class TimescaledbMeterConverter {
                 MeterType.COUNTER -> convertCounter(snapshot.measurements, timescaledbMeter)
                 MeterType.TIMER -> convertTimer(snapshot.measurements, timescaledbMeter)
                 MeterType.DISTRIBUTION_SUMMARY -> convertSummary(snapshot.measurements, timescaledbMeter)
+                MeterType.STATISTICS -> convertStatistics(snapshot.measurements, timescaledbMeter)
                 MeterType.RATE -> convertRate(snapshot.measurements, timescaledbMeter)
                 MeterType.THROUGHPUT -> convertThroughput(snapshot.measurements, timescaledbMeter)
-                else -> throw UnsupportedMeterException("Meter ${snapshotMeter.meterName} not supported")
+                else -> {
+                    log.debug { "Skipping unsupported meter type ${snapshotMeter.type} for meter ${snapshotMeter.meterName}" }
+                    null
+                }
             }
         }
+    }
+
+    private companion object {
+        val log = logger()
     }
 
     /**
@@ -136,7 +144,9 @@ internal class TimescaledbMeterConverter {
     ): TimescaledbMeter {
         val statToValue = mutableMapOf<String, Double>()
         val other = mutableListOf<String>()
-        measurements.forEach { measurement ->
+        measurements.filter { measurement ->
+            measurement.value.isFinite()
+        }.forEach { measurement ->
             val key = measurement.statistic.value
             val value = BigDecimal(measurement.value).toString()
             when (measurement) {
@@ -170,7 +180,44 @@ internal class TimescaledbMeterConverter {
     ): TimescaledbMeter {
         val statToValue = mutableMapOf<String, Double>()
         val other = mutableListOf<String>()
-        measurements.forEach { measurement ->
+        measurements.filter { measurement ->
+            measurement.value.isFinite()
+        }.forEach { measurement ->
+            val key = measurement.statistic.value
+            val value = BigDecimal(measurement.value).toString()
+            when (measurement) {
+                is DistributionMeasurementMetric -> {
+                    val entry =
+                        """"${
+                            StringEscapeUtils.escapeJson("${key}_${measurement.observationPoint}").lowercase()
+                        }":"$value""""
+                    other.add(entry)
+                }
+
+                else -> statToValue[key] = measurement.value
+            }
+        }
+        return timescaledbMeter.copy(
+            count = BigDecimal(statToValue[Statistic.COUNT.value] ?: 0.0),
+            sum = BigDecimal(statToValue[Statistic.TOTAL.value] ?: 0.0),
+            mean = BigDecimal(statToValue[Statistic.MEAN.value] ?: 0.0),
+            max = BigDecimal(statToValue[Statistic.MAX.value] ?: 0.0),
+            other = other.takeIf { it.isNotEmpty() }?.sorted()?.joinToString(",", prefix = "{", postfix = "}")
+        )
+    }
+
+    /**
+     * Timescaledb serializer for Statistics.
+     */
+    private fun convertStatistics(
+        measurements: Collection<Measurement>,
+        timescaledbMeter: TimescaledbMeter,
+    ): TimescaledbMeter {
+        val statToValue = mutableMapOf<String, Double>()
+        val other = mutableListOf<String>()
+        measurements.filter { measurement ->
+            measurement.value.isFinite()
+        }.forEach { measurement ->
             val key = measurement.statistic.value
             val value = BigDecimal(measurement.value).toString()
             when (measurement) {
@@ -218,7 +265,9 @@ internal class TimescaledbMeterConverter {
     ): TimescaledbMeter {
         val statToValue = mutableMapOf<String, Double>()
         val other = mutableListOf<String>()
-        measurements.forEach { measurement ->
+        measurements.filter { measurement ->
+            measurement.value.isFinite()
+        }.forEach { measurement ->
             val key = measurement.statistic.value
             val value = BigDecimal(measurement.value).toString()
             when (measurement) {
