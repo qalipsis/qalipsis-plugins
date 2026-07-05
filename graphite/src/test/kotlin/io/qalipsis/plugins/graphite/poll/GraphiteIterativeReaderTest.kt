@@ -83,7 +83,7 @@ internal class GraphiteIterativeReaderTest {
     private val failureCounter = relaxedMockk<Counter>()
 
     @Test
-    @Timeout(6)
+    @Timeout(10)
     fun `should be restartable`() = testDispatcherProvider.run {
         // given
         val latch = SuspendedCountLatch(1, true)

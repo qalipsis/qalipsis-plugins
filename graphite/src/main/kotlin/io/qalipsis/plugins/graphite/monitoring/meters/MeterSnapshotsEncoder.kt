@@ -19,6 +19,7 @@
 
 package io.qalipsis.plugins.graphite.monitoring.meters
 
+import io.aerisconsulting.catadioptre.KTestable
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.MessageToMessageEncoder
@@ -40,6 +41,7 @@ import io.qalipsis.plugins.graphite.client.GraphiteRecord
 internal class MeterSnapshotsEncoder(private val prefix: String, private val batchSize: Int = 100) :
     MessageToMessageEncoder<List<MeterSnapshot>>() {
 
+    @KTestable
     override fun encode(ctx: ChannelHandlerContext, msg: List<MeterSnapshot>, out: MutableList<Any>) {
         msg.windowed(batchSize, batchSize, true).forEach { snapshots ->
             out.add(
@@ -48,7 +50,9 @@ internal class MeterSnapshotsEncoder(private val prefix: String, private val bat
                         "type" to snapshot.meterId.type.value.lowercase()
                     )).toMutableMap()
 
-                    snapshot.measurements.map { measurement ->
+                    // Non-finite measurements (NaN / Infinity) are skipped: Graphite's plaintext protocol
+                    // rejects "NaN" / "Infinity" tokens.
+                    snapshot.measurements.filter { it.value.isFinite() }.map { measurement ->
                         val measurementTags = tags.toMutableMap()
                         measurementTags["measurement"] = measurement.statistic.name
                         if (measurement is DistributionMeasurementMetric && measurement.statistic == Statistic.PERCENTILE) {

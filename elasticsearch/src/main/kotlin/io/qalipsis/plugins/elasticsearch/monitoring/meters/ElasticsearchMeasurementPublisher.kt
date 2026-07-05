@@ -31,14 +31,14 @@ import io.qalipsis.api.sync.SuspendedCountLatch
 import io.qalipsis.plugins.elasticsearch.monitoring.ElasticsearchOperationsImpl
 import io.qalipsis.plugins.elasticsearch.monitoring.PublishingMode
 import jakarta.inject.Named
+import java.time.Clock
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.elasticsearch.client.Request
-import java.time.Clock
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 
 /**
  * Implementation of measurement publisher to export meters to elasticsearch.
@@ -86,14 +86,15 @@ internal class ElasticsearchMeasurementPublisher(
     private suspend fun performPublish(meterSnapshots: Collection<MeterSnapshot>) {
         logger.debug { "Sending ${meterSnapshots.size} meters to Elasticsearch" }
         // Convert the data for a bulk post.
-        val requestBody = meterSnapshots
-            .map(this@ElasticsearchMeasurementPublisher::metersToJsonConverter)
+        val serialized = meterSnapshots.mapNotNull(this@ElasticsearchMeasurementPublisher::metersToJsonConverter)
+        if (serialized.isEmpty()) return
+        val requestBody = serialized
             .joinToString(
                 separator = "\n",
                 postfix = "\n",
                 transform = { elasticsearchOperations.createBulkItem(it, configuration.indexPrefix) }
             )
-        val numberOfSentItems = meterSnapshots.size
+        val numberOfSentItems = serialized.size
         val bulkRequest = Request("POST", "_bulk")
         bulkRequest.setJsonEntity(requestBody)
         val exportStart = System.nanoTime()
@@ -115,8 +116,13 @@ internal class ElasticsearchMeasurementPublisher(
 
     /**
      * Converts a collection of [MeterSnapshot]s to json format.
+     *
+     * Non-finite measurements (NaN / Infinity) are dropped because the Elasticsearch bulk API rejects
+     * them as invalid JSON numbers. A snapshot with no finite measurements is skipped entirely.
      */
-    private fun metersToJsonConverter(meterSnapshot: MeterSnapshot): Pair<String, String> {
+    private fun metersToJsonConverter(meterSnapshot: MeterSnapshot): Pair<String, String>? {
+        val finiteMeasurements = meterSnapshot.measurements.filter { it.value.isFinite() }
+        if (finiteMeasurements.isEmpty()) return null
         val stringBuilder = StringBuilder()
         val timestamp = indexFormatter.format(ZonedDateTime.ofInstant(meterSnapshot.timestamp, Clock.systemUTC().zone))
         val meterId = meterSnapshot.meterId
@@ -138,7 +144,7 @@ internal class ElasticsearchMeasurementPublisher(
             val jsonTags = tags.entries.joinToString(",") { "\"${it.key}\":\"${it.value}\"" }
             stringBuilder.append(""""tags":{$jsonTags}""")
         }
-        val measurementJson = meterSnapshot.measurements.joinToString(separator = ",") {
+        val measurementJson = finiteMeasurements.joinToString(separator = ",") {
             if (it is DistributionMeasurementMetric) {
                 """{"${it.statistic.value.lowercase()}_${
                     it.observationPoint.toString()

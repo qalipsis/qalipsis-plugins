@@ -83,7 +83,9 @@ internal class ProtobufMeterConverter {
 
     private fun convertTimer(timerSnapshot: MeterSnapshot, meter: MeterOuterClass.Meter.Builder) {
         meter.unit = TimeUnit.MICROSECONDS.name
-        timerSnapshot.measurements.forEach {
+        // Non-finite measurements (NaN / Infinity) are skipped: protobuf's JSON printer rejects them
+        // and consumers of the message would fail downstream.
+        timerSnapshot.measurements.filter { it.value.isFinite() }.forEach {
             when (it.statistic) {
                 Statistic.COUNT -> meter.count = it.value.toLong()
                 Statistic.TOTAL_TIME -> meter.sum = it.value
@@ -103,7 +105,9 @@ internal class ProtobufMeterConverter {
     }
 
     private fun convertSummary(summarySnapshot: MeterSnapshot, meter: MeterOuterClass.Meter.Builder) {
-        summarySnapshot.measurements.forEach {
+        // Non-finite measurements (NaN / Infinity) are skipped: protobuf's JSON printer rejects them
+        // and consumers of the message would fail downstream.
+        summarySnapshot.measurements.filter { it.value.isFinite() }.forEach {
             when (it.statistic) {
                 Statistic.COUNT -> meter.count = it.value.toLong()
                 Statistic.TOTAL -> meter.sum = it.value
@@ -130,7 +134,9 @@ internal class ProtobufMeterConverter {
     }
 
     private fun convertThroughput(throughputSnapshot: MeterSnapshot, meter: MeterOuterClass.Meter.Builder) {
-        throughputSnapshot.measurements.forEach {
+        // Non-finite measurements (NaN / Infinity) are skipped: protobuf's JSON printer rejects them
+        // and consumers of the message would fail downstream.
+        throughputSnapshot.measurements.filter { it.value.isFinite() }.forEach {
             when (it.statistic) {
                 Statistic.VALUE -> meter.value = it.value
                 Statistic.TOTAL -> meter.sum = it.value

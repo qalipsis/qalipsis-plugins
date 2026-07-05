@@ -24,10 +24,10 @@ import io.qalipsis.api.meters.MeterSnapshot
 import io.qalipsis.api.meters.MeterType
 import io.qalipsis.api.meters.Statistic
 import io.qalipsis.api.meters.UnsupportedMeterException
-import org.apache.commons.text.StringEscapeUtils
-import org.apache.kafka.common.serialization.Serializer
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
+import org.apache.commons.text.StringEscapeUtils
+import org.apache.kafka.common.serialization.Serializer
 
 /**
  * Kafka serializer for different kind of Мeters as JSON.
@@ -81,11 +81,13 @@ internal class JsonMeterSerializer(
 
     /**
      * Kafka serializer for Timer.
+     *
+     * Non-finite measurements (NaN / Infinity) are skipped: JSON has no representation for them.
      */
     private fun writeTimer(timerSnapshot: MeterSnapshot): String {
         val intermediaryString = StringBuilder()
         intermediaryString.append(",\"unit\":").append("\"${TimeUnit.MICROSECONDS}\"")
-        timerSnapshot.measurements.forEach {
+        timerSnapshot.measurements.filter { java.lang.Double.isFinite(it.value) }.forEach {
             when (it.statistic) {
                 Statistic.COUNT -> intermediaryString.append(",\"count\":").append(it.value)
                 Statistic.TOTAL_TIME -> intermediaryString.append(",\"sum\":").append(it.value)
@@ -105,10 +107,12 @@ internal class JsonMeterSerializer(
 
     /**
      * Kafka serializer for DistributionSummary.
+     *
+     * Non-finite measurements (NaN / Infinity) are skipped: JSON has no representation for them.
      */
     private fun writeSummary(summarySnapshot: MeterSnapshot): String {
         val intermediaryString = StringBuilder()
-        summarySnapshot.measurements.forEach {
+        summarySnapshot.measurements.filter { java.lang.Double.isFinite(it.value) }.forEach {
             when (it.statistic) {
                 Statistic.COUNT -> intermediaryString.append(",\"count\":").append(it.value)
                 Statistic.TOTAL -> intermediaryString.append(",\"sum\":").append(it.value)
@@ -143,10 +147,12 @@ internal class JsonMeterSerializer(
 
     /**
      * Kafka serializer for Throughput.
+     *
+     * Non-finite measurements (NaN / Infinity) are skipped: JSON has no representation for them.
      */
     private fun writeThroughput(throughputSnapshot: MeterSnapshot): String {
         val intermediaryString = StringBuilder()
-        throughputSnapshot.measurements.forEach {
+        throughputSnapshot.measurements.filter { java.lang.Double.isFinite(it.value) }.forEach {
             when (it.statistic) {
                 Statistic.VALUE -> intermediaryString.append(",\"value\":").append(it.value)
                 Statistic.TOTAL -> intermediaryString.append(",\"sum\":").append(it.value)

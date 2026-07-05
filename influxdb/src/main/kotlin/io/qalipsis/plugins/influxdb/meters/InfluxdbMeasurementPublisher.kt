@@ -92,8 +92,9 @@ class InfluxdbMeasurementPublisher(
     }
 
     private suspend fun performPublish(snapshots: Collection<MeterSnapshot>) {
-        val records = snapshots.map(this::createRecord)
+        val records = snapshots.mapNotNull(this::createRecord)
         logger.debug { "Exporting ${records.size} meters to InfluxDb" }
+        if (records.isEmpty()) return
         try {
             saveRecords(records)
         } catch (ex: Exception) {
@@ -103,16 +104,22 @@ class InfluxdbMeasurementPublisher(
 
     /**
      * Generates a string record from a meter snapshot, structured in a format ideal for export to influxdb.
+     *
+     * Non-finite measurements (NaN / Infinity) are dropped because the InfluxDB line protocol rejects them.
+     * A snapshot with no finite measurements is skipped entirely.
      */
-    private fun createRecord(snapshot: MeterSnapshot): String {
+    private fun createRecord(snapshot: MeterSnapshot): String? {
         val meterId = snapshot.meterId
-        val fields = snapshot.measurements.associate {
-            if (it !is DistributionMeasurementMetric) {
-                it.statistic.value to it.value
-            } else {
-                "${it.statistic.value}_${it.observationPoint}" to it.value
+        val fields = snapshot.measurements
+            .filter { it.value.isFinite() }
+            .associate {
+                if (it !is DistributionMeasurementMetric) {
+                    it.statistic.value to it.value
+                } else {
+                    "${it.statistic.value}_${it.observationPoint}" to it.value
+                }
             }
-        }
+        if (fields.isEmpty()) return null
         val tags = if (meterId.tags.isNotEmpty()) {
             // Tags should be sanitized https://github.com/influxdata/influxdb/blob/master/tsdb/README.md
             meterId.tags
