@@ -730,9 +730,9 @@ internal abstract class AbstractTimescaledbTimeSeriesDataProviderIntegrationTest
                         campaign = "campaign-timer",
                         scenario = "scenario-1",
                         count = BigDecimal("10"),
-                        sum = BigDecimal("2000000"),
-                        mean = BigDecimal("200000"),
-                        max = BigDecimal("500000"),
+                        sum = BigDecimal("2000"),
+                        mean = BigDecimal("200"),
+                        max = BigDecimal("500"),
                     ),
                 )
             )

@@ -58,9 +58,9 @@ internal class TimeSeriesMeterRecordConverter(
             tags = row.get("tags", String::class.java)
                 ?.let { objectMapper.readValue(it, Map::class.java) } as Map<String, String>?,
             count = row.get("count", BigDecimal::class.java)?.toLong(),
-            sumDuration = row.get("sum", BigDecimal::class.java)?.toLong()?.times(1_000)?.let(Duration::ofNanos),
-            maxDuration = row.get("max", BigDecimal::class.java)?.toLong()?.times(1_000)?.let(Duration::ofNanos),
-            meanDuration = row.get("mean", BigDecimal::class.java)?.toLong()?.times(1_000)?.let(Duration::ofNanos),
+            sumDuration = row.get("sum", BigDecimal::class.java)?.toLong()?.let(Duration::ofMillis),
+            maxDuration = row.get("max", BigDecimal::class.java)?.toLong()?.let(Duration::ofMillis),
+            meanDuration = row.get("mean", BigDecimal::class.java)?.toLong()?.let(Duration::ofMillis),
             other = (row.get("other", String::class.java)
                 ?.let { objectMapper.readValue(it, Map::class.java) } as Map<String, String>?)
                 ?.mapValues { BigDecimal(it.value) }
