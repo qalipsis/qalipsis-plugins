@@ -42,7 +42,7 @@ internal class MeterQueryGeneratorFactory {
 
     private lateinit var connectionPool: ConnectionPool
 
-    @Singleton
+    @Context
     @Named("meter-data-provider")
     fun meterDataProviderConnection(configuration: TimescaledbMeterDataProviderConfiguration): ConnectionPool {
         connectionPool = DbUtils.createConnectionPool(configuration)

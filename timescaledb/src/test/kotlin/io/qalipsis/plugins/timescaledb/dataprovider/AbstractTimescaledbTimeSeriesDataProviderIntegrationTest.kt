@@ -153,6 +153,13 @@ internal abstract class AbstractTimescaledbTimeSeriesDataProviderIntegrationTest
                 override val sslRootCert: String? = null
                 override val sslCert: String? = null
                 override val sslKey: String? = null
+                override val maxLifeTime: Duration = Duration.ofMinutes(30)
+                override val backgroundEvictionInterval: Duration = Duration.ofSeconds(30)
+                override val maxAcquireTime: Duration = Duration.ofSeconds(5)
+                override val maxCreateConnectionTime: Duration = Duration.ofSeconds(5)
+                override val acquireRetry: Int = 3
+                override val validationQuery: String = "SELECT 1"
+                override val maxValidationTime: Duration = Duration.ofSeconds(2)
                 override val initSchema: Boolean = false
             })
 
@@ -292,6 +299,13 @@ internal abstract class AbstractTimescaledbTimeSeriesDataProviderIntegrationTest
                 override val sslRootCert: String? = null
                 override val sslCert: String? = null
                 override val sslKey: String? = null
+                override val maxLifeTime: Duration = Duration.ofMinutes(30)
+                override val backgroundEvictionInterval: Duration = Duration.ofSeconds(30)
+                override val maxAcquireTime: Duration = Duration.ofSeconds(5)
+                override val maxCreateConnectionTime: Duration = Duration.ofSeconds(5)
+                override val acquireRetry: Int = 3
+                override val validationQuery: String = "SELECT 1"
+                override val maxValidationTime: Duration = Duration.ofSeconds(2)
                 override val initSchema: Boolean = false
             })
 

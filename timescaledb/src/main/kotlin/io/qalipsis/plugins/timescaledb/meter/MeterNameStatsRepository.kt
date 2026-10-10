@@ -43,6 +43,38 @@ internal class MeterNameStatsRepository(
 ) {
 
     /**
+     * Returns the names of the known meters of the tenant, sorted alphabetically.
+     *
+     * @param filters wildcard patterns (`*` and `?`) matched case-insensitively, a name matching any of them is returned
+     * @param size maximum number of names to return
+     */
+    suspend fun findNames(tenant: String, filters: Collection<String>, size: Int): List<String> {
+        val sql = StringBuilder("SELECT name FROM ${databaseSchema}.meter_name_stats WHERE tenant = $1")
+        if (filters.isNotEmpty()) {
+            sql.append(" AND name ILIKE any (array[$2])")
+        }
+        sql.append(" ORDER BY name LIMIT $size")
+        return Flux.usingWhen(
+            connectionPool.create(),
+            { connection ->
+                Flux.from(
+                    connection.createStatement(sql.toString())
+                        .bind("$1", tenant)
+                        .also {
+                            if (filters.isNotEmpty()) {
+                                it.bind("$2", filters.map(::convertWildcards).toTypedArray())
+                            }
+                        }.execute()
+                ).flatMap { result ->
+                    result.map { row, _ -> row.get("name", String::class.java)!! }
+                }
+            },
+            Connection::close
+        ).collectList().awaitSingleOrNull().orEmpty()
+            .also { log.trace { "Found ${it.size} cached meter names in tenant $tenant" } }
+    }
+
+    /**
      * Returns the field names that are known to have non-null values for the given meter,
      * or an empty set when no cache entry exists yet.
      */
@@ -99,8 +131,59 @@ internal class MeterNameStatsRepository(
     }
 
     /**
+     * Returns the union of the field names known to have non-null values for any meter of the tenant,
+     * or an empty set when no cache entry exists yet.
+     */
+    suspend fun findAllFields(tenant: String): Set<String> {
+        val sql = "SELECT DISTINCT jsonb_array_elements_text(fields) AS field " +
+                "FROM ${databaseSchema}.meter_name_stats WHERE tenant = $1"
+        return Flux.usingWhen(
+            connectionPool.create(),
+            { connection ->
+                Flux.from(connection.createStatement(sql).bind("$1", tenant).execute())
+                    .flatMap { result -> result.map { row, _ -> row.get("field", String::class.java)!! } }
+            },
+            Connection::close
+        ).collectList().awaitSingleOrNull().orEmpty().toSet()
+            .also { log.trace { "Found ${it.size} cached fields for all the meters in tenant $tenant" } }
+    }
+
+    /**
+     * Returns the tag keys with the sorted union of their distinct values across all the meters of the tenant,
+     * or an empty map when no cache entry exists yet.
+     */
+    suspend fun findAllTags(tenant: String): Map<String, List<String>> {
+        val sql = """
+            SELECT DISTINCT t.key AS key, v.value AS value
+            FROM ${databaseSchema}.meter_name_stats s,
+                 jsonb_each(s.tags) AS t(key, values_array),
+                 jsonb_array_elements_text(t.values_array) AS v(value)
+            WHERE s.tenant = $1
+            ORDER BY t.key, v.value
+        """.trimIndent()
+        return Flux.usingWhen(
+            connectionPool.create(),
+            { connection ->
+                Flux.from(connection.createStatement(sql).bind("$1", tenant).execute())
+                    .flatMap { result ->
+                        result.map { row, _ ->
+                            row.get("key", String::class.java)!! to row.get(
+                                "value",
+                                String::class.java
+                            )!!
+                        }
+                    }
+            },
+            Connection::close
+        ).collectList().awaitSingleOrNull().orEmpty()
+            .groupBy({ it.first }, { it.second })
+            .also { log.trace { "Found ${it.size} cached tag keys for all the meters in tenant $tenant" } }
+    }
+
+    /**
      * Returns a chunk of (tenant, name) pairs to refresh, starting with entries not yet in
      * the stats table, then existing entries older than [minAge], ordered oldest-first.
+     * The meters whose name starts with an underscore are ignored.
      *
      * @param limit maximum number of pairs to return
      * @param minAge minimum age an existing stats entry must have before it is eligible for refresh
@@ -114,7 +197,8 @@ internal class MeterNameStatsRepository(
             (
                 SELECT DISTINCT m.tenant, m.name
                 FROM ${databaseSchema}.meters m
-                WHERE NOT EXISTS (
+                WHERE m.name not like '\_%'
+                AND NOT EXISTS (
                     SELECT 1 FROM ${databaseSchema}.meter_name_stats s WHERE s.tenant = m.tenant AND s.name = m.name
                 )
                 LIMIT $limit
@@ -183,6 +267,8 @@ internal class MeterNameStatsRepository(
         ).awaitSingleOrNull()
             .also { log.trace { "Upserted stats for meter $name in tenant $tenant" } }
     }
+
+    private fun convertWildcards(clause: String) = clause.replace('*', '%').replace('?', '_')
 
     private companion object {
         val log = logger()
