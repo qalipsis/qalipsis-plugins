@@ -29,7 +29,6 @@ import io.qalipsis.plugins.timescaledb.liquibase.LiquibaseRunner
 import io.qalipsis.plugins.timescaledb.utils.DbUtils
 import io.r2dbc.pool.ConnectionPool
 import jakarta.inject.Named
-import jakarta.inject.Singleton
 import javax.annotation.PreDestroy
 
 @Factory
@@ -41,7 +40,7 @@ internal class EventQueryGeneratorFactory {
 
     private lateinit var connectionPool: ConnectionPool
 
-    @Singleton
+    @Context
     @Named("event-data-provider")
     fun eventDataProviderConnection(configuration: TimescaledbEventDataProviderConfiguration): ConnectionPool {
         connectionPool = DbUtils.createConnectionPool(configuration)

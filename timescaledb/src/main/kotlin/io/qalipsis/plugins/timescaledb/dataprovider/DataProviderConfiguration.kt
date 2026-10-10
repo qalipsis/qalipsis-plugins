@@ -58,5 +58,19 @@ interface DataProviderConfiguration {
 
     val maxIdleTime: Duration
 
+    val maxLifeTime: Duration
+
+    val backgroundEvictionInterval: Duration
+
+    val maxAcquireTime: Duration
+
+    val maxCreateConnectionTime: Duration
+
+    val acquireRetry: Int
+
+    val validationQuery: String
+
+    val maxValidationTime: Duration
+
     val initSchema: Boolean
 }

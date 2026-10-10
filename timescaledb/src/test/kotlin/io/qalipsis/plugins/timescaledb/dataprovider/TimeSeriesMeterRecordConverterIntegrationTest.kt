@@ -369,6 +369,13 @@ internal class TimeSeriesMeterRecordConverterIntegrationTest : TestPropertyProvi
             override val minSize: Int = 1
             override val maxSize: Int = 2
             override val maxIdleTime: Duration = Duration.ofSeconds(30)
+            override val maxLifeTime: Duration = Duration.ofMinutes(30)
+            override val backgroundEvictionInterval: Duration = Duration.ofSeconds(30)
+            override val maxAcquireTime: Duration = Duration.ofSeconds(5)
+            override val maxCreateConnectionTime: Duration = Duration.ofSeconds(5)
+            override val acquireRetry: Int = 3
+            override val validationQuery: String = "SELECT 1"
+            override val maxValidationTime: Duration = Duration.ofSeconds(2)
             override val initSchema: Boolean = true
             override val enableSsl: Boolean = false
             override val sslMode: SSLMode = SSLMode.ALLOW

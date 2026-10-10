@@ -57,22 +57,37 @@ internal class TimescaledbMeterDataProvider(
 ), MeterMetadataProvider {
 
     /**
-     * Returns the fields known to carry values for the given meter name when a cache entry exists,
-     * falling back to the full list of meter fields when no entry is found.
+     * Returns the meter names from the cache when no campaign is specified, since the cache is not campaign-aware,
+     * falling back to a live database query when the campaign is specified or the cache has no matching entry.
      */
-    override suspend fun listFields(tenant: String, name: String?): Collection<DataField> {
-        if (name != null) {
-            val cachedFieldNames = statsRepository.findFields(tenant, name)
-            if (cachedFieldNames.isNotEmpty()) {
-                return AbstractMeterQueryGenerator.FIELDS.filter { it.name in cachedFieldNames }
-            }
-        }
-        return AbstractMeterQueryGenerator.FIELDS
+    override suspend fun searchNames(
+        tenant: String,
+        campaignKey: String?,
+        filters: Collection<String>,
+        size: Int,
+    ): Collection<String> {
+        val cachedNames =
+            if (campaignKey.isNullOrBlank()) statsRepository.findNames(tenant, filters, size) else emptyList()
+        return cachedNames.ifEmpty { super.searchNames(tenant, campaignKey, filters, size) }
     }
 
     /**
-     * Returns tag keys and distinct values for the given meter name from the cache when available,
-     * falling back to a live database query otherwise.
+     * Returns the fields known to carry values for the given meter name, or for any meter of the tenant when
+     * no name is provided, as long as cache entries exist, falling back to the full list of meter fields otherwise.
+     */
+    override suspend fun listFields(tenant: String, name: String?): Collection<DataField> {
+        val cachedFieldNames = name?.let { statsRepository.findFields(tenant, it) }
+            ?: statsRepository.findAllFields(tenant)
+        return if (cachedFieldNames.isNotEmpty()) {
+            AbstractMeterQueryGenerator.FIELDS.filter { it.name in cachedFieldNames }
+        } else {
+            AbstractMeterQueryGenerator.FIELDS
+        }
+    }
+
+    /**
+     * Returns tag keys and distinct values for the given meter name, or for all the meters of the tenant when
+     * no name is provided, from the cache when available, falling back to a live database query otherwise.
      */
     override suspend fun searchTagsAndValues(
         tenant: String,
@@ -80,13 +95,12 @@ internal class TimescaledbMeterDataProvider(
         filters: Collection<String>,
         size: Int,
     ): Map<String, Collection<String>> {
-        if (name != null) {
-            val cachedTags = statsRepository.findTags(tenant, name)
-            if (cachedTags.isNotEmpty()) {
-                return filterCachedTags(cachedTags, filters, size)
-            }
+        val cachedTags = name?.let { statsRepository.findTags(tenant, it) } ?: statsRepository.findAllTags(tenant)
+        return if (cachedTags.isNotEmpty()) {
+            filterCachedTags(cachedTags, filters, size)
+        } else {
+            super.searchTagsAndValues(tenant, name, filters, size)
         }
-        return super.searchTagsAndValues(tenant, name, filters, size)
     }
 
     private fun filterCachedTags(
