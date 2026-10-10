@@ -46,6 +46,10 @@ import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.postgresql.client.SSLMode
 import io.r2dbc.spi.Connection
 import jakarta.inject.Inject
+import java.math.BigDecimal
+import java.time.Duration
+import java.time.Instant
+import kotlin.math.pow
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -57,10 +61,6 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.math.BigDecimal
-import java.time.Duration
-import java.time.Instant
-import kotlin.math.pow
 
 
 @WithMockk
@@ -178,9 +178,9 @@ internal class TimeSeriesMeterRecordConverterIntegrationTest : TestPropertyProvi
                     ),
                     type = "timer",
                     count = 0L,
-                    meanDuration = Duration.parse("PT0.000224S"),
-                    maxDuration = Duration.parse("PT0.054328S"),
-                    sumDuration = Duration.parse("PT0.178713S"),
+                    meanDuration = Duration.parse("PT0.224S"),
+                    maxDuration = Duration.parse("PT54.328S"),
+                    sumDuration = Duration.parse("PT178.713S"),
                     other = mapOf(
                         "percentile_25.0" to BigDecimal(2548.7),
                         "percentile_99.9" to BigDecimal(12548.7)
@@ -369,6 +369,13 @@ internal class TimeSeriesMeterRecordConverterIntegrationTest : TestPropertyProvi
             override val minSize: Int = 1
             override val maxSize: Int = 2
             override val maxIdleTime: Duration = Duration.ofSeconds(30)
+            override val maxLifeTime: Duration = Duration.ofMinutes(30)
+            override val backgroundEvictionInterval: Duration = Duration.ofSeconds(30)
+            override val maxAcquireTime: Duration = Duration.ofSeconds(5)
+            override val maxCreateConnectionTime: Duration = Duration.ofSeconds(5)
+            override val acquireRetry: Int = 3
+            override val validationQuery: String = "SELECT 1"
+            override val maxValidationTime: Duration = Duration.ofSeconds(2)
             override val initSchema: Boolean = true
             override val enableSsl: Boolean = false
             override val sslMode: SSLMode = SSLMode.ALLOW

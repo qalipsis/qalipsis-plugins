@@ -21,6 +21,7 @@ package io.qalipsis.plugins.timescaledb.meter
 
 import assertk.all
 import assertk.assertThat
+import assertk.assertions.containsExactly
 import assertk.assertions.containsOnly
 import assertk.assertions.hasSize
 import assertk.assertions.index
@@ -195,6 +196,72 @@ internal abstract class AbstractMeterNameStatsRepositoryIntegrationTest : TestPr
 
     @Test
     @Timeout(20)
+    internal fun `should return the union of the fields of all the meters of the tenant`() =
+        testDispatcherProvider.run {
+            statsRepository.upsert("tenant-1", "meter-1", setOf("count", "max"), emptyMap())
+            statsRepository.upsert("tenant-1", "meter-2", setOf("max", "sum"), emptyMap())
+            statsRepository.upsert("tenant-2", "meter-3", setOf("mean"), emptyMap())
+
+            assertThat(statsRepository.findAllFields("tenant-1")).containsOnly("count", "max", "sum")
+            assertThat(statsRepository.findAllFields("unknown-tenant")).isEmpty()
+        }
+
+    @Test
+    @Timeout(20)
+    internal fun `should return the merged tags of all the meters of the tenant`() = testDispatcherProvider.run {
+        statsRepository.upsert(
+            "tenant-1", "meter-1", emptySet(),
+            mapOf("env" to listOf("prod", "staging"), "zone" to listOf("eu"))
+        )
+        statsRepository.upsert("tenant-1", "meter-2", emptySet(), mapOf("env" to listOf("dev", "prod")))
+        statsRepository.upsert("tenant-2", "meter-3", emptySet(), mapOf("other" to listOf("x")))
+
+        val result = statsRepository.findAllTags("tenant-1")
+
+        assertThat(result).all {
+            hasSize(2)
+            key("env").containsExactly("dev", "prod", "staging")
+            key("zone").containsExactly("eu")
+        }
+        assertThat(statsRepository.findAllTags("unknown-tenant")).isEmpty()
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should return empty list when no cache entry exists for findNames`() = testDispatcherProvider.run {
+        val result = statsRepository.findNames("unknown-tenant", emptySet(), 10)
+
+        assertThat(result).isEmpty()
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should return the names of the tenant sorted and limited`() = testDispatcherProvider.run {
+        listOf("meter-c", "meter-a", "meter-d", "meter-b").forEach {
+            statsRepository.upsert("tenant-1", it, emptySet(), emptyMap())
+        }
+        statsRepository.upsert("tenant-2", "meter-0", emptySet(), emptyMap())
+
+        assertThat(statsRepository.findNames("tenant-1", emptySet(), 10))
+            .containsExactly("meter-a", "meter-b", "meter-c", "meter-d")
+        assertThat(statsRepository.findNames("tenant-1", emptySet(), 2)).containsExactly("meter-a", "meter-b")
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should return the names matching any wildcard filter ignoring the case`() =
+        testDispatcherProvider.run {
+            listOf("http-requests", "http-errors", "kafka-lag", "db-latency", "db-1").forEach {
+                statsRepository.upsert("tenant-1", it, emptySet(), emptyMap())
+            }
+
+            val result = statsRepository.findNames("tenant-1", setOf("HTTP-*", "db-?"), 10)
+
+            assertThat(result).containsExactly("db-1", "http-errors", "http-requests")
+        }
+
+    @Test
+    @Timeout(20)
     internal fun `should return empty list when no meters exist`() = testDispatcherProvider.run {
         val result = statsRepository.findEntriesRequiringRefresh(10, Duration.ZERO)
 
@@ -228,6 +295,44 @@ internal abstract class AbstractMeterNameStatsRepositoryIntegrationTest : TestPr
         val result = statsRepository.findEntriesRequiringRefresh(10, Duration.ZERO)
 
         assertThat(result).containsOnly("tenant-1" to "meter-a", "tenant-1" to "meter-b")
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should ignore the new meters whose name starts with an underscore`() = testDispatcherProvider.run {
+        publisher.doPublish(
+            listOf("meter-a", "_internal", "a_meter").map {
+                TimescaledbMeter(
+                    it,
+                    tags = null,
+                    timestamp = Timestamp.from(Instant.now()),
+                    type = "gauge",
+                    tenant = "tenant-1",
+                    campaign = "any"
+                )
+            }
+        )
+        // Already cached meters are still refreshed, even with a leading underscore.
+        Flux.usingWhen(
+            connection.create(),
+            { conn ->
+                Flux.from(
+                    conn.createStatement(
+                        "INSERT INTO meter_name_stats (tenant, name, fields, tags, last_updated) VALUES " +
+                                "('tenant-1', '_old-internal', '[]'::jsonb, '{}'::jsonb, NOW() - INTERVAL '10 minutes')"
+                    ).execute()
+                )
+            },
+            Connection::close
+        ).blockLast()
+
+        val result = statsRepository.findEntriesRequiringRefresh(10, Duration.ZERO)
+
+        assertThat(result).containsOnly(
+            "tenant-1" to "meter-a",
+            "tenant-1" to "a_meter",
+            "tenant-1" to "_old-internal"
+        )
     }
 
     @Test
