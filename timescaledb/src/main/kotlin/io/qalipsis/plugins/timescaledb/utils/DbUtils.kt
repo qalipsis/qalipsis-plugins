@@ -25,6 +25,7 @@ import io.r2dbc.pool.ConnectionPoolConfiguration
 import io.r2dbc.postgresql.PostgresqlConnectionConfiguration
 import io.r2dbc.postgresql.PostgresqlConnectionFactory
 import io.r2dbc.spi.Connection
+import io.r2dbc.spi.ValidationDepth
 import kotlinx.coroutines.reactive.awaitFirst
 import reactor.core.publisher.Flux
 
@@ -80,6 +81,11 @@ internal object DbUtils {
             .initialSize(configuration.minSize)
             .maxSize(configuration.maxSize)
             .maxIdleTime(configuration.maxIdleTime)
+            .maxLifeTime(configuration.maxLifeTime)
+            .backgroundEvictionInterval(configuration.backgroundEvictionInterval)
+            .validationQuery(configuration.validationQuery)
+            .validationDepth(ValidationDepth.REMOTE) // Needed so the validation really hits the DB.
+            .maxValidationTime(configuration.maxValidationTime)
             .build()
 
         return ConnectionPool(poolConfiguration)

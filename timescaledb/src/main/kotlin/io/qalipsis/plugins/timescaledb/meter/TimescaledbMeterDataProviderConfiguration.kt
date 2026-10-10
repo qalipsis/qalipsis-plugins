@@ -84,6 +84,27 @@ interface TimescaledbMeterDataProviderConfiguration : DataProviderConfiguration 
     @get:Bindable(defaultValue = "PT1M")
     override val maxIdleTime: Duration
 
+    @get:Bindable(defaultValue = "PT10M")
+    override val maxLifeTime: Duration
+
+    @get:Bindable(defaultValue = "PT30S")
+    override val backgroundEvictionInterval: Duration
+
+    @get:Bindable(defaultValue = "PT5S")
+    override val maxAcquireTime: Duration
+
+    @get:Bindable(defaultValue = "PT5S")
+    override val maxCreateConnectionTime: Duration
+
+    @get:Bindable(defaultValue = "3")
+    override val acquireRetry: Int
+
+    @get:Bindable(defaultValue = "SELECT 1")
+    override val validationQuery: String
+
+    @get:Bindable(defaultValue = "PT2S")
+    override val maxValidationTime: Duration
+
     @get:Bindable(defaultValue = "true")
     override val initSchema: Boolean
 }

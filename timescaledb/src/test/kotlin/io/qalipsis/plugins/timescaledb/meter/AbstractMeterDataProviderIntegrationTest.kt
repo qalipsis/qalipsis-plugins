@@ -21,6 +21,7 @@ package io.qalipsis.plugins.timescaledb.meter
 
 import assertk.all
 import assertk.assertThat
+import assertk.assertions.containsExactly
 import assertk.assertions.containsOnly
 import assertk.assertions.hasSize
 import assertk.assertions.index
@@ -55,6 +56,9 @@ internal abstract class AbstractMeterDataProviderIntegrationTest : TestPropertyP
 
     @Inject
     private lateinit var meterDataProvider: TimescaledbMeterDataProvider
+
+    @Inject
+    private lateinit var statsRepository: MeterNameStatsRepository
 
     @JvmField
     @RegisterExtension
@@ -108,7 +112,11 @@ internal abstract class AbstractMeterDataProviderIntegrationTest : TestPropertyP
     fun tearDown() {
         Flux.usingWhen(
             connection.create(),
-            { connection -> Mono.from(connection.createStatement("truncate table meters").execute()) },
+            { connection ->
+                Mono.from(
+                    connection.createStatement("truncate table meters, meter_name_stats").execute()
+                )
+            },
             Connection::close
         ).blockLast()
     }
@@ -149,7 +157,7 @@ internal abstract class AbstractMeterDataProviderIntegrationTest : TestPropertyP
         })
 
         // when
-        val allNamesOfTenant1 = meterDataProvider.searchNames("tenant-1", null, emptySet(), 200)
+        val allNamesOfTenant1 = meterDataProvider.searchNames("tenant-1", "any", emptySet(), 200)
 
         // then
         assertThat(allNamesOfTenant1.toList()).all {
@@ -160,7 +168,7 @@ internal abstract class AbstractMeterDataProviderIntegrationTest : TestPropertyP
         }
 
         // when
-        val someNamesOfTenant2 = meterDataProvider.searchNames("tenant-2", null, emptySet(), 30)
+        val someNamesOfTenant2 = meterDataProvider.searchNames("tenant-2", "any", emptySet(), 30)
 
         // then
         assertThat(someNamesOfTenant2.toList()).all {
@@ -170,6 +178,103 @@ internal abstract class AbstractMeterDataProviderIntegrationTest : TestPropertyP
             }
         }
     }
+
+    @Test
+    @Timeout(20)
+    internal fun `should list the names from the stats cache when no campaign is set`() = testDispatcherProvider.run {
+        // given
+        (100..199).forEach {
+            statsRepository.upsert("tenant-1", "my-meter-$it-gauge", emptySet(), emptyMap())
+            statsRepository.upsert("tenant-2", "my-meter-$it-timer", emptySet(), emptyMap())
+        }
+        // Only present in the meters table: not visible from the cache.
+        timescaledbMeasurementPublisher.doPublish(
+            listOf(
+                TimescaledbMeter(
+                    "uncached-meter",
+                    timestamp = Timestamp.from(Instant.now()),
+                    type = "gauge",
+                    tenant = "tenant-1",
+                    campaign = "any",
+                    tags = null
+                )
+            )
+        )
+
+        // when
+        val allNamesOfTenant1 = meterDataProvider.searchNames("tenant-1", null, emptySet(), 200)
+        val blankCampaignNames = meterDataProvider.searchNames("tenant-1", " ", emptySet(), 200)
+        val someNamesOfTenant2 = meterDataProvider.searchNames("tenant-2", null, emptySet(), 30)
+
+        // then
+        assertThat(allNamesOfTenant1.toList()).all {
+            hasSize(100)
+            (0..99).forEach { index ->
+                index(index).isEqualTo("my-meter-${100 + index}-gauge")
+            }
+        }
+        assertThat(blankCampaignNames).isEqualTo(allNamesOfTenant1)
+        assertThat(someNamesOfTenant2.toList()).all {
+            hasSize(30)
+            (0..29).forEach { index ->
+                index(index).isEqualTo("my-meter-${100 + index}-timer")
+            }
+        }
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should list the names from the stats cache with filter when no campaign is set`() =
+        testDispatcherProvider.run {
+            // given
+            (100..199).forEach {
+                statsRepository.upsert("tenant-1", "my-meter-$it-gauge", emptySet(), emptyMap())
+            }
+
+            // when
+            val result = meterDataProvider.searchNames("tenant-1", null, setOf("mY-mEteR-10*", "*-1?9-*"), 12)
+
+            // then
+            assertThat(result.toList()).containsExactly(
+                "my-meter-100-gauge",
+                "my-meter-101-gauge",
+                "my-meter-102-gauge",
+                "my-meter-103-gauge",
+                "my-meter-104-gauge",
+                "my-meter-105-gauge",
+                "my-meter-106-gauge",
+                "my-meter-107-gauge",
+                "my-meter-108-gauge",
+                "my-meter-109-gauge",
+                "my-meter-119-gauge",
+                "my-meter-129-gauge",
+            )
+        }
+
+    @Test
+    @Timeout(20)
+    internal fun `should list the names from the meters table when no campaign is set and the cache is empty`() =
+        testDispatcherProvider.run {
+            // given
+            timescaledbMeasurementPublisher.doPublish(
+                listOf("meter-b", "meter-a", "meter-a").map {
+                    TimescaledbMeter(
+                        it,
+                        timestamp = Timestamp.from(Instant.now()),
+                        type = "gauge",
+                        tenant = "tenant-1",
+                        campaign = "any",
+                        tags = null
+                    )
+                }
+            )
+
+            // when
+            val result = meterDataProvider.searchNames("tenant-1", null, emptySet(), 10)
+
+            // then
+            assertThat(result.toList()).containsExactly("meter-a", "meter-b")
+        }
 
     @Test
     @Timeout(20)
@@ -199,7 +304,7 @@ internal abstract class AbstractMeterDataProviderIntegrationTest : TestPropertyP
         val filters = setOf("mY-mEteR-10*", "*-1?9-*")
 
         // when
-        var result = meterDataProvider.searchNames("tenant-1", null, filters, 20)
+        var result = meterDataProvider.searchNames("tenant-1", "any", filters, 20)
 
         // then
         assertThat(result).all {
@@ -228,7 +333,7 @@ internal abstract class AbstractMeterDataProviderIntegrationTest : TestPropertyP
         }
 
         // when
-        result = meterDataProvider.searchNames("tenant-2", null, filters, 5)
+        result = meterDataProvider.searchNames("tenant-2", "any", filters, 5)
 
         // then
         assertThat(result).all {
@@ -243,6 +348,81 @@ internal abstract class AbstractMeterDataProviderIntegrationTest : TestPropertyP
         }
     }
 
+
+    @Test
+    @Timeout(20)
+    internal fun `should list all the fields when the cache is empty`() = testDispatcherProvider.run {
+        assertThat(meterDataProvider.listFields("tenant-1", "my-meter"))
+            .isEqualTo(AbstractMeterQueryGenerator.FIELDS)
+        assertThat(meterDataProvider.listFields("tenant-1", null)).isEqualTo(AbstractMeterQueryGenerator.FIELDS)
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should list the cached fields of the meter`() = testDispatcherProvider.run {
+        statsRepository.upsert("tenant-1", "meter-1", setOf("count", "max"), emptyMap())
+        statsRepository.upsert("tenant-1", "meter-2", setOf("sum"), emptyMap())
+
+        val result = meterDataProvider.listFields("tenant-1", "meter-1")
+
+        assertThat(result.map { it.name }).containsOnly("count", "max")
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should list the cached fields of all the meters when no name is set`() =
+        testDispatcherProvider.run {
+            statsRepository.upsert("tenant-1", "meter-1", setOf("count", "max"), emptyMap())
+            statsRepository.upsert("tenant-1", "meter-2", setOf("max", "sum"), emptyMap())
+            statsRepository.upsert("tenant-2", "meter-3", setOf("mean"), emptyMap())
+
+            val result = meterDataProvider.listFields("tenant-1", null)
+
+            assertThat(result.map { it.name }).containsOnly("count", "max", "sum")
+        }
+
+    @Test
+    @Timeout(20)
+    internal fun `should list the cached tags of the meter with filter`() = testDispatcherProvider.run {
+        statsRepository.upsert(
+            "tenant-1", "meter-1", emptySet(),
+            mapOf("env" to listOf("prod", "staging"), "zone" to listOf("eu"))
+        )
+        statsRepository.upsert("tenant-1", "meter-2", emptySet(), mapOf("other" to listOf("x")))
+
+        val all = meterDataProvider.searchTagsAndValues("tenant-1", "meter-1", emptySet(), 100)
+        val filtered = meterDataProvider.searchTagsAndValues("tenant-1", "meter-1", setOf("en?"), 100)
+
+        assertThat(all).all {
+            hasSize(2)
+            key("env").containsOnly("prod", "staging")
+            key("zone").containsOnly("eu")
+        }
+        assertThat(filtered).all {
+            hasSize(1)
+            key("env").containsOnly("prod", "staging")
+        }
+    }
+
+    @Test
+    @Timeout(20)
+    internal fun `should list the cached tags of all the meters when no name is set`() =
+        testDispatcherProvider.run {
+            statsRepository.upsert(
+                "tenant-1", "meter-1", emptySet(),
+                mapOf("env" to listOf("prod", "staging"), "zone" to listOf("eu"))
+            )
+            statsRepository.upsert("tenant-1", "meter-2", emptySet(), mapOf("env" to listOf("dev", "prod")))
+            statsRepository.upsert("tenant-2", "meter-3", emptySet(), mapOf("other" to listOf("x")))
+
+            val result = meterDataProvider.searchTagsAndValues("tenant-1", null, emptySet(), 100)
+
+            assertThat(result).all {
+                hasSize(2)
+                key("env").containsOnly("dev", "prod", "staging")
+                key("zone").containsOnly("eu")
+            }
+        }
 
     @Test
     @Timeout(20)
