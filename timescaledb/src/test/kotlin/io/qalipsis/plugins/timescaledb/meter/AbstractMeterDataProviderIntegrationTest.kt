@@ -30,12 +30,15 @@ import assertk.assertions.key
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.micronaut.test.support.TestPropertyProvider
 import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.report.DataField
+import io.qalipsis.api.report.DataFieldType
 import io.qalipsis.plugins.timescaledb.meter.catadioptre.doPublish
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.r2dbc.postgresql.PostgresqlConnectionConfiguration
 import io.r2dbc.postgresql.PostgresqlConnectionFactory
 import io.r2dbc.spi.Connection
 import jakarta.inject.Inject
+import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -367,6 +370,39 @@ internal abstract class AbstractMeterDataProviderIntegrationTest : TestPropertyP
 
         assertThat(result.map { it.name }).containsOnly("count", "max")
     }
+
+    @Test
+    @Timeout(20)
+    internal fun `should list the cached percentiles and the unit of the duration fields of a timer`() =
+        testDispatcherProvider.run {
+            timescaledbMeasurementPublisher.doPublish(
+                listOf(
+                    TimescaledbMeter(
+                        name = "timer-1",
+                        tags = """{"scope":"period"}""",
+                        timestamp = Timestamp.from(Instant.now()),
+                        type = "timer",
+                        tenant = "tenant-1",
+                        campaign = "campaign-1",
+                        count = BigDecimal.ONE,
+                        mean = BigDecimal.TEN,
+                        unit = "MICROSECONDS",
+                    )
+                )
+            )
+            statsRepository.upsert(
+                "tenant-1", "timer-1", setOf("count", "mean", "percentile_99.0", "percentile_50.0"), emptyMap()
+            )
+
+            val result = meterDataProvider.listFields("tenant-1", "timer-1").toList()
+
+            assertThat(result).containsExactly(
+                DataField("count", DataFieldType.NUMBER),
+                DataField("mean", DataFieldType.NUMBER, "MICROSECONDS"),
+                DataField("percentile_50.0", DataFieldType.NUMBER, "MICROSECONDS"),
+                DataField("percentile_99.0", DataFieldType.NUMBER, "MICROSECONDS"),
+            )
+        }
 
     @Test
     @Timeout(20)
