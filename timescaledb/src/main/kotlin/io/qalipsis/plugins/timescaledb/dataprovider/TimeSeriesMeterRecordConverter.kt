@@ -27,8 +27,10 @@ import io.r2dbc.spi.Row
 import io.r2dbc.spi.RowMetadata
 import jakarta.inject.Singleton
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 
 /**
  * Converter from SQL result of time-series records to [io.qalipsis.api.report.TimeSeriesMeter].
@@ -49,21 +51,27 @@ internal class TimeSeriesMeterRecordConverter(
     }
 
     private fun convertTimer(type: String, row: Row): TimeSeriesMeter {
+        val unit = row.get("unit", String::class.java)
+            ?.let { runCatching { TimeUnit.valueOf(it) }.getOrNull() }
+            ?: DEFAULT_TIMER_UNIT
+        val other = readOther(row)
         return TimeSeriesMeter(
             name = row.get("name", String::class.java)!!,
             type = type,
             timestamp = row.get("timestamp", Instant::class.java)!!,
             campaign = row.get("campaign", String::class.java),
             scenario = row.get("scenario", String::class.java),
-            tags = row.get("tags", String::class.java)
-                ?.let { objectMapper.readValue(it, Map::class.java) } as Map<String, String>?,
+            tags = readTags(row),
             count = row.get("count", BigDecimal::class.java)?.toLong(),
-            sumDuration = row.get("sum", BigDecimal::class.java)?.toLong()?.let(Duration::ofMillis),
-            maxDuration = row.get("max", BigDecimal::class.java)?.toLong()?.let(Duration::ofMillis),
-            meanDuration = row.get("mean", BigDecimal::class.java)?.toLong()?.let(Duration::ofMillis),
-            other = (row.get("other", String::class.java)
-                ?.let { objectMapper.readValue(it, Map::class.java) } as Map<String, String>?)
-                ?.mapValues { BigDecimal(it.value) }
+            sumDuration = row.get("sum", BigDecimal::class.java)?.toDuration(unit),
+            maxDuration = row.get("max", BigDecimal::class.java)?.toDuration(unit),
+            meanDuration = row.get("mean", BigDecimal::class.java)?.toDuration(unit),
+            percentileDurations = other
+                ?.filterKeys { it.startsWith(PERCENTILE_PREFIX) }
+                ?.map { (key, value) -> key.removePrefix(PERCENTILE_PREFIX) to value.toDuration(unit) }
+                ?.toMap()
+                ?.takeIf { it.isNotEmpty() },
+            other = other?.filterKeys { !it.startsWith(PERCENTILE_PREFIX) }?.takeIf { it.isNotEmpty() }
         )
     }
 
@@ -74,16 +82,36 @@ internal class TimeSeriesMeterRecordConverter(
             timestamp = row.get("timestamp", Instant::class.java)!!,
             campaign = row.get("campaign", String::class.java),
             scenario = row.get("scenario", String::class.java),
-            tags = row.get("tags", String::class.java)
-                ?.let { objectMapper.readValue(it, Map::class.java) } as Map<String, String>?,
+            tags = readTags(row),
             count = row.get("count", BigDecimal::class.java)?.toLong(),
             sum = row.get("sum", BigDecimal::class.java),
             mean = row.get("mean", BigDecimal::class.java),
             max = row.get("max", BigDecimal::class.java),
             value = row.get("value", BigDecimal::class.java),
-            other = (row.get("other", String::class.java)
-                ?.let { objectMapper.readValue(it, Map::class.java) } as Map<String, String>?)
-                ?.mapValues { BigDecimal(it.value) }
+            other = readOther(row)
         )
+    }
+
+    private fun readTags(row: Row) = row.get("tags", String::class.java)
+        ?.let { objectMapper.readValue(it, Map::class.java) } as Map<String, String>?
+
+    private fun readOther(row: Row) = (row.get("other", String::class.java)
+        ?.let { objectMapper.readValue(it, Map::class.java) } as Map<String, String>?)
+        ?.mapValues { BigDecimal(it.value) }
+
+    /**
+     * Converts a value expressed in [unit] into a [Duration], keeping the sub-unit precision down to the nanosecond.
+     */
+    private fun BigDecimal.toDuration(unit: TimeUnit): Duration =
+        Duration.ofNanos(multiply(BigDecimal.valueOf(unit.toNanos(1))).setScale(0, RoundingMode.HALF_UP).toLong())
+
+    private companion object {
+
+        /**
+         * Unit of the timer values when the record does not specify any.
+         */
+        val DEFAULT_TIMER_UNIT = TimeUnit.MILLISECONDS
+
+        const val PERCENTILE_PREFIX = "percentile_"
     }
 }

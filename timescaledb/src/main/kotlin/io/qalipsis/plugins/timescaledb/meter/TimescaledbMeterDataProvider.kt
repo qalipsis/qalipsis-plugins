@@ -23,12 +23,18 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Requirements
 import io.micronaut.context.annotation.Requires
 import io.micronaut.validation.Validated
+import io.qalipsis.api.meters.MeterType
 import io.qalipsis.api.report.DataField
+import io.qalipsis.api.report.DataFieldType
 import io.qalipsis.api.report.MeterMetadataProvider
 import io.qalipsis.plugins.timescaledb.dataprovider.AbstractDataProvider
 import io.r2dbc.pool.ConnectionPool
+import io.r2dbc.spi.Connection
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.reactor.awaitSingleOrNull
+import reactor.core.publisher.Flux
 
 /**
  * Implementation of [AbstractDataProvider] for the meters in TimescaleDB.
@@ -42,8 +48,8 @@ import jakarta.inject.Singleton
 )
 @Validated
 internal class TimescaledbMeterDataProvider(
-    @Named("meter-data-provider") connectionPool: ConnectionPool,
-    configuration: TimescaledbMeterDataProviderConfiguration,
+    @Named("meter-data-provider") private val connectionPool: ConnectionPool,
+    private val configuration: TimescaledbMeterDataProviderConfiguration,
     meterQueryGenerator: AbstractMeterQueryGenerator,
     objectMapper: ObjectMapper,
     private val statsRepository: MeterNameStatsRepository,
@@ -74,15 +80,45 @@ internal class TimescaledbMeterDataProvider(
     /**
      * Returns the fields known to carry values for the given meter name, or for any meter of the tenant when
      * no name is provided, as long as cache entries exist, falling back to the full list of meter fields otherwise.
+     * The percentile fields found in the cache are added, and when the meter is a timer, the duration fields
+     * get the unit of its records.
      */
     override suspend fun listFields(tenant: String, name: String?): Collection<DataField> {
         val cachedFieldNames = name?.let { statsRepository.findFields(tenant, it) }
             ?: statsRepository.findAllFields(tenant)
-        return if (cachedFieldNames.isNotEmpty()) {
-            AbstractMeterQueryGenerator.FIELDS.filter { it.name in cachedFieldNames }
+        val fields = if (cachedFieldNames.isNotEmpty()) {
+            AbstractMeterQueryGenerator.FIELDS.filter { it.name in cachedFieldNames } +
+                    cachedFieldNames.filter { it.startsWith(PERCENTILE_PREFIX) }.sorted()
+                        .map { DataField(it, DataFieldType.NUMBER) }
         } else {
             AbstractMeterQueryGenerator.FIELDS
         }
+        val timerUnit = name?.let { findTimerUnit(tenant, it) } ?: return fields
+        return fields.map { field ->
+            if (field.name in TIMER_DURATION_FIELDS || field.name.startsWith(PERCENTILE_PREFIX)) {
+                field.copy(unit = timerUnit)
+            } else {
+                field
+            }
+        }
+    }
+
+    /**
+     * Returns the unit of the values of the timer with the given name, or null when the meter is not a timer.
+     */
+    private suspend fun findTimerUnit(tenant: String, name: String): String? {
+        val sql = """
+            SELECT coalesce(unit, '${DEFAULT_TIMER_UNIT}') AS unit FROM ${configuration.schema}.meters
+            WHERE tenant = $1 AND name = $2 AND type = '${MeterType.TIMER.value}' LIMIT 1
+        """.trimIndent()
+        return Flux.usingWhen(
+            connectionPool.create(),
+            { connection ->
+                Flux.from(connection.createStatement(sql).bind("$1", tenant).bind("$2", name).execute())
+                    .flatMap { result -> result.map { row, _ -> row.get("unit", String::class.java) } }
+            },
+            Connection::close
+        ).next().awaitSingleOrNull()
     }
 
     /**
@@ -129,5 +165,20 @@ internal class TimescaledbMeterDataProvider(
             part.split('_').joinToString(".") { Regex.escape(it) }
         } + "$")
         return regex.matches(value)
+    }
+
+    private companion object {
+
+        const val PERCENTILE_PREFIX = "percentile_"
+
+        /**
+         * Fields of the timers containing durations, beside the percentiles.
+         */
+        val TIMER_DURATION_FIELDS = setOf("sum", "mean", "max")
+
+        /**
+         * Unit of the timer values when the records do not specify any.
+         */
+        val DEFAULT_TIMER_UNIT = TimeUnit.MILLISECONDS
     }
 }

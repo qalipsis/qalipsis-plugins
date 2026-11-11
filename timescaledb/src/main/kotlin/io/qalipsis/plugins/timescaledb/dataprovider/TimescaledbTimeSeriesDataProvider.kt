@@ -139,7 +139,7 @@ internal class TimescaledbTimeSeriesDataProvider(
         params["\$2"] = campaignKeys.toTypedArray()
 
         val sql = StringBuilder(
-            """SELECT name, timestamp, type, campaign, scenario, tags, count, sum, mean, max, value, other"""
+            """SELECT name, timestamp, type, campaign, scenario, tags, count, sum, mean, max, value, unit, other"""
                     + """ FROM $schema.meters WHERE tenant = $1 AND campaign = any(array[$2]) AND tags->>'scope' = 'campaign'"""
         )
 
