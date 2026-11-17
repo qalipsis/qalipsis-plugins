@@ -19,12 +19,16 @@
 
 package io.qalipsis.plugins.http.connectionProvider
 
+import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.plugins.http.HttpClientConfiguration
+import io.qalipsis.plugins.http.HttpConnectionException
 import io.qalipsis.plugins.http.HttpProxyType
 import io.qalipsis.plugins.http.client.RequestMonitoringInterceptor
 import io.qalipsis.plugins.http.client.ResponseMonitoringInterceptor
 import java.net.InetSocketAddress
 import java.security.cert.X509Certificate
+import java.util.concurrent.TimeUnit
+import org.apache.hc.client5.http.HttpRoute
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials
 import org.apache.hc.client5.http.config.RequestConfig
 import org.apache.hc.client5.http.config.TlsConfig
@@ -32,7 +36,10 @@ import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
 import org.apache.hc.client5.http.impl.async.HttpAsyncClientBuilder
 import org.apache.hc.client5.http.impl.async.HttpAsyncClients
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider
+import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManager
 import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManagerBuilder
+import org.apache.hc.client5.http.nio.AsyncConnectionEndpoint
+import org.apache.hc.client5.http.protocol.HttpClientContext
 import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder
 import org.apache.hc.client5.http.ssl.NoopHostnameVerifier
 import org.apache.hc.core5.http.HttpHost
@@ -40,6 +47,7 @@ import org.apache.hc.core5.http.URIScheme
 import org.apache.hc.core5.http.impl.DefaultConnectionReuseStrategy
 import org.apache.hc.core5.http2.HttpVersionPolicy
 import org.apache.hc.core5.pool.PoolReusePolicy
+import org.apache.hc.core5.reactor.ConnectionInitiator
 import org.apache.hc.core5.reactor.IOReactorConfig
 import org.apache.hc.core5.ssl.SSLContextBuilder
 import org.apache.hc.core5.ssl.TrustStrategy
@@ -80,11 +88,11 @@ internal object HttpAsyncClientFactory {
      * Suitable for [io.qalipsis.plugins.http.connectionProvider.impl.PoolConnectionProvider]
      * and [io.qalipsis.plugins.http.connectionProvider.impl.WarmupConnectionProvider].
      */
-    fun createPooledClient(config: HttpClientConfiguration): CloseableHttpAsyncClient {
+    fun createPooledClient(config: HttpClientConfiguration): PooledClient {
         val ioReactorConfig = buildIOReactorConfig(config)
         val connectionManager = buildConnectionManager(config)
 
-        return buildClientBuilder(config)
+        val client = buildClientBuilder(config)
             .setIOReactorConfig(ioReactorConfig)
             .setConnectionManager(connectionManager)
             .evictExpiredConnections()
@@ -93,6 +101,77 @@ internal object HttpAsyncClientFactory {
             .setConnectionReuseStrategy(DefaultConnectionReuseStrategy())
             .build()
             .apply { start() }
+
+        return PooledClient(client, connectionManager)
+    }
+
+    /**
+     * Establishes [count] connections to the configured route and releases them to the pool.
+     *
+     * The pooled client of Apache HTTP Client opens its sockets on demand, so without this the TCP and TLS
+     * handshakes are paid by the first requests of the minions and inflate the latencies measured at the
+     * beginning of the campaign. Doing it here moves that cost to the start-up phase of the step.
+     *
+     * When none of the connections can be established, the target is considered unreachable and a
+     * [HttpConnectionException] is thrown: the step start-up then fails, the warm-up of the campaign fails and the
+     * campaign does not start. Running a campaign against an unreachable server only produces a full report of
+     * failures, which is more expensive to read than an immediate and explicit error.
+     *
+     * When only a part of the connections could be established, the missing ones are created on demand and the
+     * event is logged as a warning.
+     */
+    fun preconnect(pooled: PooledClient, config: HttpClientConfiguration, count: Int) {
+        val initiator = pooled.client as? ConnectionInitiator
+        if (count <= 0 || initiator == null) {
+            return
+        }
+        val route = buildRoute(config)
+        val timeout = Timeout.ofMilliseconds(config.connectTimeout.toMillis())
+        val validity = TimeValue.ofMilliseconds(config.idleConnectionTimeout.toMillis())
+        // The endpoints are all leased before any of them is released, otherwise the same connection is
+        // reused for each round and a single socket is opened.
+        val endpoints = mutableListOf<AsyncConnectionEndpoint>()
+        var established = 0
+        var failure: Exception? = null
+        try {
+            repeat(count) { index ->
+                val endpoint = pooled.connectionManager
+                    .lease("preconnect-$index", route, null, timeout, null)
+                    .get(timeout.toMilliseconds(), TimeUnit.MILLISECONDS)
+                endpoints += endpoint
+                pooled.connectionManager
+                    .connect(endpoint, initiator, timeout, null, HttpClientContext.create(), null)
+                    .get(timeout.toMilliseconds(), TimeUnit.MILLISECONDS)
+                established++
+            }
+        } catch (e: Exception) {
+            failure = e
+        } finally {
+            endpoints.forEach { endpoint ->
+                kotlin.runCatching { pooled.connectionManager.release(endpoint, null, validity) }
+            }
+        }
+
+        if (failure != null) {
+            if (established == 0) {
+                throw HttpConnectionException(
+                    "None of the $count connections to $route could be opened before the campaign: ${failure.message}",
+                    failure
+                )
+            }
+            log.warn("Only $established connections out of $count could be opened to $route before the campaign: ${failure.message}")
+        }
+    }
+
+    private fun buildRoute(config: HttpClientConfiguration): HttpRoute {
+        val scheme = if (config.isSecure) URIScheme.HTTPS.id else URIScheme.HTTP.id
+        val target = HttpHost(scheme, config.host, config.port)
+        val proxy = config.proxyConfiguration
+            ?.takeIf { it.type == HttpProxyType.HTTP }
+            ?.let { HttpHost(URIScheme.HTTP.id, it.host, it.port) }
+
+        return if (proxy == null) HttpRoute(target, null, config.isSecure)
+        else HttpRoute(target, null, proxy, config.isSecure)
     }
 
     private fun buildIOReactorConfig(config: HttpClientConfiguration): IOReactorConfig {
@@ -205,4 +284,15 @@ internal object HttpAsyncClientFactory {
 
         return builder
     }
+
+    @JvmStatic
+    private val log = logger()
+
+    /**
+     * A pooled client and the connection manager that owns its pool.
+     */
+    internal data class PooledClient(
+        val client: CloseableHttpAsyncClient,
+        val connectionManager: PoolingAsyncClientConnectionManager,
+    )
 }

@@ -35,15 +35,19 @@ import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.plugins.http.HttpClientConfiguration
 import io.qalipsis.plugins.http.connectionProvider.impl.WarmupConnectionProvider
 import io.qalipsis.plugins.http.connectionProvider.impl.catadioptre.preparedConnections
+import io.qalipsis.plugins.http.HttpConnectionException
 import io.qalipsis.test.mockk.WithMockk
 import java.time.Duration
 import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
 import org.apache.hc.core5.http.HttpVersion
 import org.apache.hc.core5.pool.PoolConcurrencyPolicy
 import org.apache.hc.core5.reactor.IOReactorStatus.ACTIVE
+import okhttp3.mockwebserver.MockWebServer
 import org.apache.hc.core5.reactor.IOReactorStatus.SHUT_DOWN
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 @WithMockk
 internal class WarmupConnectionProviderUnitTest {
@@ -59,8 +63,13 @@ internal class WarmupConnectionProviderUnitTest {
 
     private lateinit var provider: WarmupConnectionProvider
 
+    private lateinit var server: MockWebServer
+
     @BeforeEach
     fun setUp() {
+        server = MockWebServer()
+        server.start()
+
         every { clientConfiguration.socketTimeout } returns Duration.ofSeconds(30)
         every { clientConfiguration.idleConnectionTimeout } returns Duration.ofSeconds(30)
         every { clientConfiguration.maxConnTotal } returns 5
@@ -74,12 +83,21 @@ internal class WarmupConnectionProviderUnitTest {
         every { clientConfiguration.proxyConfiguration } returns null
         every { clientConfiguration.tlsConfiguration } returns null
         every { clientConfiguration.followRedirections } returns false
+        every { clientConfiguration.connectTimeout } returns Duration.ofMillis(500)
+        every { clientConfiguration.isSecure } returns false
+        every { clientConfiguration.host } returns "localhost"
+        every { clientConfiguration.port } returns server.port
 
         every { stepStartStopContext.scheduledMinionCount } returns 2
         every { stepContext.minionId } returns "minion-1"
         every { stepContext.isTail } returns false
 
         provider = WarmupConnectionProvider(shared = false, httpClientConfiguration = clientConfiguration)
+    }
+
+    @AfterEach
+    fun tearDown() {
+        server.shutdown()
     }
 
     @Test
@@ -160,16 +178,31 @@ internal class WarmupConnectionProviderUnitTest {
     }
 
     @Test
-    fun `should respect socks proxy configuration`() {
-        every { clientConfiguration.socksProxyAddress } returns "localhost:1080"
+    fun `init should fail when the server cannot be reached`() {
+        every { clientConfiguration.port } returns PORT_WITHOUT_SERVER
+
+        val exception = assertThrows<HttpConnectionException> { provider.init(stepStartStopContext) }
+
+        assertThat(exception.message!!).contains("http://localhost:$PORT_WITHOUT_SERVER")
+    }
+
+    @Test
+    fun `init should fail when the socks proxy cannot be reached`() {
+        every { clientConfiguration.socksProxyAddress } returns "localhost:$PORT_WITHOUT_SERVER"
         every { clientConfiguration.socksProxyUsername } returns "user"
         every { clientConfiguration.socksProxyPassword } returns "pass"
 
         provider = WarmupConnectionProvider(shared = false, httpClientConfiguration = clientConfiguration)
-        provider.init(stepStartStopContext)
 
-        val client = provider.acquire(stepContext)
-        assertThat(client).isNotNull()
-        provider.shutdown(stepStartStopContext)
+        assertThrows<HttpConnectionException> { provider.init(stepStartStopContext) }
+    }
+
+    private companion object {
+
+        /**
+         * Nothing listens there, so the connections to that port cannot be established.
+         */
+        const val PORT_WITHOUT_SERVER = 1
+
     }
 }

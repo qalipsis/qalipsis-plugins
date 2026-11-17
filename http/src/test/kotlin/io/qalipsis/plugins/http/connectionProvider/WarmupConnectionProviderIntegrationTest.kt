@@ -46,8 +46,13 @@ internal class WarmupConnectionProviderIntegrationTest {
 
     private lateinit var stepStartStopContext: StepStartStopContext
 
+    private lateinit var server: MockWebServer
+
     @BeforeEach
     fun setUp() {
+        server = MockWebServer()
+        server.start()
+
         val config = mockk<HttpClientConfiguration> {
             every { socketTimeout } returns Duration.ofSeconds(5)
             every { idleConnectionTimeout } returns Duration.ofSeconds(5)
@@ -61,6 +66,10 @@ internal class WarmupConnectionProviderIntegrationTest {
             every { proxyConfiguration } returns null
             every { tlsConfiguration } returns null
             every { followRedirections } returns false
+            every { connectTimeout } returns Duration.ofMillis(500)
+            every { isSecure } returns false
+            every { host } returns "localhost"
+            every { port } returns server.port
         }
 
         stepStartStopContext = mockk { every { scheduledMinionCount } returns 1 }
@@ -71,9 +80,7 @@ internal class WarmupConnectionProviderIntegrationTest {
 
     @Test
     fun `warmed client should execute real http request`() {
-        val server = MockWebServer()
         server.enqueue(MockResponse().setResponseCode(200))
-        server.start()
 
         val stepContext = mockk<StepContext<*, *>> {
             every { minionId } returns "minion-1"

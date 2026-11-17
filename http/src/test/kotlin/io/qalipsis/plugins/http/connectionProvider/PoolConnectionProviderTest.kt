@@ -20,6 +20,7 @@
 package io.qalipsis.plugins.http.connectionProvider
 
 import assertk.assertThat
+import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
@@ -31,14 +32,18 @@ import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.plugins.http.HttpClientConfiguration
 import io.qalipsis.plugins.http.connectionProvider.impl.PoolConnectionProvider
 import io.qalipsis.plugins.http.connectionProvider.impl.catadioptre.initialized
+import io.qalipsis.plugins.http.HttpConnectionException
 import io.qalipsis.test.mockk.WithMockk
 import java.time.Duration
 import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
 import org.apache.hc.core5.http.HttpVersion
 import org.apache.hc.core5.pool.PoolConcurrencyPolicy
+import okhttp3.mockwebserver.MockWebServer
 import org.apache.hc.core5.reactor.IOReactorStatus
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 @WithMockk
 internal class PoolConnectionProviderTest {
@@ -54,8 +59,13 @@ internal class PoolConnectionProviderTest {
 
     private lateinit var provider: PoolConnectionProvider
 
+    private lateinit var server: MockWebServer
+
     @BeforeEach
     fun setUp() {
+        server = MockWebServer()
+        server.start()
+
         every { clientConfiguration.socketTimeout } returns Duration.ofSeconds(30)
         every { clientConfiguration.idleConnectionTimeout } returns Duration.ofSeconds(30)
         every { clientConfiguration.maxConnTotal } returns 10
@@ -69,11 +79,20 @@ internal class PoolConnectionProviderTest {
         every { clientConfiguration.proxyConfiguration } returns null
         every { clientConfiguration.tlsConfiguration } returns null
         every { clientConfiguration.followRedirections } returns false
+        every { clientConfiguration.connectTimeout } returns Duration.ofMillis(500)
+        every { clientConfiguration.isSecure } returns false
+        every { clientConfiguration.host } returns "localhost"
+        every { clientConfiguration.port } returns server.port
 
         provider = PoolConnectionProvider(
             shared = false,
             httpClientConfiguration = clientConfiguration
         )
+    }
+
+    @AfterEach
+    fun tearDown() {
+        server.shutdown()
     }
 
     @Test
@@ -119,8 +138,17 @@ internal class PoolConnectionProviderTest {
     }
 
     @Test
-    fun `should create pooled client with socks proxy configuration`() {
-        every { clientConfiguration.socksProxyAddress } returns "localhost:1080"
+    fun `init should fail when the server cannot be reached`() {
+        every { clientConfiguration.port } returns PORT_WITHOUT_SERVER
+
+        val exception = assertThrows<HttpConnectionException> { provider.init(stepStartStopContext) }
+
+        assertThat(exception.message!!).contains("http://localhost:$PORT_WITHOUT_SERVER")
+    }
+
+    @Test
+    fun `init should fail when the socks proxy cannot be reached`() {
+        every { clientConfiguration.socksProxyAddress } returns "localhost:$PORT_WITHOUT_SERVER"
         every { clientConfiguration.socksProxyUsername } returns "user"
         every { clientConfiguration.socksProxyPassword } returns "password"
 
@@ -129,11 +157,15 @@ internal class PoolConnectionProviderTest {
             httpClientConfiguration = clientConfiguration
         )
 
-        provider.init(stepStartStopContext)
-        val client = provider.acquire(stepContext)
+        assertThrows<HttpConnectionException> { provider.init(stepStartStopContext) }
+    }
 
-        assertThat(client).isNotNull()
+    private companion object {
 
-        provider.shutdown(stepStartStopContext)
+        /**
+         * Nothing listens there, so the connections to that port cannot be established.
+         */
+        const val PORT_WITHOUT_SERVER = 1
+
     }
 }

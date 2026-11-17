@@ -25,6 +25,7 @@ import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.plugins.http.HttpClientConfiguration
 import io.qalipsis.plugins.http.connectionProvider.ConnectionProvider
 import io.qalipsis.plugins.http.connectionProvider.HttpAsyncClientFactory
+import io.qalipsis.plugins.http.connectionProvider.HttpAsyncClientFactory.PooledClient
 import java.util.concurrent.atomic.AtomicBoolean
 import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
 
@@ -42,22 +43,30 @@ class PoolConnectionProvider(val shared: Boolean, private val httpClientConfigur
     @KTestable
     private val initialized = AtomicBoolean(false)
 
-    private lateinit var httpClient: CloseableHttpAsyncClient
+    @KTestable
+    private lateinit var pooledClient: PooledClient
 
     override fun init(context: StepStartStopContext) {
         if (initialized.compareAndSet(false, true)) {
-            httpClient = HttpAsyncClientFactory.createPooledClient(httpClientConfiguration)
+            pooledClient = HttpAsyncClientFactory.createPooledClient(httpClientConfiguration)
+            // The connections are established now, so that the minions do not pay the handshakes on their
+            // first requests and the latencies of the beginning of the campaign stay comparable.
+            HttpAsyncClientFactory.preconnect(
+                pooledClient,
+                httpClientConfiguration,
+                httpClientConfiguration.maxConnPerRoute.coerceAtMost(httpClientConfiguration.maxConnTotal)
+            )
         }
     }
 
     override fun acquire(context: StepContext<*, *>): CloseableHttpAsyncClient {
-        return httpClient
+        return pooledClient.client
     }
 
     override fun shutdown(context: StepStartStopContext) {
-        if (initialized.get() && ::httpClient.isInitialized) {
-            httpClient.initiateShutdown()
-            httpClient.close()
+        if (initialized.get() && ::pooledClient.isInitialized) {
+            pooledClient.client.initiateShutdown()
+            pooledClient.client.close()
             initialized.set(false)
         }
     }

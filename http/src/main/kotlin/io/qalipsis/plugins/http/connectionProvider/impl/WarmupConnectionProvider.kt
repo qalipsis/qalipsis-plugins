@@ -56,7 +56,10 @@ class WarmupConnectionProvider(
         if (initialized.compareAndSet(false, true)) {
             preparedConnections = mutableListOf()
             repeat(context.scheduledMinionCount) {
-                preparedConnections.add(HttpAsyncClientFactory.createPooledClient(httpClientConfiguration))
+                val pooledClient = HttpAsyncClientFactory.createPooledClient(httpClientConfiguration)
+                // One connection per minion: the strategy promises connections ready before the start.
+                HttpAsyncClientFactory.preconnect(pooledClient, httpClientConfiguration, 1)
+                preparedConnections.add(pooledClient.client)
             }
         }
     }

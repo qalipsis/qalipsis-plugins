@@ -25,6 +25,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.qalipsis.plugins.http.HttpClientConfiguration
 import io.qalipsis.plugins.http.connectionProvider.impl.PoolConnectionProvider
+import io.qalipsis.plugins.http.connectionProvider.impl.catadioptre.pooledClient
 import io.qalipsis.test.mockk.WithMockk
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
@@ -61,6 +62,9 @@ internal class PoolConnectionProviderIntegrationTest {
             every { proxyConfiguration } returns null
             every { tlsConfiguration } returns null
             every { followRedirections } returns false
+            every { connectTimeout } returns Duration.ofSeconds(5)
+            every { isSecure } returns false
+            every { host } returns "localhost"
         }
 
         provider = PoolConnectionProvider(
@@ -70,10 +74,29 @@ internal class PoolConnectionProviderIntegrationTest {
     }
 
     @Test
+    fun `init should open the connections of the pool before any request`() {
+        val server = MockWebServer()
+        server.start()
+        every { clientConfiguration.port } returns server.port
+
+        provider.init(mockk())
+
+        // The whole pool is connected and idle, and no HTTP request was needed to open it.
+        val stats = provider.pooledClient().connectionManager.totalStats
+        assertThat(stats.available).isEqualTo(5)
+        assertThat(stats.leased).isEqualTo(0)
+        assertThat(server.requestCount).isEqualTo(0)
+
+        provider.shutdown(mockk())
+        server.shutdown()
+    }
+
+    @Test
     fun `pooled client should execute real HTTP request`() {
         val server = MockWebServer()
         server.enqueue(MockResponse().setResponseCode(200))
         server.start()
+        every { clientConfiguration.port } returns server.port
 
         provider.init(mockk())
         val client = provider.acquire(mockk())
