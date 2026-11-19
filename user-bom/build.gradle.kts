@@ -107,8 +107,8 @@ publishing {
                 url.set("https://qalipsis.io")
                 licenses {
                     license {
-                        name.set("GNU AFFERO GENERAL PUBLIC LICENSE, Version 3 (AGPL-3.0)")
-                        url.set("http://opensource.org/licenses/AGPL-3.0")
+                        name.set("Apache License, Version 2.0 (Apache-2.0)")
+                        url.set("https://opensource.org/license/apache-2-0")
                     }
                 }
                 developers {
