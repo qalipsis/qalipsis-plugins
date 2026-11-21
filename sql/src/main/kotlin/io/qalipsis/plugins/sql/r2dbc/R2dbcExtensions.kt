@@ -25,16 +25,27 @@ import io.r2dbc.spi.Connection
 import io.r2dbc.spi.Row
 import io.r2dbc.spi.RowMetadata
 import io.r2dbc.spi.Statement
+import io.r2dbc.spi.Wrapped
 import java.time.OffsetDateTime
 import java.time.ZonedDateTime
-import kotlinx.coroutines.reactive.awaitFirst
-import kotlinx.coroutines.reactive.awaitFirstOrNull
-import kotlinx.coroutines.reactive.awaitLast
+import kotlinx.coroutines.reactive.awaitSingle
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
- * Coroutine-friendly helpers for R2DBC connections.
+ * Coroutine-friendly helpers to execute statements with connections of an R2DBC [ConnectionPool].
+ *
+ * Each helper acquires a connection, executes the statement, consumes all its results and releases the connection
+ * in a single reactive pipeline, which is awaited only once and without cancellation.
+ * Bridging each of these stages separately to coroutines is not safe under concurrency:
+ * - `awaitFirst` cancels the publisher after its first value; r2dbc-pool releases a connection when the acquisition
+ *   is cancelled, even after it was emitted, and the cancellation of `Statement.execute` makes the drivers discard
+ *   or close the pending conversation,
+ * - releasing the connection from the coroutine races with the completion of the conversation in the driver.
+ * Both let concurrent queries share a connection, which crosses their results or corrupts the protocol state.
+ *
+ * When the awaiting coroutine is cancelled (e.g. a step timeout) while the statement runs, the physical connection
+ * is closed, so that the pool discards it instead of reusing a connection still busy with the cancelled statement.
  *
  * @author Eric Jessé
  */
@@ -52,18 +63,21 @@ private fun normalizeValue(value: Any?): Any? = when (value) {
 }
 
 /**
- * Acquires a connection from the pool, suspending until one is available.
+ * Executes [block] with a connection of the pool, released once the publisher of [block] is terminated.
  */
-suspend fun ConnectionPool.acquireConnection(): Connection {
-    return Mono.from(this.create()).awaitFirst()
-}
+private suspend fun <T : Any> ConnectionPool.withConnection(block: (Connection) -> Mono<T>): T =
+    Mono.usingWhen(create(), block, Connection::close, { connection, _ -> connection.close() }, ::discard)
+        .awaitSingle()
 
 /**
- * Closes the connection, suspending until complete.
+ * Closes the physical connection of the pooled [connection] before releasing it, which lets the pool destroy it
+ * (see [io.qalipsis.plugins.sql.dialect.DialectConfigurations]).
  */
-suspend fun Connection.closeConnection() {
-    Mono.from(this.close()).awaitFirstOrNull()
-}
+private fun discard(connection: Connection): Mono<Void> =
+    Mono.justOrEmpty<Connection>((connection as? Wrapped<*>)?.unwrap() as? Connection)
+        .flatMap { physicalConnection -> Mono.from(physicalConnection.close()) }
+        .onErrorResume { Mono.empty() }
+        .then(Mono.from(connection.close()))
 
 /**
  * Binds parameters to a statement, handling nulls.
@@ -81,36 +95,40 @@ private fun Statement.bindParams(params: List<Any?>) {
 /**
  * Executes a prepared query and drains the reactive result into a [SqlResultSet].
  */
-suspend fun Connection.executePreparedQuery(sql: String, params: List<Any?>): SqlResultSet {
-    val statement = this.createStatement(sql)
-    statement.bindParams(params)
+suspend fun ConnectionPool.executePreparedQuery(sql: String, params: List<Any?>): SqlResultSet =
+    withConnection { connection ->
+        val statement = connection.createStatement(sql)
+        statement.bindParams(params)
 
-    val result = Flux.from(statement.execute()).awaitFirst()
-
-    var columnNames: List<String>? = null
-    var columnIndex: Map<String, Int>? = null
-    val rows = Flux.from(result.map { row: Row, metadata: RowMetadata ->
-        if (columnNames == null) {
-            columnNames = metadata.columnMetadatas.map { it.name.lowercase() }
-            columnIndex = columnNames!!.withIndex().associate { (index, name) -> name to index }
-        }
-        val names = columnNames!!
-        val values = names.map { name -> normalizeValue(row.get(name)) }
-        SqlRow(names, values, columnIndex!!)
-    }).collectList().awaitFirst()
-
-    return SqlResultSet(columnNames ?: emptyList(), rows)
-}
+        var columnNames: List<String>? = null
+        var columnIndex: Map<String, Int>? = null
+        Flux.from(statement.execute())
+            .concatMap { result ->
+                result.map { row: Row, metadata: RowMetadata ->
+                    if (columnNames == null) {
+                        columnNames = metadata.columnMetadatas.map { it.name.lowercase() }
+                        columnIndex = columnNames!!.withIndex().associate { (index, name) -> name to index }
+                    }
+                    val names = columnNames!!
+                    val values = names.map { name -> normalizeValue(row.get(name)) }
+                    SqlRow(names, values, columnIndex!!)
+                }
+            }
+            .collectList()
+            .map { rows -> SqlResultSet(columnNames ?: emptyList(), rows) }
+    }
 
 /**
  * Executes a DML statement (INSERT/UPDATE/DELETE) and returns the number of rows affected.
  */
-suspend fun Connection.executeUpdate(sql: String, params: List<Any?>): Long {
-    val statement = this.createStatement(sql)
-    statement.bindParams(params)
-    val result = Flux.from(statement.execute()).awaitFirst()
-    return Mono.from(result.getRowsUpdated()).awaitFirst()
-}
+suspend fun ConnectionPool.executeUpdate(sql: String, params: List<Any?>): Long =
+    withConnection { connection ->
+        val statement = connection.createStatement(sql)
+        statement.bindParams(params)
+        Flux.from(statement.execute())
+            .concatMap { result -> result.rowsUpdated }
+            .reduce(0L, Long::plus)
+    }
 
 /**
  * Outcome of a single prepared INSERT execution: either a generated id (possibly `null` when no
@@ -119,24 +137,24 @@ suspend fun Connection.executeUpdate(sql: String, params: List<Any?>): Long {
 data class SqlInsertOutcome(val id: Long?, val error: Throwable?)
 
 /**
- * Executes a prepared INSERT for each set of [params] and returns the per-record outcome,
+ * Executes a prepared INSERT for each set of [params] with the same connection and returns the per-record outcome,
  * preserving the original cause when an insert fails so callers can surface it as a step error.
  */
-suspend fun Connection.executePreparedInsert(sql: String, params: List<List<Any?>>): List<SqlInsertOutcome> {
-    return Flux.fromIterable(params)
-        .concatMap { queryParams ->
-            Flux.defer {
-                val statement = createStatement(sql).returnGeneratedValues()
-                statement.bindParams(queryParams)
-                Flux.from(statement.execute())
-                    .concatMap { result ->
-                        result.map { row ->
-                            val value = row.get(0)
-                            SqlInsertOutcome(if (value is Number) value.toLong() else 0L, null)
+suspend fun ConnectionPool.executePreparedInsert(sql: String, params: List<List<Any?>>): List<SqlInsertOutcome> =
+    withConnection { connection ->
+        Flux.fromIterable(params)
+            .concatMap { queryParams ->
+                Flux.defer {
+                    val statement = connection.createStatement(sql).returnGeneratedValues()
+                    statement.bindParams(queryParams)
+                    Flux.from(statement.execute())
+                        .concatMap { result ->
+                            result.map { row ->
+                                val value = row.get(0)
+                                SqlInsertOutcome(if (value is Number) value.toLong() else 0L, null)
+                            }
                         }
-                    }
-            }.onErrorResume { error -> Flux.just(SqlInsertOutcome(null, error)) }
-        }
-        .collectList()
-        .awaitLast()
-}
+                }.onErrorResume { error -> Flux.just(SqlInsertOutcome(null, error)) }
+            }
+            .collectList()
+    }

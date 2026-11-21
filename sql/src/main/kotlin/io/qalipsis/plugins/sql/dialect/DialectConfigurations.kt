@@ -21,9 +21,13 @@ package io.qalipsis.plugins.sql.dialect
 import io.qalipsis.plugins.sql.SqlConnection
 import io.r2dbc.pool.ConnectionPool
 import io.r2dbc.pool.ConnectionPoolConfiguration
+import io.r2dbc.spi.Connection
 import io.r2dbc.spi.ConnectionFactories
 import io.r2dbc.spi.ConnectionFactoryOptions
+import io.r2dbc.spi.R2dbcNonTransientResourceException
+import io.r2dbc.spi.ValidationDepth
 import org.apache.calcite.avatica.util.Quoting
+import reactor.core.publisher.Mono
 
 /**
  * Specific configurations for the supported vendors.
@@ -49,10 +53,17 @@ internal object DialectConfigurations {
             .maxSize(config.maxSize)
             .maxIdleTime(config.maxIdleTime)
             .maxCreateConnectionTime(config.maxCreateConnectionTime)
+            // A failure before the release makes the pool destroy the connection instead of reusing it.
+            .preRelease(::rejectClosedConnection)
             .build()
 
         return ConnectionPool(poolConfig)
     }
+
+    private fun rejectClosedConnection(connection: Connection): Mono<Void> =
+        Mono.from(connection.validate(ValidationDepth.LOCAL))
+            .filter { valid -> !valid }
+            .flatMap { Mono.error<Void>(R2dbcNonTransientResourceException("The connection is closed")) }
 
     /**
      * Dialect configuration for PostgreSQL.

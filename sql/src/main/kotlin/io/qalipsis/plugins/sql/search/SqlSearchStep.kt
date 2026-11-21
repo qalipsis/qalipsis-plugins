@@ -28,8 +28,6 @@ import io.qalipsis.api.steps.AbstractStep
 import io.qalipsis.api.steps.datasource.DatasourceException
 import io.qalipsis.plugins.sql.converters.SqlResultSetConverter
 import io.qalipsis.plugins.sql.dialect.Dialect
-import io.qalipsis.plugins.sql.r2dbc.acquireConnection
-import io.qalipsis.plugins.sql.r2dbc.closeConnection
 import io.qalipsis.plugins.sql.r2dbc.executePreparedQuery
 import io.r2dbc.pool.ConnectionPool
 import java.time.Duration
@@ -74,24 +72,19 @@ internal class SqlSearchStep<I>(
         val query = dialect.convertPlaceholders(queryFactory(context, input))
         val parameters = parametersFactory(context, input)
         val requestStart = System.nanoTime()
-        val connection = connectionPool.acquireConnection()
-        try {
-            val resultSet = connection.executePreparedQuery(query, parameters)
-            val timeToResponse = Duration.ofNanos(System.nanoTime() - requestStart)
-            val result = ResultSetWrapper(
-                resultSet = resultSet,
-                timeToResponse = timeToResponse
-            )
-            val rowIndex = AtomicLong()
+        val resultSet = connectionPool.executePreparedQuery(query, parameters)
+        val timeToResponse = Duration.ofNanos(System.nanoTime() - requestStart)
+        val result = ResultSetWrapper(
+            resultSet = resultSet,
+            timeToResponse = timeToResponse
+        )
+        val rowIndex = AtomicLong()
 
-            try {
-                @Suppress("UNCHECKED_CAST")
-                converter.supply(rowIndex, result, input, context as StepOutput<Any?>, context.toEventTags())
-            } catch (e: Exception) {
-                context.addError(StepError(DatasourceException(rowIndex.get() - 1, e.message)))
-            }
-        } finally {
-            connection.closeConnection()
+        try {
+            @Suppress("UNCHECKED_CAST")
+            converter.supply(rowIndex, result, input, context as StepOutput<Any?>, context.toEventTags())
+        } catch (e: Exception) {
+            context.addError(StepError(DatasourceException(rowIndex.get() - 1, e.message)))
         }
     }
 }
