@@ -26,6 +26,8 @@ import io.qalipsis.api.steps.StepCreationContext
 import io.qalipsis.api.steps.StepSpecification
 import io.qalipsis.api.steps.StepSpecificationConverter
 import io.qalipsis.plugins.http.connectionProvider.ConnectionProvider
+import io.qalipsis.plugins.http.connectionProvider.SharedConnectionProvider
+import io.qalipsis.plugins.http.connectionProvider.SharedConnectionProviderKey
 import io.qalipsis.plugins.http.connectionProvider.impl.OnDemandConnectionProvider
 import io.qalipsis.plugins.http.connectionProvider.impl.PoolConnectionProvider
 import io.qalipsis.plugins.http.connectionProvider.impl.WarmupConnectionProvider
@@ -45,7 +47,7 @@ internal class HttpClientStepSpecificationConverter(
     private val sortedDeserializers = deserializers.sortedBy(HttpBodyDeserializer::order)
 
     @KTestable
-    private val sharedProviders = ConcurrentHashMap<ConnectionStrategyConfiguration, ConnectionProvider>()
+    private val sharedProviders = ConcurrentHashMap<SharedConnectionProviderKey, ConnectionProvider>()
 
     override fun support(stepSpecification: StepSpecification<*, *, *>): Boolean {
         return (stepSpecification is HttpClientStepSpecificationImpl<*, *>)
@@ -69,15 +71,19 @@ internal class HttpClientStepSpecificationConverter(
         creationContext.createdStep(step)
     }
 
-    // Resolves the connection provider based on the connection strategy configuration.
+    /**
+     * Resolves the connection provider based on the connection strategy configuration.
+     *
+     * The shared providers are reused by the steps whose client configurations are equal, see
+     * [SharedConnectionProviderKey].
+     */
     private fun resolveProvider(
         connectionStrategyConfiguration: ConnectionStrategyConfiguration,
         connectionConfiguration: HttpClientConfiguration
     ): ConnectionProvider {
         return if (connectionStrategyConfiguration.shared) {
-            // Create or reuse already instantiated provider for shared connection strategies.
-            sharedProviders.computeIfAbsent(connectionStrategyConfiguration) {
-                createProvider(connectionStrategyConfiguration, connectionConfiguration)
+            sharedProviders.computeIfAbsent(SharedConnectionProviderKey.of(connectionConfiguration)) {
+                SharedConnectionProvider(createProvider(connectionStrategyConfiguration, connectionConfiguration))
             }
         } else {
             // Always create a fresh instance for atomic or non-shared connection strategies.
