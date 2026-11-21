@@ -47,9 +47,9 @@ data class ConnectionStrategyConfiguration(
 /**
  * Types of connection strategies available for HTTP connections.
  *
- * ON_DEMAND: creates a new connection for each request
+ * ON_DEMAND: creates a new connection for each request, closed after the response
  * POOL: maintains a pool of connections shared among all minions
- * WARMUP: pre-initializes a pool of connections per minion
+ * WARMUP: opens one connection per minion before the campaign, only used by that minion
  *
  * @author Francisca Eze
  */

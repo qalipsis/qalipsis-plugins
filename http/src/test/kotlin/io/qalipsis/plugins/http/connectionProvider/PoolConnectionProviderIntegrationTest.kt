@@ -49,7 +49,11 @@ internal class PoolConnectionProviderIntegrationTest {
     @BeforeEach
     fun setUp() {
         clientConfiguration = mockk {
-            every { socketTimeout } returns Duration.ofSeconds(5)
+            every { responseTimeout } returns Duration.ofSeconds(5)
+            every { connectTimeout } returns Duration.ofSeconds(5)
+            every { ioThreadCount } returns 2
+            every { noDelay } returns true
+            every { maxRedirections } returns 10
             every { idleConnectionTimeout } returns Duration.ofSeconds(5)
             every { maxConnTotal } returns 5
             every { maxConnPerRoute } returns 5

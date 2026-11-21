@@ -90,7 +90,6 @@ internal class DummyHttpClientIntegrationTest {
         val step = HttpClientStep<String, String>(
             id = "http-client-step",
             retryPolicy = null,
-            ioCoroutineContext = this.coroutineContext,
             requestFactory = { _, _ -> request },
             clientConfiguration = config,
             connectionProvider = OnDemandConnectionProvider(config),

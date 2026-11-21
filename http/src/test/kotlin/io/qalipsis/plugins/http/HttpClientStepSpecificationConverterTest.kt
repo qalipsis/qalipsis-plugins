@@ -29,7 +29,6 @@ import assertk.assertions.isNull
 import assertk.assertions.isSameInstanceAs
 import assertk.assertions.prop
 import io.mockk.every
-import io.mockk.impl.annotations.MockK
 import io.mockk.mockk
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.steps.StepCreationContext
@@ -48,7 +47,6 @@ import io.qalipsis.test.assertk.typedProp
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.steps.AbstractStepSpecificationConverterTest
-import kotlin.coroutines.CoroutineContext
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -62,9 +60,6 @@ internal class HttpClientStepSpecificationConverterTest :
     @JvmField
     @RegisterExtension
     val testDispatcherProvider = TestDispatcherProvider()
-
-    @MockK
-    private lateinit var ioCoroutineContext: CoroutineContext
 
     private val bodyDeserializer1: HttpBodyDeserializer = mockk {
         every { order } returns -1

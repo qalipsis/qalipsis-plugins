@@ -8,10 +8,10 @@ import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
-import io.qalipsis.api.sync.Slot
 import io.qalipsis.plugins.http.client.MonitoringResponseConsumer
 import io.qalipsis.plugins.http.client.RequestMonitoringInterceptor
 import io.qalipsis.plugins.http.connectionProvider.ConnectionProvider
+import io.qalipsis.plugins.http.connectionProvider.DedicatedConnectionManager
 import io.qalipsis.plugins.http.monitoring.HttpMonitoringCollector
 import io.qalipsis.plugins.http.request.HttpRequest
 import io.qalipsis.plugins.http.request.HttpRequestBuilder
@@ -20,10 +20,8 @@ import io.qalipsis.plugins.http.request.InternalHttpRequest
 import io.qalipsis.plugins.http.response.HttpResponse
 import io.qalipsis.plugins.http.response.ResponseConverter
 import java.time.Duration
-import java.util.concurrent.CancellationException
-import kotlin.coroutines.CoroutineContext
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import org.apache.hc.client5.http.async.HttpAsyncClient
 import org.apache.hc.client5.http.async.methods.SimpleHttpResponse
 import org.apache.hc.client5.http.protocol.HttpClientContext
@@ -38,7 +36,6 @@ import org.apache.hc.core5.http.nio.AsyncRequestProducer
 internal class HttpClientStep<IN, OUT>(
     id: StepName,
     retryPolicy: RetryPolicy?,
-    private val ioCoroutineContext: CoroutineContext,
     private val requestFactory: suspend HttpRequestBuilder.(StepContext<*, *>, IN) -> HttpRequest<*>,
     private val clientConfiguration: HttpClientConfiguration,
     private val connectionProvider: ConnectionProvider,
@@ -58,7 +55,9 @@ internal class HttpClientStep<IN, OUT>(
         try {
             monitoring.recordConnecting()
             val requestProducer = buildAsyncRequestProducer(context, input)
-            val outcome = doExecute(httpClient, requestProducer, monitoring)
+            val httpContext = HttpClientContext.create()
+            connectionProvider.prepare(context, httpContext)
+            val outcome = doExecute(httpClient, requestProducer, httpContext, monitoring)
             val result = monitoring.toResult(input, outcome.response, outcome.failure)
             if (result.isFailure) {
                 throw HttpRequestException(result)
@@ -69,49 +68,53 @@ internal class HttpClientStep<IN, OUT>(
         }
     }
 
+    /**
+     * Sends the request and suspends until the exchange completes.
+     *
+     * The callback of the client only completes a deferred from the I/O thread of the client: the metrics and the
+     * conversion of the response are performed by the coroutine of the step after it resumes, which avoids an
+     * additional dispatch per request and keeps the I/O threads free for the network.
+     */
     private suspend fun doExecute(
         httpClient: HttpAsyncClient,
         requestProducer: AsyncRequestProducer,
+        httpContext: HttpClientContext,
         monitoring: HttpMonitoringCollector,
     ): RequestOutcome<OUT> {
-        val slot = Slot<RequestOutcome<OUT>>()
-        val consumer = MonitoringResponseConsumer.create()
-        val callbackScope = CoroutineScope(ioCoroutineContext)
-        val httpContext = HttpClientContext.create()
+        val exchange = CompletableDeferred<Result<SimpleHttpResponse>>()
         val startNanos = System.nanoTime()
-
-        val callback = object : FutureCallback<SimpleHttpResponse> {
-            override fun completed(response: SimpleHttpResponse) {
-                callbackScope.launch {
-                    try {
-                        recordSuccessMetrics(monitoring, httpContext, startNanos, response)
-                        val converted = responseConverter.convert(response, httpContext)
-                        slot.set(RequestOutcome(converted, null))
-                    } catch (e: Exception) {
-                        log.error(e) { "Error in HTTP response callback: ${e.message}" }
-                        slot.set(RequestOutcome(null, e))
-                    }
-                }
-            }
-
-            override fun failed(exception: Exception) {
-                callbackScope.launch {
-                    recordFailureMetrics(monitoring, httpContext, startNanos, exception)
-                    slot.set(RequestOutcome(null, exception))
-                }
-            }
-
-            override fun cancelled() {
-                callbackScope.launch {
-                    val exception = CancellationException("The request was cancelled")
-                    recordFailureMetrics(monitoring, httpContext, startNanos, exception)
-                    slot.set(RequestOutcome(null, exception))
-                }
-            }
+        val future = httpClient.execute(
+            requestProducer, MonitoringResponseConsumer.create(), null, httpContext, ExchangeCallback(exchange)
+        )
+        val exchangeResult = try {
+            exchange.await()
+        } catch (e: CancellationException) {
+            future?.cancel(true)
+            throw e
         }
-        httpClient.execute(requestProducer, consumer, null, httpContext, callback)
+        if (httpContext.getAttribute(DedicatedConnectionManager.RECONNECTION_ATTR) == true) {
+            monitoring.recordReconnection()
+        }
+        return exchangeResult.fold(
+            onSuccess = { response -> convertResponse(monitoring, httpContext, startNanos, response) },
+            onFailure = { exception ->
+                recordFailureMetrics(monitoring, httpContext, startNanos, exception as Exception)
+                RequestOutcome(null, exception)
+            }
+        )
+    }
 
-        return slot.get()
+    private fun convertResponse(
+        monitoring: HttpMonitoringCollector,
+        httpContext: HttpClientContext,
+        startNanos: Long,
+        response: SimpleHttpResponse,
+    ): RequestOutcome<OUT> = try {
+        recordSuccessMetrics(monitoring, httpContext, startNanos, response)
+        RequestOutcome(responseConverter.convert(response, httpContext), null)
+    } catch (e: Exception) {
+        log.error(e) { "Error while processing the HTTP response: ${e.message}" }
+        RequestOutcome(null, e)
     }
 
     private fun recordSuccessMetrics(
@@ -189,6 +192,26 @@ internal class HttpClientStep<IN, OUT>(
     }
 
     private data class RequestOutcome<OUT>(val response: HttpResponse<OUT>?, val failure: Throwable?)
+
+    /**
+     * Callback of the client, executed by its I/O threads: it only completes the [exchange].
+     */
+    private class ExchangeCallback(
+        private val exchange: CompletableDeferred<Result<SimpleHttpResponse>>,
+    ) : FutureCallback<SimpleHttpResponse> {
+
+        override fun completed(response: SimpleHttpResponse) {
+            exchange.complete(Result.success(response))
+        }
+
+        override fun failed(exception: Exception) {
+            exchange.complete(Result.failure(exception))
+        }
+
+        override fun cancelled() {
+            exchange.complete(Result.failure(CancellationException("The request was cancelled")))
+        }
+    }
 
     companion object {
 

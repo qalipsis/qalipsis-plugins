@@ -21,6 +21,7 @@ package io.qalipsis.plugins.http.connectionProvider
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepStartStopContext
 import org.apache.hc.client5.http.async.HttpAsyncClient
+import org.apache.hc.client5.http.protocol.HttpClientContext
 
 /**
  * Provides options to create, acquire and release HTTP connections to minions.
@@ -38,6 +39,11 @@ interface ConnectionProvider {
      * Acquires a connection for a given minion.
      */
     fun acquire(context: StepContext<*, *>): HttpAsyncClient
+
+    /**
+     * Prepares the [httpContext] of a request of the minion of [context], once the client is acquired.
+     */
+    fun prepare(context: StepContext<*, *>, httpContext: HttpClientContext) = Unit
 
     /**
      * Releases the connection after use.

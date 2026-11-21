@@ -19,7 +19,6 @@
 package io.qalipsis.plugins.http
 
 import io.aerisconsulting.catadioptre.KTestable
-import io.qalipsis.api.Executors
 import io.qalipsis.api.annotations.StepConverter
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
@@ -32,9 +31,7 @@ import io.qalipsis.plugins.http.connectionProvider.impl.PoolConnectionProvider
 import io.qalipsis.plugins.http.connectionProvider.impl.WarmupConnectionProvider
 import io.qalipsis.plugins.http.response.HttpBodyDeserializer
 import io.qalipsis.plugins.http.response.ResponseConverter
-import jakarta.inject.Named
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.coroutines.CoroutineContext
 
 
 @StepConverter
@@ -43,7 +40,6 @@ internal class HttpClientStepSpecificationConverter(
     deserializers: Collection<HttpBodyDeserializer>,
     private val meterRegistry: CampaignMeterRegistry,
     private val eventsLogger: EventsLogger,
-    @Named(Executors.IO_EXECUTOR_NAME) private val ioCoroutineContext: CoroutineContext
 ) : StepSpecificationConverter<HttpClientStepSpecificationImpl<*, *>> {
 
     private val sortedDeserializers = deserializers.sortedBy(HttpBodyDeserializer::order)
@@ -63,7 +59,6 @@ internal class HttpClientStepSpecificationConverter(
         val step = HttpClientStep<I, O>(
             id = spec.name,
             retryPolicy = spec.retryPolicy,
-            ioCoroutineContext = ioCoroutineContext,
             connectionProvider = connectionProvider,
             requestFactory = spec.requestFactory,
             clientConfiguration = spec.connectionConfiguration,

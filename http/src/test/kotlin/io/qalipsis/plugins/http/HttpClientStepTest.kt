@@ -147,7 +147,6 @@ internal class HttpClientStepTest {
         val step = HttpClientStep<String, String>(
             id = "my-step",
             retryPolicy = null,
-            ioCoroutineContext = this.coroutineContext,
             requestFactory = { _, _ -> mockk<HttpRequest<*>>() },
             clientConfiguration = connectionConfiguration,
             connectionProvider = connectionProvider,
@@ -172,7 +171,6 @@ internal class HttpClientStepTest {
         val step = HttpClientStep<String, String>(
             id = "my-step",
             retryPolicy = null,
-            ioCoroutineContext = this.coroutineContext,
             requestFactory = { _, _ -> mockk<HttpRequest<*>>() },
             clientConfiguration = connectionConfiguration,
             connectionProvider = connectionProvider,
@@ -200,6 +198,7 @@ internal class HttpClientStepTest {
             coEvery { context.receive() } returns "hello world"
             val httpClient = mockk<HttpAsyncClient>()
             every { connectionProvider.acquire(context) } returns httpClient
+            coJustRun { connectionProvider.prepare(context, any()) }
             coJustRun { connectionProvider.release(context, httpClient) }
             val asyncProducer = mockk<AsyncRequestProducer>()
             val internalRequest = mockk<InternalHttpRequest<SimpleHttpRequest, Any>>()
@@ -242,7 +241,6 @@ internal class HttpClientStepTest {
             val step = HttpClientStep<String, String>(
                 id = "my-step",
                 retryPolicy = null,
-                ioCoroutineContext = this.coroutineContext,
                 requestFactory = { _, _ -> internalRequest },
                 clientConfiguration = connectionConfiguration,
                 connectionProvider = connectionProvider,
@@ -257,6 +255,7 @@ internal class HttpClientStepTest {
             //then
             coVerify(exactly = 1) { context.receive() }
             coVerify(exactly = 1) { connectionProvider.acquire(context) }
+            coVerify(exactly = 1) { connectionProvider.prepare(context, any()) }
             verify(exactly = 1) { internalRequest.toAsyncRequest(connectionConfiguration) }
             coVerify(exactly = 1) { context.send(any()) }
             coVerify(exactly = 1) { connectionProvider.release(context, httpClient) }
@@ -296,6 +295,7 @@ internal class HttpClientStepTest {
             coEvery { context.receive() } returns "hello world"
             val httpClient = mockk<HttpAsyncClient>()
             every { connectionProvider.acquire(context) } returns httpClient
+            coJustRun { connectionProvider.prepare(context, any()) }
             coJustRun { connectionProvider.release(context, httpClient) }
             val asyncProducer = mockk<AsyncRequestProducer>()
             val internalRequest = mockk<InternalHttpRequest<SimpleHttpRequest, Any>>()
@@ -329,7 +329,6 @@ internal class HttpClientStepTest {
             val step = HttpClientStep<String, String>(
                 id = "my-step",
                 retryPolicy = null,
-                ioCoroutineContext = this.coroutineContext,
                 requestFactory = { _, _ -> internalRequest },
                 clientConfiguration = connectionConfiguration,
                 connectionProvider = connectionProvider,
@@ -359,6 +358,7 @@ internal class HttpClientStepTest {
             coEvery { context.receive() } returns "in"
             val httpClient = mockk<HttpAsyncClient>()
             every { connectionProvider.acquire(context) } returns httpClient
+            coJustRun { connectionProvider.prepare(context, any()) }
             coJustRun { connectionProvider.release(context, httpClient) }
             val asyncProducer = mockk<AsyncRequestProducer>()
             val internalRequest = mockk<InternalHttpRequest<SimpleHttpRequest, Any>>()
@@ -380,7 +380,6 @@ internal class HttpClientStepTest {
             val step = HttpClientStep<String, String>(
                 id = "my-step",
                 retryPolicy = null,
-                ioCoroutineContext = this.coroutineContext,
                 requestFactory = { _, _ -> internalRequest },
                 clientConfiguration = mockk(),
                 connectionProvider = connectionProvider,
@@ -408,6 +407,7 @@ internal class HttpClientStepTest {
             coEvery { context.receive() } returns "in"
             val httpClient = mockk<HttpAsyncClient>()
             every { connectionProvider.acquire(context) } returns httpClient
+            coJustRun { connectionProvider.prepare(context, any()) }
             coJustRun { connectionProvider.release(context, httpClient) }
             val asyncProducer = mockk<AsyncRequestProducer>()
             val internalRequest = mockk<InternalHttpRequest<SimpleHttpRequest, Any>>()
@@ -429,7 +429,6 @@ internal class HttpClientStepTest {
             val step = HttpClientStep<String, String>(
                 id = "my-step",
                 retryPolicy = null,
-                ioCoroutineContext = this.coroutineContext,
                 requestFactory = { _, _ -> internalRequest },
                 clientConfiguration = mockk(),
                 connectionProvider = connectionProvider,
@@ -475,6 +474,7 @@ internal class HttpClientStepTest {
             coEvery { context.receive() } returns "in"
             val httpClient = mockk<HttpAsyncClient>()
             every { connectionProvider.acquire(context) } returns httpClient
+            coJustRun { connectionProvider.prepare(context, any()) }
             coJustRun { connectionProvider.release(context, httpClient) }
             val asyncProducer = mockk<AsyncRequestProducer>()
             val internalRequest = mockk<InternalHttpRequest<SimpleHttpRequest, Any>>()
@@ -497,7 +497,6 @@ internal class HttpClientStepTest {
             val step = HttpClientStep<String, String>(
                 id = "my-step",
                 retryPolicy = null,
-                ioCoroutineContext = this.coroutineContext,
                 requestFactory = { _, _ -> internalRequest },
                 clientConfiguration = mockk(),
                 connectionProvider = connectionProvider,

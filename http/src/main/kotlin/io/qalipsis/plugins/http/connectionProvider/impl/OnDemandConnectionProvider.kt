@@ -18,34 +18,42 @@
 
 package io.qalipsis.plugins.http.connectionProvider.impl
 
+import io.aerisconsulting.catadioptre.KTestable
 import io.qalipsis.api.context.StepContext
-import io.qalipsis.api.logging.LoggerHelper.logger
+import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.plugins.http.HttpClientConfiguration
 import io.qalipsis.plugins.http.connectionProvider.ConnectionProvider
 import io.qalipsis.plugins.http.connectionProvider.HttpAsyncClientFactory
-import org.apache.hc.client5.http.async.HttpAsyncClient
+import java.util.concurrent.atomic.AtomicBoolean
 import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
+import org.apache.hc.core5.io.CloseMode
 
 /**
- * Connection provider that creates a new HTTP connection on demand for each minion.
+ * Connection provider opening a new HTTP connection for each request, closed once the response is received.
+ *
+ * A single client - and its I/O threads - is shared by all the minions using the provider: only the connections
+ * are created per request, so that the cost of a request remains the one of a TCP (and TLS) handshake.
  *
  * @author Francisca Eze
  */
 class OnDemandConnectionProvider(private val httpClientConfiguration: HttpClientConfiguration) : ConnectionProvider {
 
-    override fun acquire(context: StepContext<*, *>): CloseableHttpAsyncClient {
-        log.info { "Acquiring a new client for the minion ${context.minionId}" }
-        return HttpAsyncClientFactory.createOnDemandClient(httpClientConfiguration)
+    private val initialized = AtomicBoolean(false)
+
+    @KTestable
+    private lateinit var client: CloseableHttpAsyncClient
+
+    override fun init(context: StepStartStopContext) {
+        if (initialized.compareAndSet(false, true)) {
+            client = HttpAsyncClientFactory.createOnDemandClient(httpClientConfiguration)
+        }
     }
 
-    override fun release(context: StepContext<*, *>, client: HttpAsyncClient) {
-        log.info { "Releasing the client for the minion ${context.minionId}" }
-        (client as CloseableHttpAsyncClient).close()
-    }
+    override fun acquire(context: StepContext<*, *>): CloseableHttpAsyncClient = client
 
-    companion object {
-
-        @JvmStatic
-        private val log = logger()
+    override fun shutdown(context: StepStartStopContext) {
+        if (initialized.compareAndSet(true, false)) {
+            client.close(CloseMode.GRACEFUL)
+        }
     }
 }

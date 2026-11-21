@@ -33,6 +33,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.apache.hc.client5.http.async.methods.SimpleHttpRequest
 import org.apache.hc.client5.http.async.methods.SimpleHttpResponse
+import org.apache.hc.client5.http.protocol.HttpClientContext
 import org.apache.hc.core5.concurrent.FutureCallback
 import org.apache.hc.core5.http.HttpVersion
 import org.apache.hc.core5.pool.PoolConcurrencyPolicy
@@ -53,7 +54,11 @@ internal class WarmupConnectionProviderIntegrationTest {
         server.start()
 
         val config = mockk<HttpClientConfiguration> {
-            every { socketTimeout } returns Duration.ofSeconds(5)
+            every { responseTimeout } returns Duration.ofSeconds(5)
+            every { connectTimeout } returns Duration.ofSeconds(5)
+            every { ioThreadCount } returns 2
+            every { noDelay } returns true
+            every { maxRedirections } returns 10
             every { idleConnectionTimeout } returns Duration.ofSeconds(5)
             every { maxConnTotal } returns 2
             every { maxConnPerRoute } returns 2
@@ -87,12 +92,14 @@ internal class WarmupConnectionProviderIntegrationTest {
         }
 
         val client = provider.acquire(stepContext)
+        val httpContext = HttpClientContext.create()
+        provider.prepare(stepContext, httpContext)
 
         val request = SimpleHttpRequest("GET", server.url("/").toString())
 
         val future = CompletableFuture<SimpleHttpResponse>()
 
-        client.execute(request, object : FutureCallback<SimpleHttpResponse> {
+        client.execute(request, httpContext, object : FutureCallback<SimpleHttpResponse> {
             override fun completed(result: SimpleHttpResponse) {
                 future.complete(result)
             }

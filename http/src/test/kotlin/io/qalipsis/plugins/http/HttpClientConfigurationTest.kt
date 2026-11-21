@@ -24,6 +24,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import java.net.InetAddress
+import java.time.Duration
 import org.junit.jupiter.api.Test
 
 /**
@@ -140,6 +141,22 @@ internal class HttpClientConfigurationTest {
             prop(HttpClientConfiguration::port).isEqualTo(8080)
             prop(HttpClientConfiguration::contextPath).isEqualTo("")
             prop(HttpClientConfiguration::isSecure).isFalse()
+        }
+    }
+
+    @Test
+    @Suppress("DEPRECATION")
+    internal fun `given the former read timeout when setting it then the response timeout is configured`() {
+        // given
+        val config = HttpClientConfiguration()
+
+        // when
+        config.readTimeout = Duration.ofSeconds(42)
+
+        // then
+        assertThat(config).all {
+            prop(HttpClientConfiguration::responseTimeout).isEqualTo(Duration.ofSeconds(42))
+            prop(HttpClientConfiguration::socketTimeout).isEqualTo(Duration.ofSeconds(42))
         }
     }
 }
