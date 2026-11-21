@@ -32,6 +32,7 @@ import io.qalipsis.plugins.netty.http.spec.HttpClientConfiguration
 import io.qalipsis.plugins.netty.http.spec.HttpVersion
 import io.qalipsis.plugins.netty.monitoring.StepContextBasedSocketMonitoringCollector
 import io.qalipsis.plugins.netty.socket.RequestWriter
+import io.qalipsis.plugins.netty.socket.ConnectionMonitoringCollector
 import io.qalipsis.plugins.netty.socket.SocketClient
 import io.qalipsis.plugins.netty.socket.SocketMonitoringCollector
 import java.nio.channels.ClosedChannelException
@@ -60,6 +61,7 @@ internal class HttpClient(
         workerGroup: EventLoopGroup,
         monitoringCollector: SocketMonitoringCollector
     ) {
+        val connectionMonitoringCollector = ConnectionMonitoringCollector(monitoringCollector)
         log.trace { "Opening the HTTP client" }
         this.clientConfiguration = clientConfiguration
         this.scheme = if (clientConfiguration.isSecure) HttpScheme.HTTPS else HttpScheme.HTTP
@@ -69,7 +71,7 @@ internal class HttpClient(
             HttpVersion.HTTP_1_1 -> {
                 Http1ChannelInitializer(
                     clientConfiguration,
-                    monitoringCollector,
+                    connectionMonitoringCollector,
                     connectionReadyLatch
                 )
             }
@@ -79,12 +81,12 @@ internal class HttpClient(
 
                 Http2ChannelInitializer(
                     clientConfiguration,
-                    monitoringCollector,
+                    connectionMonitoringCollector,
                     connectionReadyLatch
                 )
             }
         }
-        open(clientConfiguration, workerGroup, monitoringCollector, channelInitializer, connectionReadyLatch)
+        open(clientConfiguration, workerGroup, connectionMonitoringCollector, channelInitializer, connectionReadyLatch)
         log.trace { "HTTP client is now open" }
     }
 

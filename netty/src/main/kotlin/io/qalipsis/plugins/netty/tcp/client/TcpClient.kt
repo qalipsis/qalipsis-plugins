@@ -26,6 +26,7 @@ import io.qalipsis.api.sync.SuspendedCountLatch
 import io.qalipsis.plugins.netty.handlers.ByteArrayInboundHandler
 import io.qalipsis.plugins.netty.handlers.monitoring.ChannelMonitoringHandler
 import io.qalipsis.plugins.netty.monitoring.StepContextBasedSocketMonitoringCollector
+import io.qalipsis.plugins.netty.socket.ConnectionMonitoringCollector
 import io.qalipsis.plugins.netty.socket.SocketClient
 import io.qalipsis.plugins.netty.socket.SocketMonitoringCollector
 import io.qalipsis.plugins.netty.tcp.spec.TcpClientConfiguration
@@ -45,14 +46,15 @@ internal class TcpClient(
         workerGroup: EventLoopGroup,
         monitoringCollector: SocketMonitoringCollector
     ) {
+        val connectionMonitoringCollector = ConnectionMonitoringCollector(monitoringCollector)
         log.trace { "Opening the TCP client" }
         // A count latch is used to ensure that the TLS handshake is als performed before the step is used.
         val connectionReadyLatch = SuspendedCountLatch(1)
         open(
             clientConfiguration,
             workerGroup,
-            monitoringCollector,
-            TcpChannelInitializer(clientConfiguration, monitoringCollector, connectionReadyLatch),
+            connectionMonitoringCollector,
+            TcpChannelInitializer(clientConfiguration, connectionMonitoringCollector, connectionReadyLatch),
             connectionReadyLatch
         )
         log.trace { "TCP client is now open" }

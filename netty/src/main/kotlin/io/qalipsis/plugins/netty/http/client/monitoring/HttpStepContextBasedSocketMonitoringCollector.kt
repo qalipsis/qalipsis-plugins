@@ -25,6 +25,7 @@ import io.qalipsis.api.meters.CampaignMeterRegistry
 import io.qalipsis.api.meters.Counter
 import io.qalipsis.api.report.ReportMessageSeverity
 import io.qalipsis.plugins.netty.monitoring.StepContextBasedSocketMonitoringCollector
+import io.qalipsis.plugins.netty.monitoring.StepMetersCache
 
 /**
  * Implementation of [StepContextBasedSocketMonitoringCollector] for HTTP.
@@ -33,8 +34,9 @@ internal class HttpStepContextBasedSocketMonitoringCollector(
     stepContext: StepContext<*, *>,
     eventsLogger: EventsLogger?,
     meterRegistry: CampaignMeterRegistry?,
+    metersCache: StepMetersCache? = null,
 ) : StepContextBasedSocketMonitoringCollector(
-    stepContext, eventsLogger, meterRegistry, "http"
+    stepContext, eventsLogger, meterRegistry, "http", metersCache
 ) {
 
     private val scenarioName = stepContext.scenarioName
@@ -50,20 +52,22 @@ internal class HttpStepContextBasedSocketMonitoringCollector(
             status.code(),
             tags = eventTags
         )
-        meterRegistry?.counter(
-            scenarioName,
-            stepName,
-            "${meterPrefix}-status",
-            metersTags + ("status" to status.code().toString())
-        )?.report {
-            display("HTTP Status", ReportMessageSeverity.INFO, row = 3) { 0 }
-            display(
-                "${status.code()}: %,.0f\n",
-                ReportMessageSeverity.INFO,
-                row = 3,
-                column = 1,
-                Counter::count
-            )
+        cachedMeter("${meterPrefix}-status-${status.code()}") {
+            meterRegistry?.counter(
+                scenarioName,
+                stepName,
+                "${meterPrefix}-status",
+                metersTags + ("status" to status.code().toString())
+            )?.report {
+                display("HTTP Status", ReportMessageSeverity.INFO, row = 3) { 0 }
+                display(
+                    "${status.code()}: %,.0f\n",
+                    ReportMessageSeverity.INFO,
+                    row = 3,
+                    column = 1,
+                    Counter::count
+                )
+            }
         }?.increment()
     }
 

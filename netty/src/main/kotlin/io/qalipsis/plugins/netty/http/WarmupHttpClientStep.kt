@@ -18,6 +18,8 @@
 
 package io.qalipsis.plugins.netty.http
 
+import io.qalipsis.api.context.StepStartStopContext
+import io.qalipsis.plugins.netty.monitoring.StepMetersCache
 import io.netty.channel.EventLoopGroup
 import io.netty.handler.codec.http.HttpResponse
 import io.qalipsis.api.context.StepContext
@@ -78,8 +80,20 @@ internal class WarmupHttpClientStep<I, O>(
         return cli
     }
 
+    private val metersCache = StepMetersCache()
+
+    override suspend fun start(context: StepStartStopContext) {
+        metersCache.clear()
+        super<WarmupSocketClientStep>.start(context)
+    }
+
+    override suspend fun stop(context: StepStartStopContext) {
+        super<WarmupSocketClientStep>.stop(context)
+        metersCache.clear()
+    }
+
     override fun createMonitoringCollector(context: StepContext<I, ConnectionAndRequestResult<I, QalipsisHttpResponse<O>>>): StepContextBasedSocketMonitoringCollector {
-        return HttpStepContextBasedSocketMonitoringCollector(context, eventsLogger, meterRegistry)
+        return HttpStepContextBasedSocketMonitoringCollector(context, eventsLogger, meterRegistry, metersCache)
     }
 
     override fun convertResponseToOutput(response: HttpResponse): QalipsisHttpResponse<O> {

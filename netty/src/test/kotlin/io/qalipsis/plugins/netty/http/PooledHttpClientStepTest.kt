@@ -18,6 +18,7 @@
 
 package io.qalipsis.plugins.netty.http
 
+import io.aerisconsulting.catadioptre.invokeInvisible
 import assertk.all
 import assertk.assertThat
 import assertk.assertions.hasSize
@@ -594,5 +595,74 @@ internal class PooledHttpClientStepTest {
             pool2.withPoolItem<HttpResponse>(any())
         }
         confirmVerified(pool1, pool2)
+    }
+
+    @Test
+    @Timeout(3)
+    internal fun `given a request to the configured peer when executing then the default pool is used`() =
+        testDispatcherProvider.run {
+            // given
+            every { configuration.scheme } returns "http"
+            every { configuration.host } returns "localhost"
+            every { configuration.port } returns 8080
+            val request = relaxedMockk<InternalHttpRequest<*, *>>(moreInterfaces = arrayOf(HttpRequest::class)) {
+                every { computeUri(refEq(configuration)) } returns "http://localhost:8080/path?query=value"
+            }
+            val response = relaxedMockk<HttpResponse>()
+            val defaultPool = relaxedMockk<Pool<HttpClient>> {
+                coEvery { withPoolItem<HttpResponse>(any()) } returns response
+            }
+            val step = PooledHttpClientStep<String, String>(
+                "my-step",
+                null,
+                this.coroutineContext,
+                relaxedMockk(),
+                configuration,
+                poolConfiguration,
+                workerGroupSupplier,
+                responseConverter,
+                eventsLogger,
+                meterRegistry
+            )
+            step.setProperty("defaultPool", defaultPool)
+            val ctx = StepTestHelper.createStepContext<String, RequestResult<String, HttpResponse, *>>("TEST")
+            val monitoringCollector = StepContextBasedSocketMonitoringCollector(ctx, eventsLogger, meterRegistry, "test")
+
+            // when
+            val result = step.coInvokeInvisible<HttpResponse>("doExecute", monitoringCollector, ctx, request)
+
+            // then
+            assertThat(result).isSameInstanceAs(response)
+            assertThat(step.getProperty<MutableMap<*, *>>("clientsPools")).isEmpty()
+            coVerifyOnce { defaultPool.withPoolItem<HttpResponse>(any()) }
+            confirmVerified(defaultPool)
+        }
+
+    @Test
+    internal fun `given URIs when checking the peer then only the ones of the configured authority are the default`() {
+        // given
+        every { configuration.scheme } returns "http"
+        every { configuration.host } returns "localhost"
+        every { configuration.port } returns 8080
+        val step = PooledHttpClientStep<String, String>(
+            "my-step",
+            null,
+            relaxedMockk(),
+            relaxedMockk(),
+            configuration,
+            poolConfiguration,
+            workerGroupSupplier,
+            responseConverter,
+            eventsLogger,
+            meterRegistry
+        )
+
+        // when + then
+        assertThat(step.invokeInvisible<Boolean>("isDefaultPeer", "http://localhost:8080")).isTrue()
+        assertThat(step.invokeInvisible<Boolean>("isDefaultPeer", "http://localhost:8080/")).isTrue()
+        assertThat(step.invokeInvisible<Boolean>("isDefaultPeer", "http://localhost:8080?a=b")).isTrue()
+        assertThat(step.invokeInvisible<Boolean>("isDefaultPeer", "http://localhost:80801/")).isFalse()
+        assertThat(step.invokeInvisible<Boolean>("isDefaultPeer", "https://localhost:8080/")).isFalse()
+        assertThat(step.invokeInvisible<Boolean>("isDefaultPeer", "http://other:8080/")).isFalse()
     }
 }
