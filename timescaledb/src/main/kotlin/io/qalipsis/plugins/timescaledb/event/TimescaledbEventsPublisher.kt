@@ -180,13 +180,22 @@ internal class TimescaledbEventsPublisher(
         super.stop()
         tryAndLogOrNull(log) {
             executors.shutdown()
-            executors.awaitTermination(30, TimeUnit.SECONDS)
+            if (!executors.awaitTermination(PUBLICATIONS_TERMINATION_TIMEOUT_SEC, TimeUnit.SECONDS)) {
+                // The pending publications are interrupted, since the connection pool is going to be closed.
+                executors.shutdownNow()
+                log.warn {
+                    "The publications of events were not completed after $PUBLICATIONS_TERMINATION_TIMEOUT_SEC seconds, " +
+                            "the pending events are lost"
+                }
+            }
         }
         datasource.close()
         log.debug { "The events logger was stopped" }
     }
 
     companion object {
+
+        private const val PUBLICATIONS_TERMINATION_TIMEOUT_SEC = 30L
 
         const val SQL =
             "INSERT into %s (timestamp, level, name, tenant, campaign, scenario, tags, message, error, stack_trace, date, boolean, number, duration_nano, geo_point, value) values (?, ?, ?, ?, ?, ?, to_json(?::json), ?, ?, ?, ?, ?, ?, ?, to_json(?::json), to_json(?::json))"

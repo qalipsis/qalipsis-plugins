@@ -267,6 +267,33 @@ internal class EventsPublisherIntegrationTest {
             graphiteEventsPublisher.stop()
         }
 
+        @Test
+        @Timeout(25)
+        fun `should save the buffered events when stopping`() {
+            //given
+            val bufferingConfiguration = object : GraphiteEventsConfiguration by configuration {
+                override val batchSize = 100
+            }
+            val bufferingPublisher = GraphiteEventsPublisher(GlobalScope, bufferingConfiguration)
+            bufferingPublisher.start()
+            val key = "$protocolPathIdentifier.buffered.any"
+
+            //when
+            bufferingPublisher.publish(Event(key, EventLevel.INFO, emptyList(), 456))
+            bufferingPublisher.stop()
+
+            //then
+            val keyPrefix = "qalipsis.event.${protocolPathIdentifier}.buffered"
+            await.atMost(10, TimeUnit.SECONDS).until {
+                httpClient.send(
+                    HttpRequest.newBuilder()
+                        .GET()
+                        .uri(URI.create("http://localhost:$httpPort/tags/findSeries?pretty=1&expr=name=~$keyPrefix.*"))
+                        .build(), HttpResponse.BodyHandlers.ofString()
+                ).body() != "[]"
+            }
+        }
+
     }
 
     @Nested

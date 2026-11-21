@@ -28,7 +28,6 @@ import io.qalipsis.api.lang.durationSinceNanos
 import io.qalipsis.api.lang.tryAndLogOrNull
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.CampaignMeterRegistry
-import io.qalipsis.api.sync.SuspendedCountLatch
 import io.qalipsis.plugins.elasticsearch.monitoring.ElasticsearchOperationsImpl
 import io.qalipsis.plugins.elasticsearch.monitoring.PublishingMode
 import jakarta.inject.Named
@@ -37,7 +36,9 @@ import java.time.Clock
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Semaphore
@@ -66,7 +67,11 @@ internal class ElasticsearchEventsPublisher(
 
     private val indexFormatter = DateTimeFormatter.ofPattern(configuration.indexDatePattern)
 
-    private lateinit var publicationLatch: SuspendedCountLatch
+    /**
+     * Parent of the running publications, joined when stopping.
+     * Tracking the jobs rather than counting them keeps the stop reliable, even when a job never starts or fails.
+     */
+    private lateinit var publicationJobs: CompletableJob
 
     private lateinit var publicationSemaphore: Semaphore
 
@@ -74,7 +79,7 @@ internal class ElasticsearchEventsPublisher(
     private val elasticsearchOperations = ElasticsearchOperationsImpl()
 
     override fun start() {
-        publicationLatch = SuspendedCountLatch(0)
+        publicationJobs = SupervisorJob()
         publicationSemaphore = Semaphore(configuration.publishers)
         elasticsearchOperations.buildClient(configuration)
         elasticsearchOperations.initializeTemplate(configuration, PublishingMode.EVENTS)
@@ -85,8 +90,9 @@ internal class ElasticsearchEventsPublisher(
         log.debug { "Stopping the events logger with ${buffer.size} events in the buffer" }
         super.stop()
         runBlocking(coroutineContext) {
-            log.debug { "Waiting for ${publicationLatch.get()} publication jobs to be completed" }
-            publicationLatch.await()
+            log.debug { "Waiting for ${publicationJobs.children.count()} publication jobs to be completed" }
+            publicationJobs.complete()
+            publicationJobs.join()
         }
         log.debug { "Closing the Elasticsearch client" }
         tryAndLogOrNull(log) {
@@ -96,14 +102,9 @@ internal class ElasticsearchEventsPublisher(
     }
 
     override suspend fun publish(values: List<Event>) {
-        publicationLatch.increment()
-        coroutineScope.launch {
-            try {
-                publicationSemaphore.withPermit {
-                    performPublish(values)
-                }
-            } finally {
-                publicationLatch.decrement()
+        coroutineScope.launch(publicationJobs) {
+            publicationSemaphore.withPermit {
+                performPublish(values)
             }
         }
     }

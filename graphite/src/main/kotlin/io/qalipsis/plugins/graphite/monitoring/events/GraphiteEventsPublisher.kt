@@ -19,8 +19,6 @@
 package io.qalipsis.plugins.graphite.monitoring.events
 
 import io.micronaut.context.annotation.Requires
-import io.netty.channel.EventLoopGroup
-import io.netty.channel.nio.NioEventLoopGroup
 import io.qalipsis.api.Executors
 import io.qalipsis.api.events.AbstractBufferedEventsPublisher
 import io.qalipsis.api.events.Event
@@ -52,15 +50,12 @@ internal class GraphiteEventsPublisher(
     coroutineScope
 ) {
 
-    private lateinit var workerGroup: EventLoopGroup
-
     private lateinit var clients: FixedPool<GraphiteClient<Event>>
 
     /**
      * Builds [FixedPool] of [GraphiteClient]s and starts the publisher.
      */
     override fun start() {
-        workerGroup = NioEventLoopGroup()
         val encoder = when (configuration.protocol) {
             GraphiteProtocol.PLAINTEXT -> PlaintextEncoder()
             GraphiteProtocol.PICKLE -> PickleEncoder()
@@ -82,16 +77,13 @@ internal class GraphiteEventsPublisher(
     }
 
     /**
-     * Shutdowns [EventLoopGroup]
-     * Closes [FixedPool] of [GraphiteClient].
-     * Stops [AbstractBufferedEventsPublisher].
+     * Stops [AbstractBufferedEventsPublisher], which publishes the buffered events, then closes [FixedPool] of [GraphiteClient].
      */
     override fun stop() {
-        workerGroup.shutdownGracefully()
+        super.stop()
         runBlocking(coroutineScope.coroutineContext) {
             clients.close()
         }
-        super.stop()
     }
 
     /**

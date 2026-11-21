@@ -19,11 +19,14 @@ package io.qalipsis.plugins.timescaledb.meter
 import io.micronaut.context.annotation.Requirements
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.util.StringUtils
+import io.qalipsis.api.Executors
 import io.qalipsis.api.config.MetersConfig
 import io.qalipsis.api.meters.MeasurementPublisher
 import io.qalipsis.api.meters.MeasurementPublisherFactory
 import io.qalipsis.plugins.timescaledb.meter.TimescaledbMeterConfig.Companion.TIMESCALEDB_ENABLED
+import jakarta.inject.Named
 import jakarta.inject.Singleton
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Configuration for the export of QALIPSIS meters to TimescaleDB.
@@ -36,13 +39,15 @@ import jakarta.inject.Singleton
     Requires(property = TIMESCALEDB_ENABLED, value = StringUtils.TRUE)
 )
 internal class TimescaledbMeasurementPublisherFactory(
-    private val configuration: TimescaledbMeterConfig
+    private val configuration: TimescaledbMeterConfig,
+    @Named(Executors.IO_EXECUTOR_NAME) private val ioContext: CoroutineContext,
 ) : MeasurementPublisherFactory {
 
     override fun getPublisher(): MeasurementPublisher {
          return TimescaledbMeasurementPublisher(
              config = configuration,
-             converter = TimescaledbMeterConverter()
+             converter = TimescaledbMeterConverter(),
+             ioContext = ioContext
          )
     }
 
