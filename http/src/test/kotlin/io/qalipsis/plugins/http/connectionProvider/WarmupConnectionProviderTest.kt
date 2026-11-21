@@ -18,80 +18,67 @@
 
 package io.qalipsis.plugins.http.connectionProvider
 
+import assertk.all
 import assertk.assertThat
 import assertk.assertions.contains
-import assertk.assertions.doesNotContain
-import assertk.assertions.isEmpty
+import assertk.assertions.each
+import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
-import assertk.assertions.isInstanceOf
-import assertk.assertions.isNotNull
+import assertk.assertions.isFalse
+import assertk.assertions.isNotEqualTo
+import assertk.assertions.isNull
 import assertk.assertions.isSameInstanceAs
+import assertk.assertions.isTrue
+import assertk.assertions.prop
 import io.mockk.every
-import io.mockk.impl.annotations.MockK
 import io.mockk.mockk
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.plugins.http.HttpClientConfiguration
 import io.qalipsis.plugins.http.HttpConnectionException
+import io.qalipsis.plugins.http.connectionProvider.DedicatedConnectionManager.DedicatedConnection
 import io.qalipsis.plugins.http.connectionProvider.impl.WarmupConnectionProvider
-import io.qalipsis.plugins.http.connectionProvider.impl.catadioptre.preparedConnections
-import io.qalipsis.test.mockk.WithMockk
+import io.qalipsis.plugins.http.connectionProvider.impl.catadioptre.dedicatedClient
+import io.qalipsis.plugins.http.connectionProvider.impl.catadioptre.freeConnections
+import io.qalipsis.plugins.http.connectionProvider.impl.catadioptre.initialized
+import io.qalipsis.plugins.http.connectionProvider.impl.catadioptre.minionConnections
+import java.net.InetSocketAddress
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
-import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
-import org.apache.hc.core5.http.HttpVersion
-import org.apache.hc.core5.pool.PoolConcurrencyPolicy
-import org.apache.hc.core5.reactor.IOReactorStatus.ACTIVE
+import org.apache.hc.client5.http.async.methods.SimpleHttpRequest
+import org.apache.hc.client5.http.async.methods.SimpleHttpResponse
+import org.apache.hc.client5.http.protocol.HttpClientContext
+import org.apache.hc.core5.concurrent.FutureCallback
 import org.apache.hc.core5.reactor.IOReactorStatus.SHUT_DOWN
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-@WithMockk
-internal class WarmupConnectionProviderUnitTest {
-
-    @MockK
-    private lateinit var clientConfiguration: HttpClientConfiguration
-
-    @MockK
-    private lateinit var stepContext: StepContext<*, *>
-
-    @MockK
-    private lateinit var stepStartStopContext: StepStartStopContext
-
-    private lateinit var provider: WarmupConnectionProvider
+internal class WarmupConnectionProviderTest {
 
     private lateinit var server: MockWebServer
+
+    private lateinit var clientConfiguration: HttpClientConfiguration
+
+    private val stepStartStopContext = mockk<StepStartStopContext> { every { scheduledMinionCount } returns 2 }
+
+    private val minion1 = minionContext("minion-1")
+
+    private val minion2 = minionContext("minion-2")
 
     @BeforeEach
     fun setUp() {
         server = MockWebServer()
         server.start()
-
-        every { clientConfiguration.socketTimeout } returns Duration.ofSeconds(30)
-        every { clientConfiguration.idleConnectionTimeout } returns Duration.ofSeconds(30)
-        every { clientConfiguration.maxConnTotal } returns 5
-        every { clientConfiguration.maxConnPerRoute } returns 5
-        every { clientConfiguration.poolConcurrencyPolicy } returns PoolConcurrencyPolicy.STRICT
-        every { clientConfiguration.version } returns HttpVersion.HTTP_1_1
-
-        every { clientConfiguration.socksProxyAddress } returns null
-        every { clientConfiguration.socksProxyUsername } returns null
-        every { clientConfiguration.socksProxyPassword } returns null
-        every { clientConfiguration.proxyConfiguration } returns null
-        every { clientConfiguration.tlsConfiguration } returns null
-        every { clientConfiguration.followRedirections } returns false
-        every { clientConfiguration.connectTimeout } returns Duration.ofMillis(500)
-        every { clientConfiguration.isSecure } returns false
-        every { clientConfiguration.host } returns "localhost"
-        every { clientConfiguration.port } returns server.port
-
-        every { stepStartStopContext.scheduledMinionCount } returns 2
-        every { stepContext.minionId } returns "minion-1"
-        every { stepContext.isTail } returns false
-
-        provider = WarmupConnectionProvider(shared = false, httpClientConfiguration = clientConfiguration)
+        clientConfiguration = HttpClientConfiguration().apply {
+            url(server.url("/").toString())
+            connectTimeout = Duration.ofSeconds(2)
+            ioThreadCount = 1
+        }
     }
 
     @AfterEach
@@ -100,100 +87,184 @@ internal class WarmupConnectionProviderUnitTest {
     }
 
     @Test
-    fun `init should prepare clients queue`() {
-        //given
-        assertThat(provider.preparedConnections().isNullOrEmpty())
-
-        //when
-        provider.init(stepStartStopContext)
-
-        //then
-        assertThat(provider.preparedConnections().isNotEmpty())
-    }
-
-
-    @Test
-    fun `acquire should create a valid client`() {
-        //given
-         provider.init(stepStartStopContext)
+    fun `given scheduled minions when initializing then one connection per minion is opened on a single client`() {
+        // given
+        every { stepStartStopContext.scheduledMinionCount } returns MINIONS_ABOVE_PRECONNECTION_BATCH
+        val provider = WarmupConnectionProvider(shared = false, httpClientConfiguration = clientConfiguration)
 
         // when
-        val client = provider.acquire(stepContext)
-
-        //then
-        assertThat(client).isNotNull()
-        assertThat(client).isInstanceOf(CloseableHttpAsyncClient::class)
-    }
-
-
-    @Test
-    fun `acquire should return the same client per minion`() {
         provider.init(stepStartStopContext)
 
-        val client1 = provider.acquire(stepContext)
-        val client2 = provider.acquire(stepContext)
-
-        // Same minion always gets the same client.
-        assertThat(client1).isSameInstanceAs(client2)
+        // then
+        assertThat(provider.dedicatedClient().connections).all {
+            hasSize(MINIONS_ABOVE_PRECONNECTION_BATCH)
+            each { it.prop(DedicatedConnection::connectedOnce).transform { flag -> flag.get() }.isTrue() }
+        }
+        assertThat(provider.freeConnections()).hasSize(MINIONS_ABOVE_PRECONNECTION_BATCH)
+        assertThat(provider.acquire(minion1)).isSameInstanceAs(provider.acquire(minion2))
+        provider.shutdown(stepStartStopContext)
     }
 
     @Test
-    fun `release should keep client active if not shared and is tail and put it back in the queue`() {
+    fun `given two minions when they send requests alternately then each always uses its own connection`() {
+        // given
+        repeat(REQUESTS_PER_MINION * 2) { server.enqueue(MockResponse().setResponseCode(200)) }
+        val provider = WarmupConnectionProvider(shared = false, httpClientConfiguration = clientConfiguration)
         provider.init(stepStartStopContext)
-        every { stepContext.isTail } returns true
 
-        val client = provider.acquire(stepContext)
-        provider.release(stepContext, client)
+        // when
+        val ports = (1..REQUESTS_PER_MINION).flatMap {
+            listOf(minion1 to localPort(send(provider, minion1)), minion2 to localPort(send(provider, minion2)))
+        }.groupBy({ it.first.minionId }, { it.second })
 
-        assertThat(client.status).isEqualTo(ACTIVE)
-        assertThat(provider.preparedConnections()).contains(client)
+        // then
+        assertThat(ports.getValue("minion-1").distinct()).hasSize(1)
+        assertThat(ports.getValue("minion-2").distinct()).hasSize(1)
+        assertThat(ports.getValue("minion-1").first()).isNotEqualTo(ports.getValue("minion-2").first())
+        // The sequence number is the index of the request on its connection, as seen by the server.
+        val sequenceNumbers = (1..REQUESTS_PER_MINION * 2).map { server.takeRequest(1, TimeUnit.SECONDS)!!.sequenceNumber }
+        assertThat(sequenceNumbers).isEqualTo((0 until REQUESTS_PER_MINION).flatMap { listOf(it, it) })
+        provider.shutdown(stepStartStopContext)
     }
 
     @Test
-    fun `release should keep client for minion if shared or not tail`() {
+    fun `given a connection closed by the server when the minion sends its next request then it is reopened for it`() {
+        // given
+        server.enqueue(MockResponse().setResponseCode(200).addHeader("Connection", "close"))
+        server.enqueue(MockResponse().setResponseCode(200))
+        val provider = WarmupConnectionProvider(shared = false, httpClientConfiguration = clientConfiguration)
         provider.init(stepStartStopContext)
-        every { stepContext.isTail } returns false
+        val firstContext = send(provider, minion1)
 
-        val client = provider.acquire(stepContext)
-        provider.release(stepContext, client)
+        // when
+        val secondContext = send(provider, minion1)
 
-        // Should still be active
-        assertThat(client.status).isEqualTo(ACTIVE)
-        assertThat(provider.preparedConnections()).doesNotContain(client)
+        // then
+        assertThat(firstContext.getAttribute(DedicatedConnectionManager.RECONNECTION_ATTR)).isNull()
+        assertThat(secondContext.getAttribute(DedicatedConnectionManager.RECONNECTION_ATTR)).isEqualTo(true)
+        assertThat(localPort(secondContext)).isNotEqualTo(localPort(firstContext))
+        assertThat(provider.minionConnections()[minion1.minionId]).isSameInstanceAs(secondContext.userToken)
+        provider.shutdown(stepStartStopContext)
     }
 
     @Test
-    fun `shutdown should close all clients and clear internal structures`() {
+    fun `given a minion executed several times when it sends requests then it always keeps its own connection`() {
+        // given
+        repeat(EXECUTIONS * 2) { server.enqueue(MockResponse().setResponseCode(200)) }
+        val provider = WarmupConnectionProvider(shared = false, httpClientConfiguration = clientConfiguration)
+        provider.init(stepStartStopContext)
+        // The end of each execution of the step by the minion, before it is replayed with the same identifier.
+        val completingMinion1 = minionContext("minion-1", isTail = true)
+
+        // when
+        val ports = (1..EXECUTIONS).map {
+            localPort(send(provider, completingMinion1)).also { send(provider, minion2) }
+        }
+
+        // then
+        assertThat(ports.distinct()).hasSize(1)
+        assertThat(provider.minionConnections().keys).isEqualTo(setOf("minion-1", "minion-2"))
+        assertThat(provider.freeConnections()).hasSize(0)
+        provider.shutdown(stepStartStopContext)
+    }
+
+    @Test
+    fun `given more minions than scheduled when they send requests then the missing connections are opened on demand`() {
+        // given
+        every { stepStartStopContext.scheduledMinionCount } returns 1
+        repeat(2) { server.enqueue(MockResponse().setResponseCode(200)) }
+        val provider = WarmupConnectionProvider(shared = false, httpClientConfiguration = clientConfiguration)
         provider.init(stepStartStopContext)
 
-        val client1 = provider.acquire(stepContext)
-        val client2 = provider.acquire(mockk<StepContext<*, *>> { every { minionId } returns "minion-2" })
+        // when
+        val port1 = localPort(send(provider, minion1))
+        val port2 = localPort(send(provider, minion2))
 
+        // then
+        assertThat(port2).isNotEqualTo(port1)
+        assertThat(provider.minionConnections()).hasSize(2)
+        provider.shutdown(stepStartStopContext)
+    }
+
+    @Test
+    fun `given an initialized provider when shutting down then the client and its connections are released`() {
+        // given
+        val provider = WarmupConnectionProvider(shared = false, httpClientConfiguration = clientConfiguration)
+        provider.init(stepStartStopContext)
+        val client = provider.acquire(minion1)
+        provider.prepare(minion1, HttpClientContext.create())
+
+        // when
         provider.shutdown(stepStartStopContext)
 
-        assertThat(client1.status).isEqualTo(SHUT_DOWN)
-        assertThat(client2.status).isEqualTo(SHUT_DOWN)
-        assertThat(provider.preparedConnections()).isEmpty()
+        // then
+        assertThat(client.status).isEqualTo(SHUT_DOWN)
+        assertThat(provider.initialized().get()).isFalse()
+        assertThat(provider.freeConnections()).hasSize(0)
+        assertThat(provider.minionConnections()).hasSize(0)
     }
 
     @Test
-    fun `init should fail when the server cannot be reached`() {
-        every { clientConfiguration.port } returns PORT_WITHOUT_SERVER
+    fun `given an unreachable server when initializing then the start fails`() {
+        // given
+        clientConfiguration.url("http://localhost:$PORT_WITHOUT_SERVER")
+        val provider = WarmupConnectionProvider(shared = false, httpClientConfiguration = clientConfiguration)
 
+        // when
         val exception = assertThrows<HttpConnectionException> { provider.init(stepStartStopContext) }
 
+        // then
         assertThat(exception.message!!).contains("http://localhost:$PORT_WITHOUT_SERVER")
+        assertThat(provider.initialized().get()).isFalse()
     }
 
     @Test
-    fun `init should fail when the socks proxy cannot be reached`() {
-        every { clientConfiguration.socksProxyAddress } returns "localhost:$PORT_WITHOUT_SERVER"
-        every { clientConfiguration.socksProxyUsername } returns "user"
-        every { clientConfiguration.socksProxyPassword } returns "pass"
+    fun `given an unreachable socks proxy when initializing then the start fails`() {
+        // given
+        val configuration = clientConfiguration.copy(
+            socksProxyAddress = "localhost:$PORT_WITHOUT_SERVER",
+            socksProxyUsername = "user",
+            socksProxyPassword = "pass"
+        ).apply { url(server.url("/").toString()) }
+        val provider = WarmupConnectionProvider(shared = false, httpClientConfiguration = configuration)
 
-        provider = WarmupConnectionProvider(shared = false, httpClientConfiguration = clientConfiguration)
-
+        // when + then
         assertThrows<HttpConnectionException> { provider.init(stepStartStopContext) }
+    }
+
+    /**
+     * Sends a request for the minion of [context] and returns the context of the request once it is complete.
+     */
+    private fun send(provider: WarmupConnectionProvider, context: StepContext<*, *>): HttpClientContext {
+        val client = provider.acquire(context)
+        val httpContext = HttpClientContext.create()
+        provider.prepare(context, httpContext)
+        val response = CompletableFuture<SimpleHttpResponse>()
+        client.execute(SimpleHttpRequest.create("GET", server.url("/").toString()), httpContext, response.asCallback())
+        assertThat(response.get(2, TimeUnit.SECONDS).code).isEqualTo(200)
+        provider.release(context, client)
+        return httpContext
+    }
+
+    private fun localPort(httpContext: HttpClientContext) = (httpContext.endpointDetails.localAddress as InetSocketAddress).port
+
+    private fun minionContext(minionId: String, isTail: Boolean = false) = mockk<StepContext<*, *>> {
+        every { this@mockk.minionId } returns minionId
+        every { this@mockk.isTail } returns isTail
+    }
+
+    private fun CompletableFuture<SimpleHttpResponse>.asCallback() = object : FutureCallback<SimpleHttpResponse> {
+        override fun completed(result: SimpleHttpResponse) {
+            complete(result)
+        }
+
+        override fun failed(ex: Exception) {
+            completeExceptionally(ex)
+        }
+
+        override fun cancelled() {
+            cancel(true)
+        }
     }
 
     private companion object {
@@ -203,5 +274,13 @@ internal class WarmupConnectionProviderUnitTest {
          */
         const val PORT_WITHOUT_SERVER = 1
 
+        /**
+         * Count of minions requiring more than one batch of pre-connections.
+         */
+        const val MINIONS_ABOVE_PRECONNECTION_BATCH = 150
+
+        const val REQUESTS_PER_MINION = 3
+
+        const val EXECUTIONS = 3
     }
 }

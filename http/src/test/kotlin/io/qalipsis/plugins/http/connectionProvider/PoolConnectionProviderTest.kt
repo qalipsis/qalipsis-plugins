@@ -65,7 +65,11 @@ internal class PoolConnectionProviderTest {
         server = MockWebServer()
         server.start()
 
-        every { clientConfiguration.socketTimeout } returns Duration.ofSeconds(30)
+        every { clientConfiguration.responseTimeout } returns Duration.ofSeconds(30)
+        every { clientConfiguration.connectTimeout } returns Duration.ofSeconds(5)
+        every { clientConfiguration.ioThreadCount } returns 2
+        every { clientConfiguration.noDelay } returns true
+        every { clientConfiguration.maxRedirections } returns 10
         every { clientConfiguration.idleConnectionTimeout } returns Duration.ofSeconds(30)
         every { clientConfiguration.maxConnTotal } returns 10
         every { clientConfiguration.maxConnPerRoute } returns 5

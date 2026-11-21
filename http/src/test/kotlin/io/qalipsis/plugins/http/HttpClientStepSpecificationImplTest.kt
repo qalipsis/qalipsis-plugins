@@ -56,6 +56,8 @@ internal class HttpClientStepSpecificationImplTest {
                     prop(HttpClientConfiguration::scheme).isEqualTo("http")
                     prop(HttpClientConfiguration::contextPath).isEqualTo("")
                     prop(HttpClientConfiguration::connectTimeout).isEqualTo(Duration.ofSeconds(10))
+                    prop(HttpClientConfiguration::responseTimeout).isEqualTo(Duration.ofSeconds(10))
+                    prop(HttpClientConfiguration::ioThreadCount).isEqualTo(Runtime.getRuntime().availableProcessors())
                     prop(HttpClientConfiguration::noDelay).isTrue()
                     prop(HttpClientConfiguration::keepConnectionAlive).isTrue()
                     prop(HttpClientConfiguration::charset).isEqualTo(Charsets.UTF_8)
@@ -86,6 +88,8 @@ internal class HttpClientStepSpecificationImplTest {
                 connect {
                     url("https://localhost:12234/test")
                     connectTimeout = Duration.ofMinutes(1)
+                    responseTimeout = Duration.ofSeconds(45)
+                    ioThreadCount = 3
                     inflate()
                     charset(Charsets.ISO_8859_1)
                     maxContentLength(123)
@@ -115,6 +119,8 @@ internal class HttpClientStepSpecificationImplTest {
                     prop(HttpClientConfiguration::scheme).isEqualTo("https")
                     prop(HttpClientConfiguration::contextPath).isEqualTo("/test")
                     prop(HttpClientConfiguration::connectTimeout).isEqualTo(Duration.ofMinutes(1))
+                    prop(HttpClientConfiguration::responseTimeout).isEqualTo(Duration.ofSeconds(45))
+                    prop(HttpClientConfiguration::ioThreadCount).isEqualTo(3)
                     prop(HttpClientConfiguration::noDelay).isFalse()
                     prop(HttpClientConfiguration::keepConnectionAlive).isFalse()
                     prop(HttpClientConfiguration::charset).isEqualTo(Charsets.ISO_8859_1)

@@ -70,6 +70,10 @@ internal class HttpMonitoringCollector(
         }
     }
 
+    private val reconnectionCounter by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        meterRegistry?.counter(scenarioName, stepName, "$METER_PREFIX-reconnection", metersTags)
+    }
+
     private val connectedTimer by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         meterRegistry?.timer(scenarioName, stepName, "$METER_PREFIX-connected", metersTags)?.report {
             display(
@@ -249,6 +253,14 @@ internal class HttpMonitoringCollector(
     fun recordConnecting() {
         eventsLogger?.info("$EVENT_PREFIX.connecting", tags = eventTags)
         connectingCounter?.increment()
+    }
+
+    /**
+     * Records that a connection dedicated to the minion was closed and had to be opened again.
+     */
+    fun recordReconnection() {
+        eventsLogger?.warn("$EVENT_PREFIX.reconnection", tags = eventTags)
+        reconnectionCounter?.increment()
     }
 
     fun recordConnected(duration: Duration) {

@@ -29,6 +29,7 @@ import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import org.apache.hc.client5.http.HttpRoute
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials
+import org.apache.hc.client5.http.config.ConnectionConfig
 import org.apache.hc.client5.http.config.RequestConfig
 import org.apache.hc.client5.http.config.TlsConfig
 import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
@@ -37,14 +38,18 @@ import org.apache.hc.client5.http.impl.async.HttpAsyncClients
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider
 import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManager
 import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManagerBuilder
+import org.apache.hc.client5.http.nio.AsyncClientConnectionManager
 import org.apache.hc.client5.http.nio.AsyncConnectionEndpoint
 import org.apache.hc.client5.http.protocol.HttpClientContext
 import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder
+import org.apache.hc.client5.http.ssl.DefaultClientTlsStrategy
 import org.apache.hc.client5.http.ssl.NoopHostnameVerifier
 import org.apache.hc.core5.http.HttpHost
 import org.apache.hc.core5.http.URIScheme
 import org.apache.hc.core5.http.impl.DefaultConnectionReuseStrategy
+import org.apache.hc.core5.http.nio.ssl.TlsStrategy
 import org.apache.hc.core5.http2.HttpVersionPolicy
+import org.apache.hc.core5.io.CloseMode
 import org.apache.hc.core5.pool.PoolReusePolicy
 import org.apache.hc.core5.reactor.ConnectionInitiator
 import org.apache.hc.core5.reactor.IOReactorConfig
@@ -62,37 +67,39 @@ import org.apache.hc.core5.util.Timeout
 internal object HttpAsyncClientFactory {
 
     /**
-     * Creates a minimal client with no connection pooling and no connection reuse.
+     * Maximal count of connections opened concurrently by [preconnect].
+     */
+    private const val PRECONNECT_PARALLELISM = 128
+
+    /**
+     * Creates a client opening a new connection for each request and closing it once the response is received.
      * Suitable for the [io.qalipsis.plugins.http.connectionProvider.impl.OnDemandConnectionProvider].
+     *
+     * The client and its I/O threads are meant to be shared by all the minions: the count of concurrent connections
+     * is therefore not limited by the pool, but only by the count of minions executing a request at the same time.
      */
     fun createOnDemandClient(config: HttpClientConfiguration): CloseableHttpAsyncClient {
-        val ioReactorConfig = buildIOReactorConfig(config)
-        val builder = buildClientBuilder(config)
-            .setIOReactorConfig(ioReactorConfig)
-
-        // A connection manager is needed for TLS and HTTP/2 ALPN negotiation.
-        if (config.isSecure || config.version.major == 2) {
-            val connectionManager = buildConnectionManager(config)
-            builder.setConnectionManager(connectionManager)
-                .setConnectionManagerShared(false)
-        } else {
-            builder.setConnectionReuseStrategy { _, _, _ -> false }
-        }
-
-        return builder.build().apply { start() }
+        return buildClientBuilder(config)
+            .setIOReactorConfig(buildIOReactorConfig(config))
+            .setConnectionManager(buildConnectionManager(config, Int.MAX_VALUE))
+            .setConnectionManagerShared(false)
+            .setConnectionReuseStrategy { _, _, _ -> false }
+            .build()
+            .apply { start() }
     }
 
     /**
      * Creates a pooled client with a connection manager.
      * Suitable for [io.qalipsis.plugins.http.connectionProvider.impl.PoolConnectionProvider]
      * and [io.qalipsis.plugins.http.connectionProvider.impl.WarmupConnectionProvider].
+     *
+     * @param maxConnections when set, overrides the maximal counts of connections of the configuration
      */
-    fun createPooledClient(config: HttpClientConfiguration): PooledClient {
-        val ioReactorConfig = buildIOReactorConfig(config)
-        val connectionManager = buildConnectionManager(config)
+    fun createPooledClient(config: HttpClientConfiguration, maxConnections: Int? = null): PooledClient {
+        val connectionManager = buildConnectionManager(config, maxConnections)
 
         val client = buildClientBuilder(config)
-            .setIOReactorConfig(ioReactorConfig)
+            .setIOReactorConfig(buildIOReactorConfig(config))
             .setConnectionManager(connectionManager)
             .evictExpiredConnections()
             .evictIdleConnections(TimeValue.ofSeconds(config.idleConnectionTimeout.toSeconds()))
@@ -105,11 +112,46 @@ internal object HttpAsyncClientFactory {
     }
 
     /**
+     * Creates a client whose connections can be dedicated to a single holder each, see [DedicatedConnectionManager],
+     * and opens [count] dedicated connections.
+     * Suitable for the [io.qalipsis.plugins.http.connectionProvider.impl.WarmupConnectionProvider].
+     *
+     * All the connections share the I/O reactor of the client, with [HttpClientConfiguration.ioThreadCount] threads.
+     * The idle connections are not evicted: they are reopened by their holder when needed.
+     */
+    fun createDedicatedClient(config: HttpClientConfiguration, count: Int): DedicatedClient {
+        // The TLS strategy is shared by all the connections, to avoid building an SSL context for each of them.
+        val tlsStrategy = buildTlsStrategy(config) ?: DefaultClientTlsStrategy.createDefault()
+        val connectionManager = DedicatedConnectionManager(
+            dedicatedConnectionManagerFactory = { buildConnectionManager(config, 1, tlsStrategy) },
+            sharedConnectionManager = buildConnectionManager(config, tlsStrategy = tlsStrategy)
+        )
+        val client = buildClientBuilder(config)
+            .setIOReactorConfig(buildIOReactorConfig(config))
+            .setConnectionManager(connectionManager)
+            .setConnectionManagerShared(false)
+            .setConnectionReuseStrategy(DefaultConnectionReuseStrategy())
+            .build()
+            .apply { start() }
+        val connections = List(count) { connectionManager.createDedicatedConnection() }
+        try {
+            // The dedicated connections never expire while idle: they wait for their minion.
+            preconnect(client, connectionManager, config, connections, TimeValue.NEG_ONE_MILLISECOND)
+        } catch (e: Exception) {
+            client.close(CloseMode.IMMEDIATE)
+            throw e
+        }
+        return DedicatedClient(client, connectionManager, connections)
+    }
+
+    /**
      * Establishes [count] connections to the configured route and releases them to the pool.
      *
      * The pooled client of Apache HTTP Client opens its sockets on demand, so without this the TCP and TLS
      * handshakes are paid by the first requests of the minions and inflate the latencies measured at the
      * beginning of the campaign. Doing it here moves that cost to the start-up phase of the step.
+     * The connections are opened by batches of [PRECONNECT_PARALLELISM], so that the start-up of large pools
+     * does not last for the sum of all the handshakes.
      *
      * When none of the connections can be established, the target is considered unreachable and a
      * [HttpConnectionException] is thrown: the step start-up then fails, the warm-up of the campaign fails and the
@@ -119,47 +161,97 @@ internal object HttpAsyncClientFactory {
      * When only a part of the connections could be established, the missing ones are created on demand and the
      * event is logged as a warning.
      */
-    fun preconnect(pooled: PooledClient, config: HttpClientConfiguration, count: Int) {
-        val initiator = pooled.client as? ConnectionInitiator
-        if (count <= 0 || initiator == null) {
+    fun preconnect(pooled: PooledClient, config: HttpClientConfiguration, count: Int) = preconnect(
+        pooled.client,
+        pooled.connectionManager,
+        config,
+        List(count) { null },
+        TimeValue.ofMilliseconds(config.idleConnectionTimeout.toMillis())
+    )
+
+    /**
+     * Establishes one connection per element of [states], leased from [connectionManager] with that state, and
+     * releases them as valid for [validity], see [preconnect].
+     */
+    private fun preconnect(
+        client: CloseableHttpAsyncClient,
+        connectionManager: AsyncClientConnectionManager,
+        config: HttpClientConfiguration,
+        states: List<Any?>,
+        validity: TimeValue,
+    ) {
+        val initiator = client as? ConnectionInitiator
+        if (states.isEmpty() || initiator == null) {
             return
         }
         val route = buildRoute(config)
         val timeout = Timeout.ofMilliseconds(config.connectTimeout.toMillis())
-        val validity = TimeValue.ofMilliseconds(config.idleConnectionTimeout.toMillis())
         // The endpoints are all leased before any of them is released, otherwise the same connection is
         // reused for each round and a single socket is opened.
         val endpoints = mutableListOf<AsyncConnectionEndpoint>()
-        var established = 0
         var failure: Exception? = null
         try {
-            repeat(count) { index ->
-                val endpoint = pooled.connectionManager
-                    .lease("preconnect-$index", route, null, timeout, null)
-                    .get(timeout.toMilliseconds(), TimeUnit.MILLISECONDS)
-                endpoints += endpoint
-                pooled.connectionManager
-                    .connect(endpoint, initiator, timeout, null, HttpClientContext.create(), null)
-                    .get(timeout.toMilliseconds(), TimeUnit.MILLISECONDS)
-                established++
+            states.chunked(PRECONNECT_PARALLELISM).forEach { batch ->
+                if (failure == null) {
+                    failure = connectBatch(connectionManager, initiator, route, timeout, batch, endpoints)
+                }
             }
-        } catch (e: Exception) {
-            failure = e
         } finally {
             endpoints.forEach { endpoint ->
-                kotlin.runCatching { pooled.connectionManager.release(endpoint, null, validity) }
+                kotlin.runCatching { connectionManager.release(endpoint, null, validity) }
             }
         }
+        failure?.let { reportPreconnectionFailure(route, states.size, endpoints.size, it) }
+    }
 
-        if (failure != null) {
-            if (established == 0) {
-                throw HttpConnectionException(
-                    "None of the $count connections to $route could be opened before the campaign: ${failure.message}",
-                    failure
-                )
-            }
-            log.warn("Only $established connections out of $count could be opened to $route before the campaign: ${failure.message}")
+    /**
+     * Leases and connects one endpoint per element of [states] concurrently, adds the connected ones to [endpoints]
+     * and returns the first failure if any.
+     */
+    private fun connectBatch(
+        connectionManager: AsyncClientConnectionManager,
+        initiator: ConnectionInitiator,
+        route: HttpRoute,
+        timeout: Timeout,
+        states: List<Any?>,
+        endpoints: MutableList<AsyncConnectionEndpoint>,
+    ): Exception? {
+        val leases = states.mapIndexed { index, state ->
+            connectionManager.lease("preconnect-${endpoints.size + index}", route, state, timeout, null)
         }
+        var failure: Exception? = null
+        val connections = leases.mapNotNull { lease ->
+            try {
+                lease.get(timeout.toMilliseconds(), TimeUnit.MILLISECONDS).also { endpoints += it }
+            } catch (e: Exception) {
+                failure = failure ?: e
+                lease.cancel(true)
+                null
+            }
+        }.map { endpoint ->
+            endpoint to connectionManager.connect(endpoint, initiator, timeout, null, HttpClientContext.create(), null)
+        }
+        connections.forEach { (endpoint, connection) ->
+            try {
+                connection.get(timeout.toMilliseconds(), TimeUnit.MILLISECONDS)
+            } catch (e: Exception) {
+                failure = failure ?: e
+                // The endpoint is not connected, it is released immediately and not counted.
+                endpoints -= endpoint
+                kotlin.runCatching { connectionManager.release(endpoint, null, TimeValue.ZERO_MILLISECONDS) }
+            }
+        }
+        return failure
+    }
+
+    private fun reportPreconnectionFailure(route: HttpRoute, count: Int, established: Int, failure: Exception) {
+        if (established == 0) {
+            throw HttpConnectionException(
+                "None of the $count connections to $route could be opened before the campaign: ${failure.message}",
+                failure
+            )
+        }
+        log.warn("Only $established connections out of $count could be opened to $route before the campaign: ${failure.message}")
     }
 
     private fun buildRoute(config: HttpClientConfiguration): HttpRoute {
@@ -173,10 +265,28 @@ internal object HttpAsyncClientFactory {
         else HttpRoute(target, null, proxy, config.isSecure)
     }
 
-    private fun buildIOReactorConfig(config: HttpClientConfiguration): IOReactorConfig {
+    /**
+     * Configuration of the requests: the response timeout applies to the inactivity while waiting for the response.
+     */
+    internal fun buildRequestConfig(config: HttpClientConfiguration): RequestConfig = RequestConfig.custom()
+        .setResponseTimeout(Timeout.ofMilliseconds(config.responseTimeout.toMillis()))
+        .setRedirectsEnabled(config.followRedirections)
+        .setMaxRedirects(config.maxRedirections)
+        .build()
+
+    /**
+     * Configuration of the connections of the pool: timeout to connect, and inactivity timeout of the sockets.
+     */
+    internal fun buildConnectionConfig(config: HttpClientConfiguration): ConnectionConfig = ConnectionConfig.custom()
+        .setConnectTimeout(Timeout.ofMilliseconds(config.connectTimeout.toMillis()))
+        .setSocketTimeout(Timeout.ofMilliseconds(config.responseTimeout.toMillis()))
+        .build()
+
+    internal fun buildIOReactorConfig(config: HttpClientConfiguration): IOReactorConfig {
         return IOReactorConfig.custom()
-            .setSoTimeout(Timeout.ofMilliseconds(config.socketTimeout.toMillis()))
-            .setIoThreadCount(1)
+            .setSoTimeout(Timeout.ofMilliseconds(config.responseTimeout.toMillis()))
+            .setIoThreadCount(config.ioThreadCount)
+            .setTcpNoDelay(config.noDelay)
             .setSoKeepAlive(true)
             .setSoReuseAddress(true)
             .apply {
@@ -204,45 +314,46 @@ internal object HttpAsyncClientFactory {
             .build()
     }
 
-    private fun buildConnectionManager(config: HttpClientConfiguration): org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManager {
-        val builder = PoolingAsyncClientConnectionManagerBuilder.create()
-            .setMaxConnPerRoute(config.maxConnPerRoute.coerceAtMost(config.maxConnTotal))
-            .setMaxConnTotal(config.maxConnTotal)
-            .setPoolConcurrencyPolicy(config.poolConcurrencyPolicy)
-            .setConnPoolPolicy(PoolReusePolicy.FIFO)
-            .setDefaultTlsConfig(
-                TlsConfig.custom()
-                    .apply {
-                        if (config.version.major == 2) {
-                            setVersionPolicy(HttpVersionPolicy.NEGOTIATE)
-                        } else {
-                            setVersionPolicy(HttpVersionPolicy.FORCE_HTTP_1)
-                        }
-                    }
-                    .build()
-            )
+    private fun buildConnectionManager(
+        config: HttpClientConfiguration,
+        maxConnections: Int? = null,
+        tlsStrategy: TlsStrategy? = buildTlsStrategy(config),
+    ): PoolingAsyncClientConnectionManager = PoolingAsyncClientConnectionManagerBuilder.create()
+        .setMaxConnPerRoute(maxConnections ?: config.maxConnPerRoute.coerceAtMost(config.maxConnTotal))
+        .setMaxConnTotal(maxConnections ?: config.maxConnTotal)
+        .setDefaultConnectionConfig(buildConnectionConfig(config))
+        .setPoolConcurrencyPolicy(config.poolConcurrencyPolicy)
+        .setConnPoolPolicy(PoolReusePolicy.FIFO)
+        .setDefaultTlsConfig(
+            TlsConfig.custom()
+                .setVersionPolicy(
+                    if (config.version.major == 2) HttpVersionPolicy.NEGOTIATE else HttpVersionPolicy.FORCE_HTTP_1
+                )
+                .build()
+        )
+        .apply { tlsStrategy?.let { setTlsStrategy(it) } }
+        .build()
 
-        // Apply custom TLS strategy when TLS configuration is present.
-        config.tlsConfiguration?.let { tls ->
-            val sslContextBuilder = SSLContextBuilder.create()
-            if (tls.disableCertificateVerification) {
-                sslContextBuilder.loadTrustMaterial(TrustStrategy { _: Array<X509Certificate>, _: String -> true })
-            }
-            val tlsStrategyBuilder = ClientTlsStrategyBuilder.create()
-                .setSslContext(sslContextBuilder.build())
-            if (tls.disableHostnameVerification) {
-                tlsStrategyBuilder.setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
-            }
-            if (tls.protocols.isNotEmpty()) {
-                tlsStrategyBuilder.setTlsVersions(*tls.protocols)
-            }
-            if (tls.ciphers.isNotEmpty()) {
-                tlsStrategyBuilder.setCiphers(*tls.ciphers)
-            }
-            builder.setTlsStrategy(tlsStrategyBuilder.build())
+    /**
+     * Builds the TLS strategy from the TLS configuration, if any.
+     */
+    private fun buildTlsStrategy(config: HttpClientConfiguration): TlsStrategy? = config.tlsConfiguration?.let { tls ->
+        val sslContextBuilder = SSLContextBuilder.create()
+        if (tls.disableCertificateVerification) {
+            sslContextBuilder.loadTrustMaterial(TrustStrategy { _: Array<X509Certificate>, _: String -> true })
         }
-
-        return builder.build()
+        val tlsStrategyBuilder = ClientTlsStrategyBuilder.create()
+            .setSslContext(sslContextBuilder.build())
+        if (tls.disableHostnameVerification) {
+            tlsStrategyBuilder.setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+        }
+        if (tls.protocols.isNotEmpty()) {
+            tlsStrategyBuilder.setTlsVersions(*tls.protocols)
+        }
+        if (tls.ciphers.isNotEmpty()) {
+            tlsStrategyBuilder.setCiphers(*tls.ciphers)
+        }
+        tlsStrategyBuilder.build()
     }
 
     private fun buildClientBuilder(config: HttpClientConfiguration): HttpAsyncClientBuilder {
@@ -269,15 +380,8 @@ internal object HttpAsyncClientFactory {
             }
         }
 
-        // Redirect handling.
-        if (config.followRedirections) {
-            builder.setDefaultRequestConfig(
-                RequestConfig.custom()
-                    .setRedirectsEnabled(true)
-                    .setMaxRedirects(config.maxRedirections)
-                    .build()
-            )
-        } else {
+        builder.setDefaultRequestConfig(buildRequestConfig(config))
+        if (!config.followRedirections) {
             builder.disableRedirectHandling()
         }
 
@@ -286,6 +390,15 @@ internal object HttpAsyncClientFactory {
 
     @JvmStatic
     private val log = logger()
+
+    /**
+     * A client with connections dedicated to single holders, and the connections opened before the campaign.
+     */
+    internal data class DedicatedClient(
+        val client: CloseableHttpAsyncClient,
+        val connectionManager: DedicatedConnectionManager,
+        val connections: List<DedicatedConnectionManager.DedicatedConnection>,
+    )
 
     /**
      * A pooled client and the connection manager that owns its pool.

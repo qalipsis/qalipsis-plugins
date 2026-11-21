@@ -34,7 +34,13 @@ import org.apache.hc.core5.http.HttpVersion
 import org.apache.hc.core5.pool.PoolConcurrencyPolicy
 
 /**
- * Configuration of a raw TCP socket to connect to a peer.
+ * Configuration of the HTTP client connecting to a peer.
+ *
+ * @property connectTimeout maximal duration to establish a connection (TCP and TLS handshakes), defaults to 10 seconds
+ * @property responseTimeout maximal duration of inactivity while waiting for the response once the request is sent,
+ * also used as the inactivity timeout of the sockets, defaults to 10 seconds
+ * @property ioThreadCount count of I/O threads of the client: the client of a step uses its own threads, which
+ * are shared by all the minions of the step, defaults to the count of available processors
  *
  * @author Eric Jessé
  */
@@ -43,7 +49,7 @@ data class HttpClientConfiguration internal constructor(
     var version: HttpVersion = HttpVersion.HTTP_1_1,
     @field:NotBlank internal var scheme: String = "",
     @field:NotBlank internal var contextPath: String = "",
-    internal var connectTimeout: Duration = Duration.ofSeconds(10),
+    @field:PositiveDuration var connectTimeout: Duration = Duration.ofSeconds(10),
     internal var noDelay: Boolean = true,
     internal var keepConnectionAlive: Boolean = true,
     @field:Valid internal var tlsConfiguration: TlsConfiguration? = null,
@@ -53,11 +59,10 @@ data class HttpClientConfiguration internal constructor(
     internal var inflate: Boolean = false,
     internal var followRedirections: Boolean = false,
     @field:Min(1) internal var maxRedirections: Int = 10,
-    @field:PositiveDuration var readTimeout: Duration = Duration.ofSeconds(10),
+    @field:PositiveDuration var responseTimeout: Duration = Duration.ofSeconds(10),
     @field:PositiveDuration var shutdownTimeout: Duration = Duration.ofSeconds(10),
     @field:Positive var sendBufferSize: Int = 1024,
     @field:Positive var receiveBufferSize: Int = 1024,
-    val socketTimeout: Duration = Duration.ofSeconds(2),
     val socksProxyAddress: String? = null,
     val socksProxyUsername: String? = null,
     val socksProxyPassword: String? = null,
@@ -65,7 +70,25 @@ data class HttpClientConfiguration internal constructor(
     var maxConnTotal: Int = 25,
     var poolConcurrencyPolicy: PoolConcurrencyPolicy = PoolConcurrencyPolicy.STRICT,
     var idleConnectionTimeout: Duration = Duration.ofSeconds(30),
+    @field:Positive var ioThreadCount: Int = Runtime.getRuntime().availableProcessors(),
 ) {
+
+    /**
+     * Former name of [responseTimeout].
+     */
+    @Deprecated("Use responseTimeout", ReplaceWith("responseTimeout"))
+    var readTimeout: Duration
+        get() = responseTimeout
+        set(value) {
+            responseTimeout = value
+        }
+
+    /**
+     * Former timeout of the sockets, now equal to [responseTimeout].
+     */
+    @Deprecated("Use responseTimeout", ReplaceWith("responseTimeout"))
+    val socketTimeout: Duration
+        get() = responseTimeout
 
     internal var inetAddress = InetAddress.getLocalHost()
 
@@ -142,7 +165,7 @@ data class HttpClientConfiguration internal constructor(
      *
      * - ON_DEMAND: one connection per request (default)
      * - POOL: shared connection pool
-     * - WARMUP: pre-creates all connections for all minions
+     * - WARMUP: one dedicated connection per minion, opened before the campaign
      */
     fun connectionStrategy(configurationBlock: @ConnectionStrategyMarker ConnectionStrategyConfiguration.() -> Unit) {
         connectionStrategyConfiguration.configurationBlock()

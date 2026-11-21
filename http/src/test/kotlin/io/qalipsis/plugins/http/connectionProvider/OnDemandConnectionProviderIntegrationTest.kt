@@ -20,12 +20,11 @@ package io.qalipsis.plugins.http.connectionProvider
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import io.mockk.every
 import io.mockk.mockk
 import io.qalipsis.api.context.StepContext
+import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.plugins.http.HttpClientConfiguration
 import io.qalipsis.plugins.http.connectionProvider.impl.OnDemandConnectionProvider
-import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import okhttp3.mockwebserver.MockResponse
@@ -33,7 +32,7 @@ import okhttp3.mockwebserver.MockWebServer
 import org.apache.hc.client5.http.async.methods.SimpleHttpRequest
 import org.apache.hc.client5.http.async.methods.SimpleHttpResponse
 import org.apache.hc.core5.concurrent.FutureCallback
-import org.apache.hc.core5.http.HttpVersion
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -42,64 +41,62 @@ import org.junit.jupiter.api.Test
  */
 internal class OnDemandConnectionProviderIntegrationTest {
 
+    private lateinit var server: MockWebServer
+
     private lateinit var provider: OnDemandConnectionProvider
 
-    private lateinit var clientConfiguration: HttpClientConfiguration
+    private val stepStartStopContext = mockk<StepStartStopContext>()
 
     @BeforeEach
     fun setUp() {
-        clientConfiguration = mockk {
-            every { socketTimeout } returns Duration.ofSeconds(5)
-            every { socksProxyAddress } returns null
-            every { socksProxyUsername } returns null
-            every { socksProxyPassword } returns null
-            every { proxyConfiguration } returns null
-            every { followRedirections } returns false
-            every { version } returns HttpVersion.HTTP_1_1
-            every { isSecure } returns false
-        }
+        server = MockWebServer()
+        server.start()
+        provider = OnDemandConnectionProvider(HttpClientConfiguration().apply { url(server.url("/").toString()) })
+        provider.init(stepStartStopContext)
+    }
 
-        provider = OnDemandConnectionProvider(clientConfiguration)
+    @AfterEach
+    fun tearDown() {
+        provider.shutdown(stepStartStopContext)
+        server.shutdown()
     }
 
     @Test
-    fun `client should execute a real HTTP request`() {
-        val server = MockWebServer()
-        server.enqueue(MockResponse().setResponseCode(200))
-        server.start()
+    fun `given a shared client when executing several requests then each request uses a new connection`() {
+        // given
+        repeat(REQUESTS) { server.enqueue(MockResponse().setResponseCode(200)) }
+        val client = provider.acquire(mockk<StepContext<*, *>>())
 
-        val acquireContext = mockk<StepContext<*, *>> {
-            every { minionId } returns "minion-1"
+        // when
+        val codes = (1..REQUESTS).map {
+            val response = CompletableFuture<SimpleHttpResponse>()
+            client.execute(SimpleHttpRequest("GET", server.url("/").toString()), response.asCallback())
+            response.get(2, TimeUnit.SECONDS).code
         }
-        val client = provider.acquire(acquireContext)
 
-        val request = SimpleHttpRequest("GET", server.url("/").toString())
-        val responseFuture = CompletableFuture<SimpleHttpResponse>()
+        // then
+        assertThat(codes).isEqualTo(List(REQUESTS) { 200 })
+        // The sequence number is the index of the request on its connection.
+        val sequenceNumbers = (1..REQUESTS).map { server.takeRequest(1, TimeUnit.SECONDS)!!.sequenceNumber }
+        assertThat(sequenceNumbers).isEqualTo(List(REQUESTS) { 0 })
+    }
 
-        client.execute(
-            request,
-            object : FutureCallback<SimpleHttpResponse> {
-                override fun completed(result: SimpleHttpResponse) {
-                    responseFuture.complete(result)
-                }
-
-                override fun failed(ex: Exception) {
-                    responseFuture.completeExceptionally(ex)
-                }
-
-                override fun cancelled() {
-                    responseFuture.cancel(true)
-                }
-            }
-        )
-
-        val response = responseFuture.get(2, TimeUnit.SECONDS)
-        assertThat(response.code).isEqualTo(200)
-
-        val releaseContext = mockk<StepContext<*, *>> {
-            every { minionId } returns "minion-1"
+    private fun CompletableFuture<SimpleHttpResponse>.asCallback() = object : FutureCallback<SimpleHttpResponse> {
+        override fun completed(result: SimpleHttpResponse) {
+            complete(result)
         }
-        provider.release(releaseContext, client)
-        server.shutdown()
+
+        override fun failed(ex: Exception) {
+            completeExceptionally(ex)
+        }
+
+        override fun cancelled() {
+            cancel(true)
+        }
+    }
+
+    private companion object {
+
+        const val REQUESTS = 3
     }
 }

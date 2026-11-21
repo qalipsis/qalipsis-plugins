@@ -93,7 +93,6 @@ internal class SimpleHttpClientStepIntegrationTest {
             val step = HttpClientStep(
                 id = "http-it-step",
                 retryPolicy = null,
-                ioCoroutineContext = this.coroutineContext,
                 requestFactory = requestFactory,
                 clientConfiguration = clientConfiguration,
                 connectionProvider = connectionProvider,
@@ -133,7 +132,6 @@ internal class SimpleHttpClientStepIntegrationTest {
             val step = HttpClientStep(
                 id = "http-it-step-error",
                 retryPolicy = null,
-                ioCoroutineContext = this.coroutineContext,
                 requestFactory = requestFactory,
                 clientConfiguration = clientConfiguration,
                 connectionProvider = connectionProvider,
@@ -141,6 +139,7 @@ internal class SimpleHttpClientStepIntegrationTest {
                 eventsLogger = null,
                 meterRegistry = null
             )
+            step.start(mockk())
 
             // when
             step.execute(stepContext)
@@ -148,6 +147,7 @@ internal class SimpleHttpClientStepIntegrationTest {
             // then
             val response =
                 (stepContext.output as Channel<StepContext.StepOutputRecord<HttpResult<String, String>>>).receive().value
+            step.stop(mockk())
             assertThat(response.response).isNotNull()
             assertThat(response.response!!.code).isEqualTo(500)
             assertThat(response.response!!.reason).isEqualTo("Internal Server Error")

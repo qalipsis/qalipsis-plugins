@@ -22,17 +22,30 @@ import io.aerisconsulting.catadioptre.KTestable
 import io.qalipsis.api.context.MinionId
 import io.qalipsis.api.context.StepContext
 import io.qalipsis.api.context.StepStartStopContext
-import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.plugins.http.HttpClientConfiguration
 import io.qalipsis.plugins.http.connectionProvider.ConnectionProvider
+import io.qalipsis.plugins.http.connectionProvider.DedicatedConnectionManager.DedicatedConnection
 import io.qalipsis.plugins.http.connectionProvider.HttpAsyncClientFactory
+import io.qalipsis.plugins.http.connectionProvider.HttpAsyncClientFactory.DedicatedClient
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
-import org.apache.hc.client5.http.async.HttpAsyncClient
 import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
+import org.apache.hc.client5.http.protocol.HttpClientContext
+import org.apache.hc.core5.io.CloseMode
 
 /**
- * Connection provider that pre-initializes a pool of HTTP connections per minion.
+ * Connection provider giving each minion its own connection, opened before the campaign starts.
+ *
+ * One connection per scheduled minion is opened when the step starts. A minion takes one of them at its first
+ * request and keeps it for its whole life, across all its iterations and replays (a replayed minion keeps its
+ * identifier), like the HTTP client of a JMeter thread. No other minion uses it. The completion of a minion is
+ * not observable from the step, so the connections are only released when the step stops; their count is
+ * bounded by the count of minions. When the connection is closed by the server or fails, it is opened again at
+ * the next request of the minion, which is recorded in the meters.
+ *
+ * All the connections share the I/O reactor of a single client, with [HttpClientConfiguration.ioThreadCount]
+ * threads, whatever the count of minions.
  *
  * @property shared denotes if the connection should be shared among steps
  * @property httpClientConfiguration the HTTP client configuration
@@ -40,57 +53,63 @@ import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
  * @author Francisca Eze
  */
 class WarmupConnectionProvider(
-    private val shared: Boolean,
+    val shared: Boolean,
     private val httpClientConfiguration: HttpClientConfiguration,
 ) : ConnectionProvider {
 
+    @KTestable
     private val initialized = AtomicBoolean(false)
 
-    private val clients = ConcurrentHashMap<MinionId, CloseableHttpAsyncClient>()
-
     @KTestable
-    private lateinit var preparedConnections: MutableList<CloseableHttpAsyncClient>
+    private lateinit var dedicatedClient: DedicatedClient
+
+    /**
+     * Connections opened before the campaign that no minion holds yet.
+     */
+    @KTestable
+    private val freeConnections = ConcurrentLinkedQueue<DedicatedConnection>()
+
+    /**
+     * Connection held by each minion.
+     */
+    @KTestable
+    private val minionConnections = ConcurrentHashMap<MinionId, DedicatedConnection>()
 
     override fun init(context: StepStartStopContext) {
         if (initialized.compareAndSet(false, true)) {
-            preparedConnections = mutableListOf()
-            repeat(context.scheduledMinionCount) {
-                val pooledClient = HttpAsyncClientFactory.createPooledClient(httpClientConfiguration)
-                // One connection per minion: the strategy promises connections ready before the start.
-                HttpAsyncClientFactory.preconnect(pooledClient, httpClientConfiguration, 1)
-                preparedConnections.add(pooledClient.client)
+            try {
+                dedicatedClient = HttpAsyncClientFactory.createDedicatedClient(
+                    httpClientConfiguration, context.scheduledMinionCount.coerceAtLeast(1)
+                )
+            } catch (e: Exception) {
+                initialized.set(false)
+                throw e
             }
+            freeConnections.addAll(dedicatedClient.connections)
         }
     }
 
-    override fun acquire(context: StepContext<*, *>): CloseableHttpAsyncClient {
-        return clients.computeIfAbsent(context.minionId) {
-            preparedConnections.removeFirst()
-        }
+    override fun acquire(context: StepContext<*, *>): CloseableHttpAsyncClient = dedicatedClient.client
+
+    override fun prepare(context: StepContext<*, *>, httpContext: HttpClientContext) {
+        httpContext.userToken = connectionOf(context.minionId)
     }
 
-    override fun release(context: StepContext<*, *>, client: HttpAsyncClient) {
-        if (!shared && context.isTail) {
-            preparedConnections.add(client as CloseableHttpAsyncClient)
-            clients.remove(context.minionId)
+    /**
+     * Returns the connection held by the minion, assigning it a free one - or a new one when all are held - if it
+     * has none yet.
+     */
+    private fun connectionOf(minionId: MinionId): DedicatedConnection =
+        minionConnections.computeIfAbsent(minionId) {
+            freeConnections.poll() ?: dedicatedClient.connectionManager.createDedicatedConnection()
         }
-    }
 
     override fun shutdown(context: StepStartStopContext) {
-        try {
-            preparedConnections.forEach { kotlin.runCatching { it.close() } }
-            clients.values.forEach { kotlin.runCatching { it.close() } }
-        } catch (ex: Exception) {
-            log.warn("An error occurred while shutting down the HTTP connection", ex)
+        if (initialized.compareAndSet(true, false)) {
+            // The client closes its connection manager, and with it all the dedicated connections.
+            dedicatedClient.client.close(CloseMode.GRACEFUL)
+            freeConnections.clear()
+            minionConnections.clear()
         }
-        initialized.set(false)
-        preparedConnections.clear()
-        clients.clear()
-    }
-
-    companion object {
-
-        @JvmStatic
-        private val log = logger()
     }
 }
