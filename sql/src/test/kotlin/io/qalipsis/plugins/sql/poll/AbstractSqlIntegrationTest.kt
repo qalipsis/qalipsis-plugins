@@ -22,8 +22,6 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.plugins.sql.dialect.Dialect
-import io.qalipsis.plugins.sql.r2dbc.acquireConnection
-import io.qalipsis.plugins.sql.r2dbc.closeConnection
 import io.qalipsis.plugins.sql.r2dbc.executePreparedQuery
 import io.qalipsis.plugins.sql.r2dbc.executeUpdate
 import io.qalipsis.test.coroutines.TestDispatcherProvider
@@ -63,39 +61,24 @@ internal abstract class AbstractSqlIntegrationTest(
     protected open fun init() = Unit
 
     protected suspend fun execute(statements: List<String>) {
-        val connection = connectionPool.acquireConnection()
-        try {
-            statements.forEach {
-                try {
-                    val rowsUpdated = connection.executeUpdate(it, emptyList())
-                    assertThat(rowsUpdated).isEqualTo(1L)
-                } catch (e: Exception) {
-                    log.error(e) { "Error in the statement '$it': ${e.message}" }
-                    throw e
-                }
+        statements.forEach {
+            try {
+                val rowsUpdated = connectionPool.executeUpdate(it, emptyList())
+                assertThat(rowsUpdated).isEqualTo(1L)
+            } catch (e: Exception) {
+                log.error(e) { "Error in the statement '$it': ${e.message}" }
+                throw e
             }
-        } finally {
-            connection.closeConnection()
         }
     }
 
     protected suspend fun count(table: String): Int {
-        val connection = connectionPool.acquireConnection()
-        try {
-            val result = connection.executePreparedQuery("select count(*) from ${dialect.quote(table)}", emptyList())
-            return (result[0][0] as Number).toInt()
-        } finally {
-            connection.closeConnection()
-        }
+        val result = connectionPool.executePreparedQuery("select count(*) from ${dialect.quote(table)}", emptyList())
+        return (result[0][0] as Number).toInt()
     }
 
     protected suspend fun sendQuery(sql: String) {
-        val connection = connectionPool.acquireConnection()
-        try {
-            connection.executePreparedQuery(sql, emptyList())
-        } finally {
-            connection.closeConnection()
-        }
+        connectionPool.executePreparedQuery(sql, emptyList())
     }
 
     companion object {

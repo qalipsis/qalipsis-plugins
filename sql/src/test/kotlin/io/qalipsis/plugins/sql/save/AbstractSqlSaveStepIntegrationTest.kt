@@ -33,8 +33,6 @@ import io.qalipsis.api.meters.Meter
 import io.qalipsis.api.meters.Timer
 import io.qalipsis.plugins.sql.dialect.Dialect
 import io.qalipsis.plugins.sql.poll.AbstractSqlIntegrationTest
-import io.qalipsis.plugins.sql.r2dbc.acquireConnection
-import io.qalipsis.plugins.sql.r2dbc.closeConnection
 import io.qalipsis.plugins.sql.r2dbc.executePreparedQuery
 import io.qalipsis.test.io.readResource
 import io.qalipsis.test.mockk.WithMockk
@@ -169,15 +167,10 @@ internal abstract class AbstractSqlSaveStepIntegrationTest(
         }
         confirmVerified(timeToResponse, successCounter, recordsCounter)
 
-        val connection = connectionPool.acquireConnection()
-        try {
-            val result = connection.executePreparedQuery("SELECT * FROM ${dialect.quote(tableName)}", emptyList())
-            val firstRow = result[0]
-            assertTrue(firstRow[1].toString().contains("IN") || firstRow[2].toString().contains("IN"))
-            assertTrue(firstRow[2].toString().contains("alice") || firstRow[3].toString().contains("alice"))
-        } finally {
-            connection.closeConnection()
-        }
+        val result = connectionPool.executePreparedQuery("SELECT * FROM ${dialect.quote(tableName)}", emptyList())
+        val firstRow = result[0]
+        assertTrue(firstRow[1].toString().contains("IN") || firstRow[2].toString().contains("IN"))
+        assertTrue(firstRow[2].toString().contains("alice") || firstRow[3].toString().contains("alice"))
 
         val output = (context.output as Channel).receive().value
         assertThat(output.sqlSaveStepMeters.successSavedDocuments == 1)
@@ -268,19 +261,14 @@ internal abstract class AbstractSqlSaveStepIntegrationTest(
         }
         confirmVerified(timeToResponse, successCounter, recordsCounter)
 
-        val connection = connectionPool.acquireConnection()
-        try {
-            val result = connection.executePreparedQuery("SELECT * FROM ${dialect.quote(tableName)}", emptyList())
-            val allValues = result.flatMap { row ->
-                (0 until result.columnNames().size).map { row[it]?.toString() ?: "" }
-            }
-
-            assertTrue(allValues.any { it.contains("IN") })
-            assertTrue(allValues.any { it.contains("alice") })
-            assertTrue(allValues.any { it.contains("john") })
-        } finally {
-            connection.closeConnection()
+        val result = connectionPool.executePreparedQuery("SELECT * FROM ${dialect.quote(tableName)}", emptyList())
+        val allValues = result.flatMap { row ->
+            (0 until result.columnNames().size).map { row[it]?.toString() ?: "" }
         }
+
+        assertTrue(allValues.any { it.contains("IN") })
+        assertTrue(allValues.any { it.contains("alice") })
+        assertTrue(allValues.any { it.contains("john") })
 
         val output = (context.output as Channel).receive().value
         assertThat(output.sqlSaveStepMeters.successSavedDocuments == 2)

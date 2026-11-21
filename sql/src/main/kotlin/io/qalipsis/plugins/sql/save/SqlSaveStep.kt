@@ -32,8 +32,6 @@ import io.qalipsis.api.retry.RetryPolicy
 import io.qalipsis.api.steps.AbstractStep
 import io.qalipsis.plugins.sql.dialect.Dialect
 import io.qalipsis.plugins.sql.r2dbc.SqlInsertOutcome
-import io.qalipsis.plugins.sql.r2dbc.acquireConnection
-import io.qalipsis.plugins.sql.r2dbc.closeConnection
 import io.qalipsis.plugins.sql.r2dbc.executePreparedInsert
 import io.r2dbc.pool.ConnectionPool
 import java.time.Duration
@@ -138,15 +136,10 @@ internal class SqlSaveStep<I>(
         val requestStart = System.nanoTime()
         val query = dialect.convertPlaceholders(buildQuery(dialect, tableName, columns))
         try {
-            val connection = connectionPool.acquireConnection()
-            try {
-                outcomes = connection.executePreparedInsert(
-                    sql = query,
-                    params = records.map { it.parameters }
-                )
-            } finally {
-                connection.closeConnection()
-            }
+            outcomes = connectionPool.executePreparedInsert(
+                sql = query,
+                params = records.map { it.parameters }
+            )
         } catch (e: Exception) {
             log.debug(e) { "${e.message}" }
             context.addError(StepError(e))

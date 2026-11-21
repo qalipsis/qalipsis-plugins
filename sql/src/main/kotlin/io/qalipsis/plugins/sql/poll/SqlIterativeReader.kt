@@ -24,8 +24,6 @@ import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.steps.datasource.DatasourceIterativeReader
 import io.qalipsis.plugins.sql.SqlResultSet
 import io.qalipsis.plugins.sql.dialect.Dialect
-import io.qalipsis.plugins.sql.r2dbc.acquireConnection
-import io.qalipsis.plugins.sql.r2dbc.closeConnection
 import io.qalipsis.plugins.sql.r2dbc.executePreparedQuery
 import io.r2dbc.pool.ConnectionPool
 import java.time.Duration
@@ -103,23 +101,18 @@ internal class SqlIterativeReader(
      */
     private suspend fun poll() {
         try {
-            val connection = connectionPool.acquireConnection()
-            try {
-                val currentQuery = sqlPollStatement.query
-                if (currentQuery != lastQuery) {
-                    convertedQuery = dialect.convertPlaceholders(currentQuery)
-                    lastQuery = currentQuery
-                }
-                val result = connection.executePreparedQuery(convertedQuery!!, sqlPollStatement.parameters)
-                if (result.isNotEmpty()) {
-                    log.debug { "A result set with ${result.size} records(s) was received" }
-                    resultsChannel?.send(result)
-                    sqlPollStatement.saveTiebreaker(result.last())
-                } else {
-                    log.debug { "An empty result set was received" }
-                }
-            } finally {
-                connection.closeConnection()
+            val currentQuery = sqlPollStatement.query
+            if (currentQuery != lastQuery) {
+                convertedQuery = dialect.convertPlaceholders(currentQuery)
+                lastQuery = currentQuery
+            }
+            val result = connectionPool.executePreparedQuery(convertedQuery!!, sqlPollStatement.parameters)
+            if (result.isNotEmpty()) {
+                log.debug { "A result set with ${result.size} records(s) was received" }
+                resultsChannel?.send(result)
+                sqlPollStatement.saveTiebreaker(result.last())
+            } else {
+                log.debug { "An empty result set was received" }
             }
         } catch (e: InterruptedException) {
             throw e
