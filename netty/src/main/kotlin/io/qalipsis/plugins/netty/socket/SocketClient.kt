@@ -38,6 +38,7 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.URI
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.TimeoutCancellationException
 
@@ -123,7 +124,8 @@ internal abstract class SocketClient<CONN : SocketClientConfiguration, REQ : Any
         }
         val timeout = config.connectTimeout.toMillis()
         if (!connectionReadyLatch.await(timeout)) {
-            close()
+            // The client is not open yet, so the channel has to be closed directly.
+            channelFuture.channel().close()
             throw monitoringCollector.cause
                 ?: TimeoutException(
                     "The client ${
@@ -131,10 +133,8 @@ internal abstract class SocketClient<CONN : SocketClientConfiguration, REQ : Any
                     } could not connect within ${config.connectTimeout.toMillis()} ms"
                 )
         }
-        monitoringCollector.cause?.let {
-            if (channelFuture.isDone) {
-                close()
-            }
+        (monitoringCollector.cause ?: channelFuture.takeIf { it.isDone && !it.isSuccess }?.cause())?.let {
+            channelFuture.channel().close()
             throw it
         }
         open = true
@@ -166,15 +166,33 @@ internal abstract class SocketClient<CONN : SocketClientConfiguration, REQ : Any
         }
 
         return try {
-            val response = runCatchingTimeoutCancellationException("Read timeout $readTimeout was reached ") {
-                responseSlot.get(readTimeout)
-            }.getOrThrow()
+            val response = awaitResponse(responseSlot).getOrThrow()
             log.trace { "Returning response $response" }
             response
         } catch (e: Exception) {
             log.trace(e) { e.message }
             monitoringCollector.recordReceivingDataFailure(e)
             throw e
+        }
+    }
+
+    /**
+     * Suspends until the response is received or the read timeout is reached.
+     *
+     * The timeout is scheduled on the event loop of the channel, which also completes the [responseSlot] when the
+     * response is received: this avoids to schedule a timeout per request on the coroutine dispatcher of the
+     * campaign, whose delayed queue is shared by all the minions.
+     */
+    private suspend fun <R> awaitResponse(responseSlot: ImmutableSlot<Result<R>>): Result<R> {
+        val timeout = channel.eventLoop().schedule({
+            if (responseSlot.isEmpty()) {
+                responseSlot.offer(Result.failure(TimeoutException("Read timeout $readTimeout was reached")))
+            }
+        }, readTimeout.toNanos(), TimeUnit.NANOSECONDS)
+        return try {
+            responseSlot.get()
+        } finally {
+            timeout.cancel(false)
         }
     }
 

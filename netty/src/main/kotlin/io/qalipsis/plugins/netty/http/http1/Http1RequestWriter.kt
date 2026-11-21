@@ -44,7 +44,9 @@ internal open class Http1RequestWriter(
     protected open val version = HttpVersion.HTTP_1_1
 
     override fun write(channel: Channel) {
-        configuresMonitoring(nettyRequest)
+        if (monitoringCollector.isMonitoringEnabled) {
+            configuresMonitoring(nettyRequest)
+        }
 
         var removeChunkedRequestHandler = false
         val requestToFlush: Any = if (encoder?.isChunked == true) {

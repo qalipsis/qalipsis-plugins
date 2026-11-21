@@ -44,6 +44,7 @@ import io.qalipsis.plugins.netty.http.request.InternalHttpRequest
 import io.qalipsis.plugins.netty.http.response.ResponseConverter
 import io.qalipsis.plugins.netty.http.spec.HttpClientConfiguration
 import io.qalipsis.plugins.netty.monitoring.StepBasedTcpMonitoringCollector
+import io.qalipsis.plugins.netty.monitoring.StepMetersCache
 import io.qalipsis.plugins.netty.monitoring.StepContextBasedSocketMonitoringCollector
 import io.qalipsis.plugins.netty.socket.SocketClient
 import io.qalipsis.plugins.netty.socket.SocketClientStep
@@ -81,11 +82,25 @@ internal class PooledHttpClientStep<I, O>(
 
     private lateinit var workerGroup: EventLoopGroup
 
+    /**
+     * Pool of the clients to the peer of the configuration, used by most of the requests.
+     */
+    private lateinit var defaultPool: Pool<HttpClient>
+
+    /**
+     * Beginning of the complete URIs of the requests to the peer of the configuration.
+     */
+    private val defaultUriPrefix = "${clientConfiguration.scheme}://${clientConfiguration.host}:${clientConfiguration.port}"
+
+    private val metersCache = StepMetersCache()
+
     override suspend fun start(context: StepStartStopContext) {
+        metersCache.clear()
         workerGroup = eventLoopGroupSupplier.getGroup()
         stepMonitoringCollector = StepBasedTcpMonitoringCollector(eventsLogger, meterRegistry, context, "http")
+        defaultPool = createPool(clientConfiguration, workerGroup).awaitReadiness()
         clientsPools[SocketClient.RemotePeerIdentifier(clientConfiguration.inetAddress, clientConfiguration.port)] =
-            createPool(clientConfiguration, workerGroup).awaitReadiness()
+            defaultPool
     }
 
     private fun createPool(
@@ -111,11 +126,12 @@ internal class PooledHttpClientStep<I, O>(
     override suspend fun stop(context: StepStartStopContext) {
         clientsPools.values.forEach { kotlin.runCatching { it.close() } }
         clientsPools.clear()
+        metersCache.clear()
         workerGroup.shutdownGracefully()
     }
 
     override suspend fun execute(context: StepContext<I, RequestResult<I, QalipsisHttpResponse<O>, *>>) {
-        val monitoringCollector = HttpStepContextBasedSocketMonitoringCollector(context, eventsLogger, meterRegistry)
+        val monitoringCollector = HttpStepContextBasedSocketMonitoringCollector(context, eventsLogger, meterRegistry, metersCache)
         val input = context.receive()
         val response =
             execute(monitoringCollector, context, input, HttpRequestBuilderImpl.requestFactory(context, input))
@@ -152,13 +168,27 @@ internal class PooledHttpClientStep<I, O>(
         request: HttpRequest<*>
     ): HttpResponse {
         val requestUri = (request as InternalHttpRequest<*, *>).computeUri(clientConfiguration)
-        val requestPeerIdentifier = SocketClient.RemotePeerIdentifier.of(requestUri)
-        return clientsPools.computeIfAbsent(requestPeerIdentifier) {
-            createPool(clientConfiguration.copy().apply { url(requestUri) }, workerGroup)
-        }
-            .awaitReadiness()
-            .withPoolItem { client -> client.execute(context, request, monitoringCollector) }
+        return poolFor(requestUri).withPoolItem { client -> client.execute(context, request, monitoringCollector) }
     }
+
+    /**
+     * Returns the pool of clients to the peer of [requestUri].
+     *
+     * The URI is only parsed - and the host resolved - when it does not target the peer of the configuration.
+     */
+    private suspend fun poolFor(requestUri: String): Pool<HttpClient> {
+        return if (isDefaultPeer(requestUri)) {
+            defaultPool
+        } else {
+            clientsPools.computeIfAbsent(SocketClient.RemotePeerIdentifier.of(requestUri)) {
+                createPool(clientConfiguration.copy().apply { url(requestUri) }, workerGroup)
+            }.awaitReadiness()
+        }
+    }
+
+    private fun isDefaultPeer(requestUri: String): Boolean =
+        requestUri.startsWith(defaultUriPrefix)
+                && (requestUri.length == defaultUriPrefix.length || requestUri[defaultUriPrefix.length] in URI_PATH_START)
 
     /**
      * This has no effect on pooled steps.
@@ -176,6 +206,11 @@ internal class PooledHttpClientStep<I, O>(
     override fun addUsage(count: Int) = Unit
 
     companion object {
+
+        /**
+         * Characters that can follow the authority of a URI.
+         */
+        private const val URI_PATH_START = "/?#"
 
         @JvmStatic
         private val REDIRECTION_STATUS = setOf(

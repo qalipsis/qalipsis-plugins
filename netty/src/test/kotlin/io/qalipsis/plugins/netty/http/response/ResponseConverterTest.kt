@@ -18,6 +18,8 @@
 
 package io.qalipsis.plugins.netty.http.response
 
+import assertk.assertions.isNotNull
+import io.netty.buffer.Unpooled
 import assertk.all
 import assertk.assertThat
 import assertk.assertions.hasSameSizeAs
@@ -386,4 +388,22 @@ internal class ResponseConverterTest {
     }
 
     private data class Entity(val field: String)
+
+    @Test
+    internal fun `given responses with the same content type when converting then the media type is parsed once`() {
+        // given
+        val responseConverter = ResponseConverter<ByteArray>(ByteArray::class, emptyList())
+        fun response() = DefaultFullHttpResponse(
+            HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.wrappedBuffer(byteArrayOf(1, 2, 3))
+        ).apply { headers()["Content-Type"] = "text/plain;charset=UTF-8" }
+
+        // when
+        val first = responseConverter.convert(response())
+        val second = responseConverter.convert(response())
+
+        // then
+        assertThat(first.contentType).isNotNull().isEqualTo(MediaType("text/plain;charset=UTF-8"))
+        assertThat(second.contentType).isSameInstanceAs(first.contentType)
+        assertThat(second.headers).key("content-type").isEqualTo("text/plain;charset=UTF-8")
+    }
 }

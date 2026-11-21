@@ -191,7 +191,6 @@ internal class Http1ClientIntegrationTest {
         coVerifyOrder {
             monitoringCollector.recordConnecting()
             monitoringCollector.recordConnected(more(Duration.ZERO))
-            monitoringCollector.cause
         }
 
         // when
@@ -250,7 +249,6 @@ internal class Http1ClientIntegrationTest {
         coVerifyOrder {
             monitoringCollector.recordConnecting()
             monitoringCollector.recordConnected(more(Duration.ZERO))
-            monitoringCollector.cause
         }
         var request = SimpleHttpRequest(HttpMethod.GET, "/").apply {
             addParameter("status", "BAD_REQUEST")
@@ -264,6 +262,7 @@ internal class Http1ClientIntegrationTest {
         assertThat(client.isOpen).isTrue()
         assertThat(client.isExhausted()).isFalse()
         coVerifyOrder {
+            monitoringCollector.isMonitoringEnabled
             monitoringCollector.setTags(
                 "protocol" to HTTP_1_1.protocol,
                 "method" to "GET",
@@ -298,6 +297,7 @@ internal class Http1ClientIntegrationTest {
         assertThat(client.isOpen).isTrue()
         assertThat(client.isExhausted()).isFalse()
         coVerifyOrder {
+            monitoringCollector.isMonitoringEnabled
             monitoringCollector.setTags(
                 "protocol" to HTTP_1_1.protocol,
                 "method" to "POST",
@@ -331,6 +331,7 @@ internal class Http1ClientIntegrationTest {
         assertThat(client.isOpen).isTrue()
         assertThat(client.isExhausted()).isTrue()
         coVerifyOrder {
+            monitoringCollector.isMonitoringEnabled
             monitoringCollector.setTags(
                 "protocol" to HTTP_1_1.protocol,
                 "method" to "DELETE",
@@ -378,7 +379,6 @@ internal class Http1ClientIntegrationTest {
         coVerifyOrder {
             monitoringCollector.recordConnecting()
             monitoringCollector.recordConnectionFailure(more(Duration.ZERO), refEq(exception))
-            monitoringCollector.cause
         }
 
         confirmVerified(monitoringCollector)
@@ -431,7 +431,6 @@ internal class Http1ClientIntegrationTest {
             monitoringCollector.recordConnecting()
             monitoringCollector.recordConnected(more(Duration.ZERO))
             monitoringCollector.recordTlsHandshakeFailure(more(Duration.ZERO), refEq(exception))
-            monitoringCollector.cause
         }
 
         confirmVerified(monitoringCollector)
@@ -478,7 +477,6 @@ internal class Http1ClientIntegrationTest {
         coVerifyOrder {
             monitoringCollector.recordConnecting()
             monitoringCollector.recordConnected(more(Duration.ZERO))
-            monitoringCollector.cause
         }
 
         // when
@@ -542,7 +540,6 @@ internal class Http1ClientIntegrationTest {
         coVerifyOrder {
             monitoringCollector.recordConnecting()
             monitoringCollector.recordConnected(more(Duration.ZERO))
-            monitoringCollector.cause
         }
 
         // then
@@ -557,6 +554,7 @@ internal class Http1ClientIntegrationTest {
         // then
         assertThat(client.isExhausted()).isFalse()
         coVerifyOrder {
+            monitoringCollector.isMonitoringEnabled
             monitoringCollector.setTags(
                 "protocol" to HTTP_1_1.protocol,
                 "method" to "GET",
@@ -1037,8 +1035,8 @@ internal class Http1ClientIntegrationTest {
                 if (server.secured) {
                     monitoringCollector.recordTlsHandshakeSuccess(more(Duration.ZERO))
                 }
-                monitoringCollector.cause
 
+                monitoringCollector.isMonitoringEnabled
                 monitoringCollector.setTags(
                     "protocol" to configuration.version.protocol,
                     match { it.first == "method" && it.second in setOf("GET", "POST", "PUT", "PATCH", "DELETE") },

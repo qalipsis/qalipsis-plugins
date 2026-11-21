@@ -24,6 +24,7 @@ import io.netty.handler.codec.http.HttpStatusClass
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder
 import io.netty.handler.codec.http.cookie.Cookie
 import io.qalipsis.api.logging.LoggerHelper.logger
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import io.netty.handler.codec.http.HttpResponse as NettyResponse
 
@@ -40,6 +41,12 @@ internal class ResponseConverter<B>(
     private val cookieDecoder = ClientCookieDecoder.LAX
 
     /**
+     * Media types already parsed, by value of the content type header: the responses of a step generally have one
+     * or a few distinct content types.
+     */
+    private val mediaTypes = ConcurrentHashMap<String, MediaType>()
+
+    /**
      * Converts a Netty [FullHttpResponse] into a Qalipsis [HttpResponse] where the body can be deserialized.
      */
     fun convert(nettyResponse: NettyResponse): HttpResponse<B> {
@@ -49,8 +56,7 @@ internal class ResponseConverter<B>(
         return (nettyResponse as? FullHttpResponse)?.let {
             fillHeadersAndCookies(it, cookies, headers)
 
-            val responseType = headers.filterKeys { it.lowercase() == CONTENT_TYPE_HEADER }.values.firstOrNull()
-                ?.let { MediaType(it) }
+            val responseType = headers[CONTENT_TYPE_HEADER]?.let(::mediaTypeOf)
             val usedContentType = responseType ?: MediaType.TEXT_PLAIN_TYPE
 
             val bytes = ByteBufUtil.getBytes(nettyResponse.content())
@@ -98,17 +104,25 @@ internal class ResponseConverter<B>(
         cookies: MutableMap<String, Cookie>,
         headers: MutableMap<String, String>
     ) {
-        nettyResponse.headers().asSequence().forEach { (key, value) ->
-            if (key.lowercase() == COOKIE_HEADER) {
+        nettyResponse.headers().forEach { (originalKey, value) ->
+            val key = originalKey.lowercase()
+            if (key == COOKIE_HEADER) {
                 val cookie = cookieDecoder.decode(value)
                 log.trace { "Received cookie $cookie" }
                 cookies[cookie.name()] = cookie
             } else {
                 log.trace { "Received header $key: $value" }
-                headers[key.lowercase()] = value
+                headers[key] = value
             }
         }
     }
+
+    private fun mediaTypeOf(contentType: String): MediaType =
+        mediaTypes[contentType] ?: MediaType(contentType).also {
+            if (mediaTypes.size < MAX_CACHED_MEDIA_TYPES) {
+                mediaTypes[contentType] = it
+            }
+        }
 
     @Suppress("UNCHECKED_CAST")
     private fun deserialize(bytes: ByteArray, responseType: MediaType): B? {
@@ -133,6 +147,11 @@ internal class ResponseConverter<B>(
         private const val COOKIE_HEADER = "set-cookie"
 
         private const val CONTENT_TYPE_HEADER = "content-type"
+
+        /**
+         * Maximal count of distinct media types kept in the cache, to bound it when the content types vary.
+         */
+        private const val MAX_CACHED_MEDIA_TYPES = 64
 
         private val log = logger()
 

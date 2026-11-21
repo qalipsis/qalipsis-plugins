@@ -159,7 +159,6 @@ internal class TcpClientIntegrationTest {
             coVerifyOrder {
                 monitoringCollector.recordConnecting()
                 monitoringCollector.recordConnected(more(Duration.ZERO))
-                monitoringCollector.cause
             }
 
             // when
@@ -196,7 +195,6 @@ internal class TcpClientIntegrationTest {
                 coVerifyOrder {
                     monitoringCollector.recordConnecting()
                     monitoringCollector.recordConnected(more(Duration.ZERO))
-                    monitoringCollector.cause
                 }
 
                 // when
@@ -258,7 +256,6 @@ internal class TcpClientIntegrationTest {
             coVerifyOrder {
                 monitoringCollector.recordConnecting()
                 monitoringCollector.recordConnectionFailure(more(Duration.ZERO), refEq(exception))
-                monitoringCollector.cause
             }
 
             confirmVerified(monitoringCollector)
@@ -296,7 +293,6 @@ internal class TcpClientIntegrationTest {
             coVerify {
                 monitoringCollector.recordConnecting()
                 monitoringCollector.recordConnected(more(Duration.ZERO))
-                monitoringCollector.cause
                 monitoringCollector.recordSendingData(eq(3))
                 monitoringCollector.recordSentDataFailure(any<SocketException>())
             }
@@ -330,7 +326,6 @@ internal class TcpClientIntegrationTest {
             coVerifyOrder {
                 monitoringCollector.recordConnecting()
                 monitoringCollector.recordConnected(more(Duration.ZERO))
-                monitoringCollector.cause
             }
 
             // then
@@ -385,7 +380,6 @@ internal class TcpClientIntegrationTest {
                 monitoringCollector.recordConnecting()
                 monitoringCollector.recordConnected(more(Duration.ZERO))
                 monitoringCollector.recordTlsHandshakeSuccess(more(Duration.ZERO))
-                monitoringCollector.cause
             }
 
             // when
@@ -426,7 +420,6 @@ internal class TcpClientIntegrationTest {
                     monitoringCollector.recordConnecting()
                     monitoringCollector.recordConnected(more(Duration.ZERO))
                     monitoringCollector.recordTlsHandshakeSuccess(more(Duration.ZERO))
-                    monitoringCollector.cause
                 }
 
                 // when
@@ -491,7 +484,6 @@ internal class TcpClientIntegrationTest {
             coVerifyOrder {
                 monitoringCollector.recordConnecting()
                 monitoringCollector.recordConnectionFailure(more(Duration.ZERO), refEq(exception))
-                monitoringCollector.cause
             }
 
             confirmVerified(monitoringCollector)
@@ -528,7 +520,6 @@ internal class TcpClientIntegrationTest {
                     monitoringCollector.recordConnecting()
                     monitoringCollector.recordConnected(more(Duration.ZERO))
                     monitoringCollector.recordTlsHandshakeFailure(more(Duration.ZERO), refEq(exception))
-                    monitoringCollector.cause
                 }
 
                 confirmVerified(monitoringCollector)
@@ -558,7 +549,6 @@ internal class TcpClientIntegrationTest {
                 coVerifyOrder {
                     monitoringCollector.recordConnecting()
                     monitoringCollector.recordConnected(more(Duration.ZERO))
-                    monitoringCollector.cause
                 }
 
                 confirmVerified(monitoringCollector)
@@ -612,7 +602,6 @@ internal class TcpClientIntegrationTest {
             coVerifyOrder {
                 monitoringCollector.recordConnecting()
                 monitoringCollector.recordConnected(more(Duration.ZERO))
-                monitoringCollector.cause
             }
 
             // when
@@ -653,7 +642,6 @@ internal class TcpClientIntegrationTest {
                 coVerifyOrder {
                     monitoringCollector.recordConnecting()
                     monitoringCollector.recordConnected(more(Duration.ZERO))
-                    monitoringCollector.cause
                 }
 
                 // when
@@ -719,7 +707,6 @@ internal class TcpClientIntegrationTest {
             coVerifyOrder {
                 monitoringCollector.recordConnecting()
                 monitoringCollector.recordConnected(more(Duration.ZERO))
-                monitoringCollector.cause
             }
 
             // when
@@ -760,7 +747,6 @@ internal class TcpClientIntegrationTest {
                 coVerifyOrder {
                     monitoringCollector.recordConnecting()
                     monitoringCollector.recordConnected(more(Duration.ZERO))
-                    monitoringCollector.cause
                 }
 
                 // when
@@ -827,7 +813,6 @@ internal class TcpClientIntegrationTest {
                 coVerifyOrder {
                     monitoringCollector.recordConnecting()
                     monitoringCollector.recordConnectionFailure(more(Duration.ZERO), refEq(exception))
-                    monitoringCollector.cause
                 }
 
                 confirmVerified(monitoringCollector)
@@ -870,7 +855,6 @@ internal class TcpClientIntegrationTest {
                 monitoringCollector.recordConnecting()
                 monitoringCollector.recordConnected(more(Duration.ZERO))
                 monitoringCollector.recordTlsHandshakeSuccess(more(Duration.ZERO))
-                monitoringCollector.cause
             }
 
             // when
@@ -915,7 +899,6 @@ internal class TcpClientIntegrationTest {
                     monitoringCollector.recordConnecting()
                     monitoringCollector.recordConnected(more(Duration.ZERO))
                     monitoringCollector.recordTlsHandshakeSuccess(more(Duration.ZERO))
-                    monitoringCollector.cause
                 }
 
                 // when
@@ -984,7 +967,6 @@ internal class TcpClientIntegrationTest {
                 monitoringCollector.recordConnecting()
                 monitoringCollector.recordConnected(more(Duration.ZERO))
                 monitoringCollector.recordTlsHandshakeSuccess(more(Duration.ZERO))
-                monitoringCollector.cause
             }
 
             // when
@@ -1029,7 +1011,6 @@ internal class TcpClientIntegrationTest {
                     monitoringCollector.recordConnecting()
                     monitoringCollector.recordConnected(more(Duration.ZERO))
                     monitoringCollector.recordTlsHandshakeSuccess(more(Duration.ZERO))
-                    monitoringCollector.cause
                 }
 
                 // when
@@ -1099,7 +1080,6 @@ internal class TcpClientIntegrationTest {
                 coVerifyOrder {
                     monitoringCollector.recordConnecting()
                     monitoringCollector.recordConnectionFailure(more(Duration.ZERO), refEq(exception))
-                    monitoringCollector.cause
                 }
 
                 confirmVerified(monitoringCollector)

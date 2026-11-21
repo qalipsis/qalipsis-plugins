@@ -184,7 +184,6 @@ internal class Http2ClientIntegrationTest {
         coVerifyOrder {
             monitoringCollector.recordConnecting()
             monitoringCollector.recordConnected(more(Duration.ZERO))
-            monitoringCollector.cause
         }
 
         // when
@@ -239,7 +238,6 @@ internal class Http2ClientIntegrationTest {
             if (server.secured) {
                 monitoringCollector.recordTlsHandshakeSuccess(more(Duration.ZERO))
             }
-            monitoringCollector.cause
         }
         var request = SimpleHttpRequest(HttpMethod.GET, "/status").apply {
             addParameter("status", "BAD_REQUEST")
@@ -335,7 +333,6 @@ internal class Http2ClientIntegrationTest {
         coVerifyOrder {
             monitoringCollector.recordConnecting()
             monitoringCollector.recordConnectionFailure(more(Duration.ZERO), refEq(exception))
-            monitoringCollector.cause
         }
         confirmVerified(monitoringCollector)
         val result = monitoringCollector.toResult(Unit, Unit, null);
@@ -386,7 +383,6 @@ internal class Http2ClientIntegrationTest {
             monitoringCollector.recordConnecting()
             monitoringCollector.recordConnected(more(Duration.ZERO))
             monitoringCollector.recordTlsHandshakeFailure(more(Duration.ZERO), refEq(exception))
-            monitoringCollector.cause
         }
 
         confirmVerified(monitoringCollector)
@@ -433,7 +429,6 @@ internal class Http2ClientIntegrationTest {
         coVerifyOrder {
             monitoringCollector.recordConnecting()
             monitoringCollector.recordConnected(more(Duration.ZERO))
-            monitoringCollector.cause
         }
 
         // when
@@ -497,7 +492,6 @@ internal class Http2ClientIntegrationTest {
         coVerifyOrder {
             monitoringCollector.recordConnecting()
             monitoringCollector.recordConnected(more(Duration.ZERO))
-            monitoringCollector.cause
         }
 
         // then
@@ -515,7 +509,7 @@ internal class Http2ClientIntegrationTest {
             monitoringCollector.recordConnecting()
             monitoringCollector.recordConnected(more(Duration.ZERO))
             monitoringCollector.recordTlsHandshakeSuccess(more(Duration.ZERO))
-            monitoringCollector.cause
+            monitoringCollector.isMonitoringEnabled
             monitoringCollector.setTags(
                 "protocol" to HTTP_2_0.protocol,
                 "method" to "GET",
@@ -1002,8 +996,8 @@ internal class Http2ClientIntegrationTest {
                 if (server.secured) {
                     monitoringCollector.recordTlsHandshakeSuccess(more(Duration.ZERO))
                 }
-                monitoringCollector.cause
 
+                monitoringCollector.isMonitoringEnabled
                 monitoringCollector.setTags(
                     "protocol" to configuration.version.protocol,
                     match { it.first == "method" && it.second in setOf("GET", "POST", "PUT", "PATCH", "DELETE") },
