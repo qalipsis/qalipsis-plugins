@@ -128,7 +128,7 @@ publishing {
     }
 }
 
-val pluginPlatformVersion: String? by project
+val ossVersion: String? by project
 
 javaPlatform {
     allowDependencies()
@@ -136,22 +136,22 @@ javaPlatform {
 
 dependencies {
     // Core modules.
-    api(platform("io.qalipsis:qalipsis-dev-platform:$pluginPlatformVersion"))
-    api("io.qalipsis:qalipsis-api-dsl:$pluginPlatformVersion")
+    api(platform("io.qalipsis:qalipsis-dev-platform:$ossVersion"))
+    api("io.qalipsis:qalipsis-api-dsl:$ossVersion")
 
     constraints {
         // API modules.
-        api("io.qalipsis:qalipsis-api-processors:$pluginPlatformVersion")
-        api("io.qalipsis:qalipsis-api-common:$pluginPlatformVersion")
-        api("io.qalipsis:qalipsis-api-dev:$pluginPlatformVersion")
-        api("io.qalipsis:qalipsis-api-dsl:$pluginPlatformVersion")
-        api("io.qalipsis:qalipsis-test:$pluginPlatformVersion")
+        api("io.qalipsis:qalipsis-api-processors:$ossVersion")
+        api("io.qalipsis:qalipsis-api-common:$ossVersion")
+        api("io.qalipsis:qalipsis-api-dev:$ossVersion")
+        api("io.qalipsis:qalipsis-api-dsl:$ossVersion")
+        api("io.qalipsis:qalipsis-test:$ossVersion")
 
         // Core modules.
-        api("io.qalipsis:qalipsis-runtime:$pluginPlatformVersion")
-        api("io.qalipsis:qalipsis-head:$pluginPlatformVersion")
-        api("io.qalipsis:qalipsis-webapp:${pluginPlatformVersion}")
-        api("io.qalipsis:qalipsis-factory:$pluginPlatformVersion")
+        api("io.qalipsis:qalipsis-runtime:$ossVersion")
+        api("io.qalipsis:qalipsis-head:$ossVersion")
+        api("io.qalipsis:qalipsis-webapp:${ossVersion}")
+        api("io.qalipsis:qalipsis-factory:$ossVersion")
 
         // Plugins.
         api(project(":qalipsis-plugin-cassandra"))
