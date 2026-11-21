@@ -40,8 +40,12 @@ internal class PostgresJasyncSaveStepIntegrationTest : AbstractJasyncSaveStepInt
 ) {
 
     companion object {
+        /**
+         * Since PostgreSQL 14, the passwords are verified with SCRAM by default, which validates the SCRAM library
+         * on the classpath.
+         */
         @Container
         @JvmStatic
-        private val db = PostgreSQLContainerProvider().newInstance()
+        private val db = PostgreSQLContainerProvider().newInstance("16-alpine")
     }
 }
