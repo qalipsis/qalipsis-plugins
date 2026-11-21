@@ -26,14 +26,15 @@ import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.DistributionMeasurementMetric
 import io.qalipsis.api.meters.MeasurementPublisher
 import io.qalipsis.api.meters.MeterSnapshot
-import io.qalipsis.api.sync.SuspendedCountLatch
 import io.qalipsis.plugins.elasticsearch.monitoring.ElasticsearchOperationsImpl
 import io.qalipsis.plugins.elasticsearch.monitoring.PublishingMode
 import jakarta.inject.Named
 import java.time.Clock
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -52,7 +53,11 @@ internal class ElasticsearchMeasurementPublisher(
 
     private val indexFormatter = DateTimeFormatter.ofPattern(configuration.indexDatePattern)
 
-    private var publicationLatch: SuspendedCountLatch = SuspendedCountLatch(0)
+    /**
+     * Parent of the running publications, joined when stopping.
+     * Tracking the jobs rather than counting them keeps the stop reliable, even when a job never starts or fails.
+     */
+    private var publicationJobs: CompletableJob = SupervisorJob()
 
     private var publicationSemaphore: Semaphore = Semaphore(configuration.publishers)
 
@@ -63,21 +68,16 @@ internal class ElasticsearchMeasurementPublisher(
      * Initializes Elasticsearch and make it available for exporting of data.
      */
     override suspend fun init() {
-        publicationLatch = SuspendedCountLatch(0)
+        publicationJobs = SupervisorJob()
         publicationSemaphore = Semaphore(configuration.publishers)
         elasticsearchOperations.buildClient(configuration)
         elasticsearchOperations.initializeTemplate(configuration, PublishingMode.METERS)
     }
 
     override suspend fun publish(meters: Collection<MeterSnapshot>) {
-        publicationLatch.increment()
-        coroutineScope.launch {
-            try {
-                publicationSemaphore.withPermit {
-                    performPublish(meters)
-                }
-            } finally {
-                publicationLatch.decrement()
+        coroutineScope.launch(publicationJobs) {
+            publicationSemaphore.withPermit {
+                performPublish(meters)
             }
         }
     }
@@ -163,7 +163,8 @@ internal class ElasticsearchMeasurementPublisher(
 
     override suspend fun stop() {
         logger.debug { "Stopping the meter publication of meters" }
-        publicationLatch.await()
+        publicationJobs.complete()
+        publicationJobs.join()
         logger.debug { "Closing the Elasticsearch client" }
         tryAndLogOrNull(logger) {
             elasticsearchOperations.close()

@@ -27,9 +27,10 @@ import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.meters.DistributionMeasurementMetric
 import io.qalipsis.api.meters.MeasurementPublisher
 import io.qalipsis.api.meters.MeterSnapshot
-import io.qalipsis.api.sync.SuspendedCountLatch
 import jakarta.inject.Named
+import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -48,12 +49,16 @@ class InfluxdbMeasurementPublisher(
 
     private lateinit var writeClient: WriteKotlinApi
 
-    private lateinit var publicationLatch: SuspendedCountLatch
+    /**
+     * Parent of the running publications, joined when stopping.
+     * Tracking the jobs rather than counting them keeps the stop reliable, even when a job never starts or fails.
+     */
+    private lateinit var publicationJobs: CompletableJob
 
     private lateinit var publicationSemaphore: Semaphore
 
     override suspend fun init() {
-        publicationLatch = SuspendedCountLatch(0)
+        publicationJobs = SupervisorJob()
         publicationSemaphore = Semaphore(1)
         buildClient()
     }
@@ -79,14 +84,9 @@ class InfluxdbMeasurementPublisher(
     }
 
     override suspend fun publish(meters: Collection<MeterSnapshot>) {
-        publicationLatch.increment()
-        coroutineScope.launch {
-            try {
-                publicationSemaphore.withPermit {
-                    performPublish(meters)
-                }
-            } finally {
-                publicationLatch.decrement()
+        coroutineScope.launch(publicationJobs) {
+            publicationSemaphore.withPermit {
+                performPublish(meters)
             }
         }
     }
@@ -143,7 +143,8 @@ class InfluxdbMeasurementPublisher(
 
     override suspend fun stop() {
         logger.debug { "Stopping the meter publication of meters" }
-        publicationLatch.await()
+        publicationJobs.complete()
+        publicationJobs.join()
         logger.debug { "Closing the InfluxDbKotlin client" }
         tryAndLogOrNull(logger) {
             client.close()

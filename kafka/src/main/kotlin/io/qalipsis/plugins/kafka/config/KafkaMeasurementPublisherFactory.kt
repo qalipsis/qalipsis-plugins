@@ -19,6 +19,7 @@ package io.qalipsis.plugins.kafka.config
 import io.micronaut.context.annotation.Requirements
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.util.StringUtils
+import io.qalipsis.api.Executors
 import io.qalipsis.api.config.MetersConfig
 import io.qalipsis.api.meters.MeasurementPublisher
 import io.qalipsis.api.meters.MeasurementPublisherFactory
@@ -27,7 +28,9 @@ import io.qalipsis.plugins.kafka.meters.KafkaMeasurementPublisher
 import io.qalipsis.plugins.kafka.meters.KafkaMeterConfig
 import io.qalipsis.plugins.kafka.meters.ProtobufMeterConverter
 import io.qalipsis.plugins.kafka.meters.ProtobufMeterSerializer
+import jakarta.inject.Named
 import jakarta.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 
 /**
  * Configuration for the export of Qalipsis meters to Kafka.
@@ -40,7 +43,8 @@ import jakarta.inject.Singleton
     Requires(property = KafkaMeterConfig.KAFKA_ENABLED, value = StringUtils.TRUE)
 )
 internal class KafkaMeasurementPublisherFactory(
-    private val configuration: KafkaMeterConfig
+    private val configuration: KafkaMeterConfig,
+    @Named(Executors.IO_EXECUTOR_NAME) private val ioScope: CoroutineScope,
 ) : MeasurementPublisherFactory {
 
     private val protobufMeterConverter = ProtobufMeterConverter()
@@ -51,7 +55,7 @@ internal class KafkaMeasurementPublisherFactory(
         } else {
             JsonMeterSerializer(configuration.timestampFieldName)
         }
-        return KafkaMeasurementPublisher(configuration, serializer)
+        return KafkaMeasurementPublisher(configuration, serializer, ioScope)
     }
 
     companion object {

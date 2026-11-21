@@ -19,8 +19,6 @@
 package io.qalipsis.plugins.graphite.monitoring.meters
 
 import io.micronaut.context.annotation.Requires
-import io.netty.channel.EventLoopGroup
-import io.netty.channel.nio.NioEventLoopGroup
 import io.qalipsis.api.meters.MeasurementPublisher
 import io.qalipsis.api.meters.MeterSnapshot
 import io.qalipsis.api.pool.FixedPool
@@ -41,15 +39,12 @@ internal class GraphiteMeasurementPublisher(
     private val configuration: GraphiteMeasurementConfiguration,
 ) : MeasurementPublisher {
 
-    private lateinit var workerGroup: EventLoopGroup
-
     private lateinit var clients: FixedPool<GraphiteClient<MeterSnapshot>>
 
     /**
      * Builds [FixedPool] of [GraphiteClient].
      */
     override suspend fun init() {
-        workerGroup = NioEventLoopGroup()
         val encoder = when (configuration.protocol) {
             GraphiteProtocol.PLAINTEXT -> PlaintextEncoder()
             GraphiteProtocol.PICKLE -> PickleEncoder()
@@ -68,12 +63,10 @@ internal class GraphiteMeasurementPublisher(
     }
 
     /**
-     * Shutdowns [EventLoopGroup]
      * Closes [FixedPool] of [GraphiteClient].
      */
     override suspend fun stop() {
         clients.close()
-        workerGroup.shutdownGracefully()
     }
 
     /**

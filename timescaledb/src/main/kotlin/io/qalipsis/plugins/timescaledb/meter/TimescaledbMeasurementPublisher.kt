@@ -29,11 +29,14 @@ import io.qalipsis.plugins.timescaledb.dataprovider.setBigDecimalOrNull
 import io.qalipsis.plugins.timescaledb.dataprovider.setStringOrNull
 import io.qalipsis.plugins.timescaledb.liquibase.LiquibaseConfiguration
 import io.qalipsis.plugins.timescaledb.liquibase.LiquibaseRunner
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.withContext
 import org.postgresql.Driver
 
 internal class TimescaledbMeasurementPublisher(
     private val config: TimescaledbMeterConfig,
-    private val converter: TimescaledbMeterConverter
+    private val converter: TimescaledbMeterConverter,
+    private val ioContext: CoroutineContext,
 ) : MeasurementPublisher {
 
     private lateinit var datasource: HikariDataSource
@@ -94,12 +97,20 @@ internal class TimescaledbMeasurementPublisher(
 
     override suspend fun stop() {
         super.stop()
-        datasource.close()
+        // The datasource is not created when neither autostart nor autoconnect is enabled.
+        if (::datasource.isInitialized) {
+            datasource.close()
+        }
         log.debug { "The meter registry publisher was stopped" }
     }
 
     override suspend fun publish(meters: Collection<MeterSnapshot>) {
-        doPublish(converter.convert(meters))
+        if (::datasource.isInitialized) {
+            // JDBC blocks the thread until the meters are saved.
+            withContext(ioContext) { doPublish(converter.convert(meters)) }
+        } else {
+            log.warn { "The meters cannot be published, because the connection to the database was not created" }
+        }
     }
 
     @KTestable

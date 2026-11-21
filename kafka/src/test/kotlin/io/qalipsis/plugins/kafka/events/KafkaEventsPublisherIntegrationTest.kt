@@ -22,6 +22,7 @@ import assertk.all
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.hasSameSizeAs
+import assertk.assertions.isLessThan
 import io.mockk.every
 import io.qalipsis.api.events.Event
 import io.qalipsis.api.events.EventGeoPoint
@@ -41,6 +42,12 @@ import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.util.Properties
 import kotlin.math.pow
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.measureTime
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
@@ -93,7 +100,12 @@ internal class KafkaEventsPublisherIntegrationTest {
     @Timeout(30)
     internal fun `should export data`() {
         // given
-        val publisher = KafkaEventsPublisher(configuration, meterRegistry, JsonEventSerializer(eventsConverter))
+        val publisher = KafkaEventsPublisher(
+            CoroutineScope(SupervisorJob() + Dispatchers.IO),
+            configuration,
+            meterRegistry,
+            JsonEventSerializer(eventsConverter)
+        )
         publisher.start()
 
         val events = mutableListOf<Event>()
@@ -134,6 +146,32 @@ internal class KafkaEventsPublisherIntegrationTest {
         }
     }
 
+    @Test
+    @Timeout(30)
+    internal fun `given an unreachable broker when publishing then the caller is not blocked`() {
+        // given
+        val unreachableConfiguration = KafkaEventsConfiguration().apply {
+            bootstrap = "localhost:1"
+            configuration[ProducerConfig.MAX_BLOCK_MS_CONFIG] = BLOCKING_DURATION_MS.toString()
+        }
+        val publisher = KafkaEventsPublisher(
+            CoroutineScope(SupervisorJob() + Dispatchers.IO),
+            unreachableConfiguration,
+            meterRegistry,
+            JsonEventSerializer(eventsConverter)
+        )
+        publisher.start()
+
+        // when
+        val publicationDuration = measureTime {
+            repeat(10) { publisher.publish(Event(name = "my-event", EventLevel.INFO)) }
+        }
+
+        // then
+        assertThat(publicationDuration).isLessThan(1.seconds)
+        publisher.stop()
+    }
+
     /**
      * Create the test data set with the value to log as key and the condition to match when asserting the data as value.
      */
@@ -169,6 +207,8 @@ internal class KafkaEventsPublisherIntegrationTest {
     data class MyTestObject(val property1: Double = 1243.65, val property2: String = "here is the test")
 
     companion object {
+
+        private const val BLOCKING_DURATION_MS = 3000L
 
         @Container
         @JvmStatic
