@@ -40,7 +40,11 @@ import org.apache.hc.core5.pool.PoolConcurrencyPolicy
  * @property responseTimeout maximal duration of inactivity while waiting for the response once the request is sent,
  * also used as the inactivity timeout of the sockets, defaults to 10 seconds
  * @property ioThreadCount count of I/O threads of the client: the client of a step uses its own threads, which
- * are shared by all the minions of the step, defaults to the count of available processors
+ * are shared by all the minions of the step, defaults to the count of available processors. Each request wakes up the
+ * selector of its I/O thread (a limit of Apache HttpCore), so at very high rates the minions and the I/O threads wait
+ * for the locks of the selectors: more I/O threads lower the tail latency but cost throughput and CPU (on 10 cores at
+ * 1,000 minions, 20 threads: p99 −19 %, throughput −8 %; 40 threads: p99 −33 %, throughput −17 %). Prefer the Netty
+ * plugin for the highest request rates.
  *
  * @author Eric Jessé
  */
