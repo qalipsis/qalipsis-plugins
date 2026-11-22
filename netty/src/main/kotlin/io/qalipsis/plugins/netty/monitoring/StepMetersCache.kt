@@ -37,7 +37,7 @@ internal class StepMetersCache {
      */
     @Suppress("UNCHECKED_CAST")
     fun <M : Any> getOrCreate(name: String, tags: Map<String, String>, factory: () -> M?): M? =
-        meters[MeterKey(name, tags)] as M? ?: factory()?.also { meters.putIfAbsent(MeterKey(name, tags.toMap()), it) }
+        meters[MeterKey(name, tags)] as M? ?: factory()?.let { meters.putIfAbsent(MeterKey(name, tags.toMap()), it) as M? ?: it }
 
     fun clear() = meters.clear()
 

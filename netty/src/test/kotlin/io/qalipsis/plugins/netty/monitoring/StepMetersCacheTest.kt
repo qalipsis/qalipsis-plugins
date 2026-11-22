@@ -60,6 +60,21 @@ internal class StepMetersCacheTest {
     }
 
     @Test
+    fun `given a meter cached while another was being created when getting it then the cached one is returned`() {
+        // given
+        val first = Any()
+
+        // when
+        val meter = cache.getOrCreate("concurrently-created", emptyMap()) {
+            cache.getOrCreate("concurrently-created", emptyMap()) { first }
+            Any()
+        }
+
+        // then
+        assertThat(meter).isSameInstanceAs(first)
+    }
+
+    @Test
     fun `given a factory returning null when getting the meter then nothing is cached`() {
         // when
         val meter = cache.getOrCreate<Any>("meter", emptyMap()) { null }
