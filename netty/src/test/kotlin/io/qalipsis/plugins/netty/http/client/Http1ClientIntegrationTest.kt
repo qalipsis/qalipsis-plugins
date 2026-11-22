@@ -87,6 +87,7 @@ import java.util.stream.Stream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
@@ -553,6 +554,12 @@ internal class Http1ClientIntegrationTest {
 
         // then
         assertThat(client.isExhausted()).isFalse()
+        // The connection is closed, so that the late response cannot be delivered to a next request.
+        withTimeout(CLOSING_TIMEOUT_MILLIS) {
+            while (client.isOpen) {
+                delay(10)
+            }
+        }
         coVerifyOrder {
             monitoringCollector.isMonitoringEnabled
             monitoringCollector.setTags(
@@ -1059,6 +1066,8 @@ internal class Http1ClientIntegrationTest {
         }
 
         const val TIMEOUT_SECONDS = 10L
+
+        const val CLOSING_TIMEOUT_MILLIS = 1000L
 
         @JvmStatic
         fun allConfigurations(): Stream<Arguments> = Stream.of(

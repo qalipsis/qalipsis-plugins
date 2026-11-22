@@ -182,11 +182,16 @@ internal abstract class SocketClient<CONN : SocketClientConfiguration, REQ : Any
      * The timeout is scheduled on the event loop of the channel, which also completes the [responseSlot] when the
      * response is received: this avoids to schedule a timeout per request on the coroutine dispatcher of the
      * campaign, whose delayed queue is shared by all the minions.
+     *
+     * When the timeout is reached, the channel is closed: the response might still arrive later, and nothing would
+     * distinguish it from the response to the next request sent on the same connection. The pools and the steps
+     * then replace the closed client by a new one.
      */
     private suspend fun <R> awaitResponse(responseSlot: ImmutableSlot<Result<R>>): Result<R> {
         val timeout = channel.eventLoop().schedule({
             if (responseSlot.isEmpty()) {
                 responseSlot.offer(Result.failure(TimeoutException("Read timeout $readTimeout was reached")))
+                channel.close()
             }
         }, readTimeout.toNanos(), TimeUnit.NANOSECONDS)
         return try {

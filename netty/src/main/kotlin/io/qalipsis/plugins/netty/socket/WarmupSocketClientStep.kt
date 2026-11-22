@@ -132,12 +132,16 @@ internal abstract class WarmupSocketClientStep<I, O : Any, CONF : SocketClientCo
     }
 
     /**
-     * Acquires the client assigned to the given minion, or assigns a pre-warmed one.
+     * Acquires the client assigned to the given minion, or assigns a new one: a pre-warmed client at the first call,
+     * or a newly opened client when the previous one was closed, after a failure or a read timeout.
+     *
+     * The executions of a minion are sequential, so its entry is not updated concurrently.
      */
-    private fun acquireClient(minionId: MinionId): CLI {
-        return assignedClients.computeIfAbsent(minionId) {
-            preparedClients.poll() ?: error("No pre-warmed client available for minion $minionId")
-        }
+    private suspend fun acquireClient(minionId: MinionId): CLI {
+        return assignedClients[minionId]?.takeIf { it.isOpen }
+            ?: (preparedClients.poll() ?: createClient(workerGroup, stepMonitoringCollector)).also { client ->
+                assignedClients.put(minionId, client)?.let { closed -> tryAndLogOrNull(log) { closed.close() } }
+            }
     }
 
     /**
