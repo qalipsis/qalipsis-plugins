@@ -98,7 +98,9 @@ internal open class ChannelMonitoringHandler(
             // Only count bytes during the request-sending phase, not protocol-level frames
             // (e.g. HTTP/2 WINDOW_UPDATE) sent after response reception has started.
             log.trace { "Channel ${ctx.channel()}: writing $size bytes" }
-            monitoringCollector.recordSendingData(size)
+            // The write completes later: its outcome is recorded with the collector of the request that wrote it.
+            val writingCollector = monitoringCollector
+            writingCollector.recordSendingData(size)
 
             promise.addListener { result ->
                 if (exchangePhase.compareAndSet(INIT_PHASE, DATA_SENT_PHASE)) {
@@ -108,11 +110,11 @@ internal open class ChannelMonitoringHandler(
                 }
                 if (result.isSuccess) {
                     log.trace { "Channel ${ctx.channel()}: writing $size bytes succeeded" }
-                    monitoringCollector.recordSentDataSuccess(size)
+                    writingCollector.recordSentDataSuccess(size)
                 } else {
                     val cause = result.cause()
                     log.trace { "Channel ${ctx.channel()}: writing $size bytes failed, $cause" }
-                    monitoringCollector.recordSentDataFailure(cause)
+                    writingCollector.recordSentDataFailure(cause)
                 }
             }
         }

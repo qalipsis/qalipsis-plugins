@@ -27,6 +27,7 @@ import io.qalipsis.plugins.netty.http.client.HttpRequestExecutionConfigurer
 import io.qalipsis.plugins.netty.http.client.monitoring.HttpChannelMonitoringHandler
 import io.qalipsis.plugins.netty.http.client.monitoring.HttpStepContextBasedSocketMonitoringCollector
 import io.qalipsis.plugins.netty.http.request.HttpRequest
+import io.qalipsis.plugins.netty.http.client.runOnEventLoop
 import io.qalipsis.plugins.netty.http.request.InternalHttpRequest
 import io.qalipsis.plugins.netty.http.spec.HttpClientConfiguration
 import io.qalipsis.plugins.netty.monitoring.StepContextBasedSocketMonitoringCollector
@@ -69,9 +70,13 @@ internal class Http1RequestExecutionConfigurer(
             pipeline.addLast(HttpPipelineNames.INBOUND_HANDLER, rh)
             responseHandler = rh
         } else {
-            // Subsequent requests: reset handler state.
-            existingCmh.prepare(monitoringCollector)
-            responseHandler!!.prepare(responseSlot, httpMonitoringCollector)
+            // Subsequent requests: reset handler state on the event loop of the channel, where the end of the
+            // previous exchange may still be processed, and before the new request is written.
+            val existingResponseHandler = responseHandler!!
+            pipeline.runOnEventLoop {
+                existingCmh.prepare(monitoringCollector)
+                existingResponseHandler.prepare(responseSlot, httpMonitoringCollector)
+            }
         }
 
         return Http1RequestWriter(
@@ -82,6 +87,6 @@ internal class Http1RequestExecutionConfigurer(
     }
 
     override fun completeMonitoring() {
-        channelMonitoringHandler?.complete()
+        channelMonitoringHandler?.let { pipeline.runOnEventLoop(it::complete) }
     }
 }

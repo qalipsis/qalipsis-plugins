@@ -33,6 +33,11 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
+/**
+ * Value of the instant of the first sent byte, as long as nothing was sent.
+ */
+private const val NOT_SENT = 0L
+
 internal open class StepContextBasedSocketMonitoringCollector(
     private val stepContext: StepContext<*, *>,
     protected val eventsLogger: EventsLogger?,
@@ -367,7 +372,7 @@ internal open class StepContextBasedSocketMonitoringCollector(
     override fun recordSendingData(bytesCount: Int) {
         val now = System.nanoTime()
         sendingInstants.add(now)
-        firstSentByteInstant.compareAndSet(0, now)
+        firstSentByteInstant.compareAndSet(NOT_SENT, now)
         if (bytesCount > 0) {
             eventsLogger?.debug("${eventPrefix}.sending-bytes", bytesCount, tags = eventTags)
         } else {
@@ -384,7 +389,7 @@ internal open class StepContextBasedSocketMonitoringCollector(
     }
 
     override fun recordSentDataSuccess(bytesCount: Int) {
-        val timeToSent = Duration.ofNanos(System.nanoTime() - sendingInstants.removeAt(0))
+        val timeToSent = sendingInstants.removeFirstOrNull()?.let { Duration.ofNanos(System.nanoTime() - it) }
         if (bytesCount > 0) {
             eventsLogger?.debug("${eventPrefix}.sent-bytes", arrayOf(timeToSent, bytesCount), tags = eventTags)
         } else {
@@ -395,7 +400,7 @@ internal open class StepContextBasedSocketMonitoringCollector(
     }
 
     override fun recordSentDataFailure(throwable: Throwable) {
-        val timeToFailure = Duration.ofNanos(System.nanoTime() - firstSentByteInstant.get())
+        val timeToFailure = sinceFirstSentByte()
         if (sendingFailure == null) {
             sendingFailure = throwable
             eventsLogger?.warn("${eventPrefix}.sending.failed", arrayOf(timeToFailure, throwable), tags = eventTags)
@@ -409,9 +414,9 @@ internal open class StepContextBasedSocketMonitoringCollector(
     }
 
     override fun recordReceivingData() {
-        meters.timeToFirstByte = Duration.ofNanos(System.nanoTime() - firstSentByteInstant.get())
+        meters.timeToFirstByte = sinceFirstSentByte()
         eventsLogger?.debug("${eventPrefix}.receiving", meters.timeToFirstByte, tags = eventTags)
-        receivingDataTimer?.record(meters.timeToFirstByte!!)
+        meters.timeToFirstByte?.let { receivingDataTimer?.record(it) }
     }
 
     override fun countReceivedData(bytesCount: Int) {
@@ -419,18 +424,18 @@ internal open class StepContextBasedSocketMonitoringCollector(
     }
 
     override fun recordReceptionComplete() {
-        meters.timeToLastByte = Duration.ofNanos(System.nanoTime() - firstSentByteInstant.get())
+        meters.timeToLastByte = sinceFirstSentByte()
         eventsLogger?.info(
             "${eventPrefix}.received-response",
             arrayOf(meters.timeToLastByte, meters.receivedBytes),
             tags = eventTags
         )
         responseThroughput?.record()
-        receivedDataTimer?.record(meters.timeToLastByte!!)
+        meters.timeToLastByte?.let { receivedDataTimer?.record(it) }
     }
 
     override fun recordReceivingDataFailure(throwable: Throwable) {
-        val timeToFailure = Duration.ofNanos(System.nanoTime() - firstSentByteInstant.get())
+        val timeToFailure = sinceFirstSentByte()
         if (sendingFailure == null) {
             sendingFailure = throwable
             eventsLogger?.warn(
@@ -441,6 +446,13 @@ internal open class StepContextBasedSocketMonitoringCollector(
             receivingDataFailureCounter?.increment()
         }
     }
+
+    /**
+     * Time elapsed since the first byte of the request was sent, or null when nothing was sent with this collector,
+     * e.g. for a late response of a previous request on the same connection.
+     */
+    private fun sinceFirstSentByte(): Duration? =
+        firstSentByteInstant.get().takeIf { it != NOT_SENT }?.let { Duration.ofNanos(System.nanoTime() - it) }
 
     fun <IN, OUT : Any> toResult(input: IN, response: OUT?, failure: Throwable?) = ConnectionAndRequestResult(
         connected,

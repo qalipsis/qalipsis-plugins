@@ -18,6 +18,7 @@
 
 package io.qalipsis.plugins.netty.http.client
 
+import io.netty.channel.ChannelPipeline
 import io.netty.handler.codec.http.HttpResponse
 import io.qalipsis.api.sync.ImmutableSlot
 import io.qalipsis.plugins.netty.monitoring.StepContextBasedSocketMonitoringCollector
@@ -43,4 +44,13 @@ internal interface HttpRequestExecutionConfigurer {
      */
     fun completeMonitoring() {}
 
+}
+
+/**
+ * Executes [action] on the event loop of the channel: directly when already there, otherwise after the tasks and the
+ * I/O events already queued, so that the state of the handlers is only changed between two exchanges.
+ */
+internal fun ChannelPipeline.runOnEventLoop(action: () -> Unit) {
+    val eventLoop = channel().eventLoop()
+    if (eventLoop.inEventLoop()) action() else eventLoop.execute(action)
 }
