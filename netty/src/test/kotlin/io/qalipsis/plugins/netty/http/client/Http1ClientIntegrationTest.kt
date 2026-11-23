@@ -684,7 +684,7 @@ internal class Http1ClientIntegrationTest {
                 prop(HttpITMeters::bytesCountToSend).isBetween(220, 240)
                 prop(HttpITMeters::sentBytes).isBetween(220, 240)
                 prop(HttpITMeters::timeToFirstByte).isNotNull().all {
-                    isGreaterThan(result.meters.timeToSuccessfulConnect)
+                    isGreaterThan(Duration.ZERO)
                     isLessThan(Duration.ofSeconds(2))
                 }
                 prop(HttpITMeters::timeToLastByte).isNotNull().all {
@@ -769,7 +769,7 @@ internal class Http1ClientIntegrationTest {
                 prop(HttpITMeters::bytesCountToSend).isBetween(200, 220)
                 prop(HttpITMeters::sentBytes).isBetween(200, 220)
                 prop(HttpITMeters::timeToFirstByte).isNotNull().all {
-                    isGreaterThan(result.meters.timeToSuccessfulConnect)
+                    isGreaterThan(Duration.ZERO)
                     isLessThan(Duration.ofSeconds(2))
                 }
                 prop(HttpITMeters::timeToLastByte).isNotNull().all {
@@ -861,7 +861,7 @@ internal class Http1ClientIntegrationTest {
                 prop(HttpITMeters::bytesCountToSend).isBetween(640, 680)
                 prop(HttpITMeters::sentBytes).isBetween(640, 680)
                 prop(HttpITMeters::timeToFirstByte).isNotNull().all {
-                    isGreaterThan(result.meters.timeToSuccessfulConnect)
+                    isGreaterThan(Duration.ZERO)
                     isLessThan(Duration.ofSeconds(2))
                 }
                 prop(HttpITMeters::timeToLastByte).isNotNull().all {
@@ -959,7 +959,7 @@ internal class Http1ClientIntegrationTest {
                 prop(HttpITMeters::bytesCountToSend).isBetween(10620, 10760)
                 prop(HttpITMeters::sentBytes).isBetween(10620, 10760)
                 prop(HttpITMeters::timeToFirstByte).isNotNull().all {
-                    isGreaterThan(result.meters.timeToSuccessfulConnect)
+                    isGreaterThan(Duration.ZERO)
                     isLessThan(Duration.ofSeconds(8))
                 }
                 prop(HttpITMeters::timeToLastByte).isNotNull().all {

@@ -33,6 +33,7 @@ import io.qalipsis.api.sync.ImmutableSlot
 import io.qalipsis.api.sync.SuspendedCountLatch
 import io.qalipsis.plugins.netty.NativeTransportUtils
 import io.qalipsis.plugins.netty.asSuspended
+import io.qalipsis.plugins.netty.handlers.monitoring.ChannelMonitoringHandler
 import io.qalipsis.plugins.netty.monitoring.StepContextBasedSocketMonitoringCollector
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -185,12 +186,14 @@ internal abstract class SocketClient<CONN : SocketClientConfiguration, REQ : Any
      *
      * When the timeout is reached, the channel is closed: the response might still arrive later, and nothing would
      * distinguish it from the response to the next request sent on the same connection. The pools and the steps
-     * then replace the closed client by a new one.
+     * then replace the closed client by a new one. The monitoring of the exchange ends before the channel is closed:
+     * the frames sent to close the connection (TLS close_notify, HTTP/2 GOAWAY...) are not part of the request.
      */
     private suspend fun <R> awaitResponse(responseSlot: ImmutableSlot<Result<R>>): Result<R> {
         val timeout = channel.eventLoop().schedule({
             if (responseSlot.isEmpty()) {
                 responseSlot.offer(Result.failure(TimeoutException("Read timeout $readTimeout was reached")))
+                channel.pipeline().get(ChannelMonitoringHandler::class.java)?.complete()
                 channel.close()
             }
         }, readTimeout.toNanos(), TimeUnit.NANOSECONDS)
