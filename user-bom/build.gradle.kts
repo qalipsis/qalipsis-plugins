@@ -1,3 +1,4 @@
+import io.qalipsis.gradle.build.skipPublicationOfReleasedVersion
 import org.jreleaser.model.Active
 import org.jreleaser.model.Signing
 import org.jreleaser.model.api.deploy.maven.MavenCentralMavenDeployer
@@ -11,6 +12,8 @@ plugins {
 group = "io.qalipsis"
 version = file("project.version").readText().trim()
 description = "Bill of materials for QALIPSIS scenario development"
+
+skipPublicationOfReleasedVersion()
 
 repositories {
     mavenLocal()

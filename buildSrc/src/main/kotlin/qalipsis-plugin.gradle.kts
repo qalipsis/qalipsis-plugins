@@ -20,6 +20,7 @@ import groovy.lang.Closure
 import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
 import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_ERROR
 import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_OUT
+import io.qalipsis.gradle.build.skipPublicationOfReleasedVersion
 import org.jreleaser.model.Active
 import org.jreleaser.model.Signing
 import org.jreleaser.model.api.deploy.maven.MavenCentralMavenDeployer
@@ -199,6 +200,8 @@ afterEvaluate {
 }
 
 // ---- Publishing ----
+
+skipPublicationOfReleasedVersion()
 
 publishing {
     repositories {
