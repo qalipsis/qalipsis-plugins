@@ -19,6 +19,7 @@
 package io.qalipsis.plugins.graphite.monitoring.meters
 
 import assertk.all
+import io.qalipsis.plugins.graphite.awaitRenderedSeries
 import assertk.assertThat
 import assertk.assertions.any
 import assertk.assertions.containsOnly
@@ -29,7 +30,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.jsonMapper
 import com.fasterxml.jackson.module.kotlin.kotlinModule
-import com.fasterxml.jackson.module.kotlin.readValue
 import io.mockk.every
 import io.mockk.mockk
 import io.netty.channel.ChannelOutboundHandlerAdapter
@@ -43,14 +43,9 @@ import io.qalipsis.plugins.graphite.Constants
 import io.qalipsis.plugins.graphite.GraphiteProtocol
 import io.qalipsis.plugins.graphite.search.DataPoints
 import io.qalipsis.test.coroutines.TestDispatcherProvider
-import java.net.URI
 import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.concurrent.TimeUnit
-import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -245,24 +240,8 @@ internal abstract class AbstractGraphiteMeasurementPublisherProtocolTest {
             )
 
             //then
-            // Wait until the tags are properly created, since the operation is asynchronous.
             val savedMetersKeyPrefix = "qalipsis.meters.${protocolPathIdentifier}.collection"
-            await.atMost(10, TimeUnit.SECONDS).until {
-                val savedTagsResponse = httpClient.send(
-                    HttpRequest.newBuilder()
-                        .GET()
-                        .uri(URI.create("http://localhost:$httpPort/tags/findSeries?pretty=1&expr=name=~$savedMetersKeyPrefix.*"))
-                        .build(), HttpResponse.BodyHandlers.ofString()
-                )
-                savedTagsResponse.body() != "[]"
-            }
-            val savedMetersResponse = httpClient.send(
-                HttpRequest.newBuilder()
-                    .GET()
-                    .uri(URI.create("http://localhost:${httpPort}/render?target=$savedMetersKeyPrefix.**&target=seriesByTag('name=~$savedMetersKeyPrefix.*')&noNullPoints=True&format=json"))
-                    .build(), HttpResponse.BodyHandlers.ofString()
-            )
-            val dataPoints = objectMapper.readValue<List<DataPoints>>(savedMetersResponse.body())
+            val dataPoints = httpClient.awaitRenderedSeries(httpPort, savedMetersKeyPrefix, 17, objectMapper)
             assertThat(dataPoints).all {
                 hasSize(17)
                 any {

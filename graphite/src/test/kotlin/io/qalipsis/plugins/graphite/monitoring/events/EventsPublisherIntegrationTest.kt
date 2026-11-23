@@ -19,6 +19,7 @@
 package io.qalipsis.plugins.graphite.monitoring.events
 
 import assertk.all
+import io.qalipsis.plugins.graphite.awaitRenderedSeries
 import assertk.assertThat
 import assertk.assertions.any
 import assertk.assertions.containsOnly
@@ -29,7 +30,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.jsonMapper
 import com.fasterxml.jackson.module.kotlin.kotlinModule
-import com.fasterxml.jackson.module.kotlin.readValue
 import io.mockk.spyk
 import io.netty.channel.ChannelOutboundHandlerAdapter
 import io.qalipsis.api.events.Event
@@ -145,22 +145,7 @@ internal class EventsPublisherIntegrationTest {
             //then
             // Wait until the tags are properly created, since the operation is asynchronous.
             val keyPrefix = "qalipsis.event.${protocolPathIdentifier}.single"
-            await.atMost(10, TimeUnit.SECONDS).until {
-                val savedTagsResponse = httpClient.send(
-                    HttpRequest.newBuilder()
-                        .GET()
-                        .uri(URI.create("http://localhost:$httpPort/tags/findSeries?pretty=1&expr=name=~$keyPrefix.*"))
-                        .build(), HttpResponse.BodyHandlers.ofString()
-                )
-                savedTagsResponse.body() != "[]"
-            }
-            val savedEventsResponse = httpClient.send(
-                HttpRequest.newBuilder()
-                    .GET()
-                    .uri(URI.create("http://localhost:${httpPort}/render?target=$keyPrefix.**&target=seriesByTag('name=~$keyPrefix.*')&noNullPoints=True&format=json"))
-                    .build(), HttpResponse.BodyHandlers.ofString()
-            )
-            val dataPoints = objectMapper.readValue<List<DataPoints>>(savedEventsResponse.body())
+            val dataPoints = httpClient.awaitRenderedSeries(httpPort, keyPrefix, 1, objectMapper)
             assertThat(dataPoints).all {
                 hasSize(1)
                 any {
@@ -198,22 +183,7 @@ internal class EventsPublisherIntegrationTest {
             //then
             // Wait until the tags are properly created, since the operation is asynchronous.
             val savedEventKeyPrefix = "qalipsis.event.${protocolPathIdentifier}.collection"
-            await.atMost(10, TimeUnit.SECONDS).until {
-                val savedTagsResponse = httpClient.send(
-                    HttpRequest.newBuilder()
-                        .GET()
-                        .uri(URI.create("http://localhost:$httpPort/tags/findSeries?pretty=1&expr=name=~$savedEventKeyPrefix.*"))
-                        .build(), HttpResponse.BodyHandlers.ofString()
-                )
-                savedTagsResponse.body() != "[]"
-            }
-            val savedEventsResponse = httpClient.send(
-                HttpRequest.newBuilder()
-                    .GET()
-                    .uri(URI.create("http://localhost:${httpPort}/render?target=$savedEventKeyPrefix.**&target=seriesByTag('name=~$savedEventKeyPrefix.*')&noNullPoints=True&format=json"))
-                    .build(), HttpResponse.BodyHandlers.ofString()
-            )
-            val dataPoints = objectMapper.readValue<List<DataPoints>>(savedEventsResponse.body())
+            val dataPoints = httpClient.awaitRenderedSeries(httpPort, savedEventKeyPrefix, 5, objectMapper)
             assertThat(dataPoints).all {
                 hasSize(5)
                 (1..5).forEach { index ->

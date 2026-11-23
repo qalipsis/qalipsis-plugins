@@ -21,6 +21,7 @@
 package io.qalipsis.plugins.graphite.save
 
 import assertk.all
+import io.qalipsis.plugins.graphite.awaitRenderedSeries
 import assertk.assertThat
 import assertk.assertions.any
 import assertk.assertions.containsAll
@@ -35,7 +36,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.jsonMapper
 import com.fasterxml.jackson.module.kotlin.kotlinModule
-import com.fasterxml.jackson.module.kotlin.readValue
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
@@ -59,10 +59,7 @@ import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
 import io.qalipsis.test.mockk.relaxedMockk
 import io.qalipsis.test.steps.StepTestHelper
-import java.net.URI
 import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.nio.channels.ClosedChannelException
 import java.time.Clock
 import java.time.Duration
@@ -72,7 +69,6 @@ import kotlin.math.pow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.ReceiveChannel
 import org.apache.commons.lang3.RandomStringUtils
-import org.awaitility.kotlin.await
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -225,24 +221,7 @@ internal class GraphiteSaveStepIntegrationTest {
                 assertThat(capturedContext.captured).isSameInstanceAs(stepContext)
                 assertThat(capturedInput.captured).isEqualTo(input)
 
-                // Wait until the tags are properly created, since the operation is asynchronous.
-                await.atMost(10, TimeUnit.SECONDS).until {
-                    val savedTagsResponse = httpClient.send(
-                        HttpRequest.newBuilder()
-                            .GET()
-                            .uri(URI.create("http://localhost:$httpPort/tags/findSeries?pretty=1&expr=name=~qalipsis.${protocolPathIdentifier}.foo.*"))
-                            .build(), HttpResponse.BodyHandlers.ofString()
-                    )
-                    savedTagsResponse.body() != "[]"
-                }
-
-                val savedValuesResponse = httpClient.send(
-                    HttpRequest.newBuilder()
-                        .GET()
-                        .uri(URI.create("http://localhost:$httpPort/render?target=qalipsis.${protocolPathIdentifier}.foo.**&target=seriesByTag('name=~qalipsis.${protocolPathIdentifier}.foo.*')&noNullPoints=True&format=json"))
-                        .build(), HttpResponse.BodyHandlers.ofString()
-                )
-                val dataPoints = objectMapper.readValue<List<DataPoints>>(savedValuesResponse.body())
+                val dataPoints = httpClient.awaitRenderedSeries(httpPort, "qalipsis.${protocolPathIdentifier}.foo", 3, objectMapper)
                 assertThat(dataPoints).all {
                     hasSize(3)
                     any {
@@ -368,24 +347,7 @@ internal class GraphiteSaveStepIntegrationTest {
                 assertThat(capturedContext.captured).isSameInstanceAs(stepContext)
                 assertThat(capturedInput.captured).isEqualTo(input)
 
-                // Wait until the tags are properly created, since the operation is asynchronous.
-                await.atMost(10, TimeUnit.SECONDS).until {
-                    val savedTagsResponse = httpClient.send(
-                        HttpRequest.newBuilder()
-                            .GET()
-                            .uri(URI.create("http://localhost:$httpPort/tags/findSeries?pretty=1&expr=name=~qalipsis.${protocolPathIdentifier}.bar.*"))
-                            .build(), HttpResponse.BodyHandlers.ofString()
-                    )
-                    savedTagsResponse.body() != "[]"
-                }
-
-                val savedValuesResponse = httpClient.send(
-                    HttpRequest.newBuilder()
-                        .GET()
-                        .uri(URI.create("http://localhost:$httpPort/render?target=qalipsis.${protocolPathIdentifier}.bar.**&target=seriesByTag('name=~qalipsis.${protocolPathIdentifier}.bar.*')&noNullPoints=True&format=json"))
-                        .build(), HttpResponse.BodyHandlers.ofString()
-                )
-                val dataPoints = objectMapper.readValue<List<DataPoints>>(savedValuesResponse.body())
+                val dataPoints = httpClient.awaitRenderedSeries(httpPort, "qalipsis.${protocolPathIdentifier}.bar", 3, objectMapper)
                 assertThat(dataPoints).all {
                     hasSize(3)
                     any {
